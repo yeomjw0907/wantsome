@@ -61,6 +61,10 @@ export function useAppInit() {
   useEffect(() => {
     let cancelled = false;
 
+    const timeout = setTimeout(() => {
+      if (!cancelled) setStatus("onboarding");
+    }, 5000);
+
     async function init() {
       try {
         // [1] 시스템 상태 체크 (API 서버 미준비 시 graceful 처리)
@@ -148,6 +152,7 @@ export function useAppInit() {
     init();
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
     };
   }, []);
 

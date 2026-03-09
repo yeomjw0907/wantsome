@@ -10,6 +10,10 @@ export interface Creator {
   mode_red: boolean;
   settlement_rate: number;
   monthly_minutes: number;
+  /** 피드 API 응답용 (본인인증 뱃지) */
+  is_verified?: boolean;
+  /** 피드 API 응답용 (분당 P) */
+  rate_per_min?: number;
 }
 
 interface CreatorStore {
