@@ -52,7 +52,7 @@ export async function DELETE(
     p_user_id: authUser.id,
     p_amount: reservation.deposit_points,
     p_reason: `reservation_cancel:${id}`,
-  }).catch(() => null);
+  }).then(null, () => null);
 
   // 크리에이터 푸시 알림
   await sendPushToUser(admin, reservation.creator_id, {

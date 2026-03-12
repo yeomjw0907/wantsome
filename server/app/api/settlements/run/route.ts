@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
       body: JSON.stringify({
         text: `💰 ${period} 정산 생성 완료\n• 처리: ${processed}명 / 스킵: ${skipped}명\n${slackLines.slice(0, 10).join("\n")}${slackLines.length > 10 ? `\n외 ${slackLines.length - 10}명` : ""}`,
       }),
-    }).catch(() => null);
+    }).then(null, () => null);
   }
 
   return NextResponse.json({ success: true, period, processed, skipped });

@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
           urgentText,
         ].filter(Boolean).join("\n"),
       }),
-    }).catch(() => null);
+    }).then(null, () => null);
   }
 
   return NextResponse.json({

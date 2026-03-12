@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         text: `🆕 크리에이터 등록 심사 요청\n• userId: ${authUser.id}\n• email: ${authUser.email}\n• 은행: ${body.bankName} ${body.accountNumber.slice(-4).padStart(body.accountNumber.length, "*")}\n• 예금주: ${body.holderName}`,
       }),
-    }).catch(() => null);
+    }).then(null, () => null);
   }
 
   return NextResponse.json({ success: true });

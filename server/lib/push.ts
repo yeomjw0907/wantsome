@@ -72,7 +72,7 @@ async function sendPushRaw(tokens: string[], msg: PushMessage): Promise<boolean>
         ...(expoToken ? { Authorization: `Bearer ${expoToken}` } : {}),
       },
       body: JSON.stringify(messages),
-    }).catch(() => null);
+    }).then(null, () => null);
 
     if (res?.ok) success = true;
   }

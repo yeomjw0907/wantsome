@@ -92,7 +92,7 @@ export async function POST(
     target_type: "report",
     target_id: id,
     detail: { action: body.action, target_id: report.target_id },
-  }).catch(() => null);
+  }).then(null, () => null);
 
   return NextResponse.json({ success: true });
 }

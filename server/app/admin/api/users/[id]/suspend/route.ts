@@ -43,7 +43,7 @@ export async function POST(
     target_id: id,
     detail: { days, suspended_until: suspendedUntil },
     ip: req.headers.get("x-forwarded-for") ?? "unknown",
-  }).catch(() => null);
+  }).then(null, () => null);
 
   return NextResponse.json({ success: true });
 }

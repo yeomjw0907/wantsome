@@ -44,7 +44,7 @@ export async function POST(
     target_id: userId,
     detail: { status: "APPROVED" },
     ip: req.headers.get("x-forwarded-for") ?? "unknown",
-  }).catch(() => null);
+  }).then(null, () => null);
 
   // Slack 알림
   const slackUrl = process.env.SLACK_WEBHOOK_URL;
@@ -55,7 +55,7 @@ export async function POST(
       body: JSON.stringify({
         text: `✅ 크리에이터 승인 처리\n• userId: ${userId}\n• 처리자: ${adminId}`,
       }),
-    }).catch(() => null);
+    }).then(null, () => null);
   }
 
   return NextResponse.json({ success: true });

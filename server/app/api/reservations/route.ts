@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     p_user_id: authUser.id,
     p_amount: depositPoints,
     p_reason: `reservation_deposit:${reservation.id}`,
-  }).catch(() => null);
+  }).then(null, () => null);
 
   // 크리에이터에게 푸시 알림
   await sendPushToUser(admin, body.creator_id, {

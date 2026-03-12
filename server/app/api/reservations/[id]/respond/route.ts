@@ -67,7 +67,7 @@ export async function POST(
       p_user_id: reservation.consumer_id,
       p_amount: reservation.deposit_points,
       p_reason: `reservation_refund:${id}`,
-    }).catch(() => null);
+    }).then(null, () => null);
 
     await sendPushToUser(admin, reservation.consumer_id, {
       title: "예약이 취소됐습니다",

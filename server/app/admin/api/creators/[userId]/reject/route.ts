@@ -46,7 +46,7 @@ export async function POST(
     target_id: userId,
     detail: { status: "REJECTED", reason: body.reason },
     ip: req.headers.get("x-forwarded-for") ?? "unknown",
-  }).catch(() => null);
+  }).then(null, () => null);
 
   return NextResponse.json({ success: true });
 }

@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         ...(expoToken ? { "Authorization": `Bearer ${expoToken}` } : {}),
       },
       body: JSON.stringify(messages),
-    }).catch(() => null);
+    }).then(null, () => null);
 
     if (res?.ok) successCount += batch.length;
   }
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     title: body.title,
     body: body.body,
     sent_count: validTokens.length,
-  }).catch(() => null);
+  }).then(null, () => null);
 
   // 관리자 로그
   await admin.from("admin_logs").insert({
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     target_type: "push",
     detail: { target: body.target, title: body.title, sentCount: successCount },
     ip: req.headers.get("x-forwarded-for") ?? "unknown",
-  }).catch(() => null);
+  }).then(null, () => null);
 
   return NextResponse.json({ success: true, sentCount: successCount });
 }

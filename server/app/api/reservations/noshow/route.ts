@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       p_user_id: res.creator_id,
       p_amount: compensation,
       p_reason: `noshow_compensation:${res.id}`,
-    }).catch(() => null);
+    }).then(null, () => null);
 
     await sendPushToUser(admin, res.consumer_id, {
       title: "크리에이터가 나타나지 않았습니다",
