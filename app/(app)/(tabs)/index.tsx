@@ -9,9 +9,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePointStore } from "@/stores/usePointStore";
 import { useCreatorStore } from "@/stores/useCreatorStore";
+import { useCallStore } from "@/stores/useCallStore";
 import { PointBadge } from "@/components/ui/PointBadge";
 import { ModeTab, type FeedMode } from "@/components/feed/ModeTab";
 import { CreatorCard } from "@/components/feed/CreatorCard";
@@ -37,6 +39,8 @@ export default function FeedScreen() {
     updateOnlineStatus,
     setLoading,
   } = useCreatorStore();
+
+  const { setConnecting } = useCallStore();
 
   const [mode, setMode] = useState<FeedMode>("blue");
   const [page, setPage] = useState(1);
@@ -111,10 +115,34 @@ export default function FeedScreen() {
   }, [updateOnlineStatus]);
 
   const handleCallPress = useCallback(
-    (creator: { id: string }) => {
-      router.push(`/call/${creator.id}`);
+    async (creator: { id: string; display_name: string; profile_image_url: string | null }) => {
+      try {
+        const res = await apiCall<{
+          session_id: string;
+          agora_channel: string;
+          agora_token: string;
+          per_min_rate: number;
+          creator_name: string;
+        }>("/api/calls/start", {
+          method: "POST",
+          body: JSON.stringify({ creator_id: creator.id, mode }),
+        });
+        setConnecting({
+          sessionId: res.session_id,
+          agoraChannel: res.agora_channel,
+          agoraToken: res.agora_token,
+          perMinRate: res.per_min_rate,
+          mode,
+          creatorId: creator.id,
+          creatorName: res.creator_name ?? creator.display_name,
+          creatorAvatar: creator.profile_image_url,
+        });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "통화 연결에 실패했습니다.";
+        Toast.show({ type: "error", text1: msg });
+      }
     },
-    [router]
+    [router, mode, setConnecting]
   );
 
   const renderItem = useCallback(
