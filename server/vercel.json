@@ -3,6 +3,8 @@
     { "path": "/api/calls/tick", "schedule": "* * * * *" },
     { "path": "/api/settlements/run", "schedule": "0 9 15 * *" },
     { "path": "/api/creators/update-grades", "schedule": "0 0 1 * *" },
-    { "path": "/api/reports/daily-summary", "schedule": "0 9 * * *" }
+    { "path": "/api/reports/daily-summary", "schedule": "0 9 * * *" },
+    { "path": "/api/reservations/remind", "schedule": "* * * * *" },
+    { "path": "/api/reservations/noshow", "schedule": "* * * * *" }
   ]
 }

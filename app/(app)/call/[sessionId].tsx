@@ -33,6 +33,7 @@ import { apiCall } from "@/lib/api";
 import { useCallStore } from "@/stores/useCallStore";
 import { usePointStore } from "@/stores/usePointStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import ReportBottomSheet from "@/components/ReportBottomSheet";
 
 export default function CallScreen() {
   usePreventScreenCapture();
@@ -80,9 +81,9 @@ export default function CallScreen() {
 
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isCameraFlipped, setIsCameraFlipped] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [isEnding, setIsEnding] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const rate = Number(perMinRate ?? 900);
   const isLowPoints = points < rate * 5;
@@ -102,7 +103,7 @@ export default function CallScreen() {
       engine.enableVideo();
       engine.startPreview();
 
-      engine.addListener("onUserJoined", (connection, uid) => {
+      engine.addListener("onUserJoined", (_connection, uid) => {
         setRemoteUid(uid);
       });
       engine.addListener("onUserOffline", () => {
@@ -125,7 +126,7 @@ export default function CallScreen() {
       });
     };
 
-    init().catch(console.error);
+    init().catch(() => { /* Agora 초기화 실패 처리 */ });
 
     return () => {
       engineRef.current?.leaveChannel();
@@ -206,8 +207,7 @@ export default function CallScreen() {
           creatorAvatar: creatorAvatar ?? "",
         },
       });
-    } catch (e) {
-      console.error("[end call]", e);
+    } catch {
       callStore.endCall();
       router.replace("/(app)/(tabs)");
     }
@@ -227,7 +227,6 @@ export default function CallScreen() {
 
   const flipCamera = () => {
     engineRef.current?.switchCamera();
-    setIsCameraFlipped((v) => !v);
   };
 
   const formatTime = (sec: number) => {
@@ -290,8 +289,8 @@ export default function CallScreen() {
 
       {/* 신고 버튼 (우상단) */}
       <TouchableOpacity
-        className="absolute top-14 right-4 w-10 h-10 items-center justify-center"
-        onPress={() => Alert.alert("신고", "신고 기능은 곧 제공됩니다.")}
+        className="absolute top-14 right-4 w-10 h-10 items-center justify-center rounded-full bg-black/40"
+        onPress={() => setShowReport(true)}
       >
         <Text className="text-lg">🚩</Text>
       </TouchableOpacity>
@@ -329,6 +328,14 @@ export default function CallScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 신고 바텀시트 */}
+      <ReportBottomSheet
+        visible={showReport}
+        targetId={creatorId ?? ""}
+        callSessionId={sessionId}
+        onClose={() => setShowReport(false)}
+      />
     </View>
   );
 }
