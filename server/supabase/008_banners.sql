@@ -30,14 +30,53 @@ CREATE POLICY "banners_read" ON banners
 -- (admin 패널은 service_role key 사용)
 
 -- 2) ci_blacklist (신분증 CI 블랙리스트)
-CREATE TABLE IF NOT EXISTS ci_blacklist (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  ci_hash     TEXT NOT NULL UNIQUE,
-  reason      TEXT,
-  added_by    UUID REFERENCES users(id),
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
+-- 테이블이 이미 존재하지만 ci_hash 컬럼이 없을 경우 안전하게 처리
+DO $$
+BEGIN
+  -- ci_blacklist 테이블이 없으면 생성
+  IF NOT EXISTS (
+    SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'ci_blacklist'
+  ) THEN
+    CREATE TABLE ci_blacklist (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ci_hash     TEXT NOT NULL UNIQUE,
+      reason      TEXT,
+      added_by    UUID REFERENCES users(id),
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+  ELSE
+    -- 테이블은 있지만 ci_hash 컬럼이 없으면 추가
+    IF NOT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name   = 'ci_blacklist'
+        AND column_name  = 'ci_hash'
+    ) THEN
+      ALTER TABLE ci_blacklist ADD COLUMN ci_hash TEXT;
+      ALTER TABLE ci_blacklist ADD CONSTRAINT ci_blacklist_ci_hash_key UNIQUE (ci_hash);
+    END IF;
+    -- reason 컬럼이 없으면 추가
+    IF NOT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name   = 'ci_blacklist'
+        AND column_name  = 'reason'
+    ) THEN
+      ALTER TABLE ci_blacklist ADD COLUMN reason TEXT;
+    END IF;
+    -- added_by 컬럼이 없으면 추가
+    IF NOT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name   = 'ci_blacklist'
+        AND column_name  = 'added_by'
+    ) THEN
+      ALTER TABLE ci_blacklist ADD COLUMN added_by UUID REFERENCES users(id);
+    END IF;
+  END IF;
+END $$;
 
+-- 인덱스 생성 (이미 있으면 스킵)
 CREATE INDEX IF NOT EXISTS idx_ci_blacklist_hash ON ci_blacklist(ci_hash);
 ALTER TABLE ci_blacklist ENABLE ROW LEVEL SECURITY;
 -- service_role만 접근
