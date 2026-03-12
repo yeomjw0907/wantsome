@@ -27,6 +27,7 @@ const NAV = [
   {
     section: "마케팅",
     items: [
+      { href: "/admin/banners", label: "🎨 배너 관리" },
       { href: "/admin/push", label: "🔔 푸시 알림" },
     ],
   },
