@@ -3,12 +3,14 @@
  * - 통화 시간, 차감 포인트, 잔여 포인트 표시
  * - 3분 이상 통화 시 예약 통화 유도
  * - 잔여 5분치 미만 시 충전 버튼 표시
+ * - 통화 종료 직후 평점 모달 자동 표시
  */
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, Image, BackHandler } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { usePointStore } from "@/stores/usePointStore";
+import RatingModal from "@/components/RatingModal";
 
 export default function CallSummaryScreen() {
   const router = useRouter();
@@ -35,12 +37,22 @@ export default function CallSummaryScreen() {
   const min = Math.floor(sec / 60);
   const remSec = sec % 60;
 
-  // 분당 단가 역산 (charged / min)
   const perMinRate = min > 0 ? Math.round(charged / min) : 900;
   const isLowPoints = points < perMinRate * 5;
   const showReservation = min >= 3;
 
-  // ─── 하드웨어 뒤로가기 차단 ───
+  // 평점 모달: 통화 종료 직후 자동 표시 (60초 이상 통화 시)
+  const [ratingVisible, setRatingVisible] = useState(false);
+
+  useEffect(() => {
+    if (sec >= 60) {
+      // 약간의 딜레이 후 표시 (화면 전환 완료 후)
+      const t = setTimeout(() => setRatingVisible(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, [sec]);
+
+  // 하드웨어 뒤로가기 차단
   useEffect(() => {
     const handler = BackHandler.addEventListener("hardwareBackPress", () => true);
     return () => handler.remove();
@@ -90,7 +102,7 @@ export default function CallSummaryScreen() {
         </Row>
       </View>
 
-      {/* 다음 예약 유도 (3분 이상 통화 시) */}
+      {/* 다음 예약 유도 */}
       {showReservation && (
         <View className="mx-5 mt-4 rounded-2xl border border-gray-200 px-6 py-5">
           <Text className="text-gray-900 font-semibold text-base mb-3">
@@ -122,6 +134,16 @@ export default function CallSummaryScreen() {
           <Text className="text-white font-bold text-base">메인으로</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 평점 모달 */}
+      <RatingModal
+        visible={ratingVisible}
+        callSessionId={sessionId ?? ""}
+        creatorId={creatorId ?? ""}
+        creatorName={creatorName ?? "크리에이터"}
+        creatorAvatar={creatorAvatar ?? null}
+        onClose={() => setRatingVisible(false)}
+      />
     </View>
   );
 }

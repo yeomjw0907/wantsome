@@ -2,8 +2,10 @@
  * 크리에이터 프로필 화면
  * - 프로필 사진 풀커버 (3:4) + 하단 그라데이션
  * - 닉네임 / 인증뱃지 / 등급 / 모드 뱃지
+ * - 평점 / 평균 통화 시간 / 총 통화 수 지표
  * - 즉시 통화 버튼 (CallWaitingModal)
- * - 예약 통화 버튼 (ReservationBottomSheet)
+ * - 예약 통화 버튼
+ * - 포스트 그리드 (3컬럼)
  * - 신고/차단 메뉴
  */
 import React, { useEffect, useState, useCallback } from "react";
@@ -16,7 +18,6 @@ import {
   ActivityIndicator,
   StatusBar,
   Alert,
-  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,6 +28,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { usePointStore } from "@/stores/usePointStore";
 import CallWaitingModal from "@/components/CallWaitingModal";
 import ReportBottomSheet from "@/components/ReportBottomSheet";
+import { PostGrid, type GridPost } from "@/components/posts/PostGrid";
 
 interface Creator {
   id: string;
@@ -41,6 +43,10 @@ interface Creator {
   rate_per_min: number;
   total_calls: number;
   monthly_minutes: number;
+  avg_call_min: number;
+  avg_rating: number;
+  categories: string[];
+  post_count: number;
 }
 
 const GRADE_CONFIG = {
@@ -49,6 +55,29 @@ const GRADE_CONFIG = {
   인기: { icon: "flame-outline" as const, color: "#FF9800" },
   탑:  { icon: "trophy-outline" as const, color: "#FF6B9D" },
 };
+
+function StarRating({ rating }: { rating: number }) {
+  const full = Math.floor(rating);
+  const half = rating - full >= 0.5;
+  return (
+    <View style={{ flexDirection: "row", gap: 1, marginTop: 2 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Ionicons
+          key={i}
+          name={
+            i <= full
+              ? "star"
+              : i === full + 1 && half
+              ? "star-half"
+              : "star-outline"
+          }
+          size={12}
+          color="#FF6B9D"
+        />
+      ))}
+    </View>
+  );
+}
 
 export default function CreatorProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -67,8 +96,13 @@ export default function CreatorProfileScreen() {
     perMinRate: number;
   } | null>(null);
 
+  // 포스트 그리드
+  const [gridPosts, setGridPosts] = useState<GridPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+
   useEffect(() => {
     loadCreator();
+    loadPosts();
   }, [id]);
 
   const loadCreator = async () => {
@@ -76,7 +110,6 @@ export default function CreatorProfileScreen() {
       setIsLoading(true);
       const data = await apiCall<Creator>(`/api/creators/${id}`);
       setCreator(data);
-      // 기본 모드: 온라인이고 blue 지원하면 blue, 아니면 red
       if (data.mode_blue) setCallMode("blue");
       else if (data.mode_red) setCallMode("red");
     } catch {
@@ -87,9 +120,23 @@ export default function CreatorProfileScreen() {
     }
   };
 
+  const loadPosts = async () => {
+    if (!id) return;
+    setPostsLoading(true);
+    try {
+      const res = await apiCall<{ posts: GridPost[] }>(
+        `/api/creators/${id}/posts?limit=18`
+      );
+      setGridPosts(res.posts ?? []);
+    } catch {
+      // 포스트 없음 처리
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
   const handleCallPress = useCallback(async () => {
     if (!creator) return;
-
     const perMinRate = callMode === "blue" ? 900 : 1300;
     if (points < perMinRate) {
       Toast.show({
@@ -100,7 +147,6 @@ export default function CreatorProfileScreen() {
       router.push("/charge");
       return;
     }
-
     try {
       const res = await apiCall<{ session_id: string }>("/api/calls/start", {
         method: "POST",
@@ -156,7 +202,8 @@ export default function CreatorProfileScreen() {
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* 프로필 사진 (3:4 비율) */}
+
+        {/* ── 프로필 사진 (3:4 비율) ── */}
         <View style={{ aspectRatio: 3 / 4 }} className="w-full relative">
           {creator.profile_image_url ? (
             <Image
@@ -170,7 +217,7 @@ export default function CreatorProfileScreen() {
             </View>
           )}
 
-          {/* 하단 그라데이션 (반투명 오버레이) */}
+          {/* 하단 그라데이션 */}
           <View
             className="absolute bottom-0 left-0 right-0 h-40"
             style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
@@ -195,7 +242,6 @@ export default function CreatorProfileScreen() {
             <Ionicons name="ellipsis-horizontal" size={20} color="white" />
           </TouchableOpacity>
 
-          {/* 더보기 드롭다운 */}
           {showMenu && (
             <View
               className="absolute bg-white rounded-2xl overflow-hidden shadow-lg"
@@ -218,9 +264,8 @@ export default function CreatorProfileScreen() {
             </View>
           )}
 
-          {/* 하단 정보 (사진 위) */}
+          {/* 하단 정보 오버레이 */}
           <View className="absolute bottom-0 left-0 right-0 px-5 pb-5">
-            {/* 온라인 상태 */}
             <View className="flex-row items-center gap-1.5 mb-2">
               <View
                 className={`w-2 h-2 rounded-full ${creator.is_online ? "bg-green-400" : "bg-gray-400"}`}
@@ -230,13 +275,13 @@ export default function CreatorProfileScreen() {
               </Text>
             </View>
 
-            {/* 닉네임 + 인증뱃지 */}
             <View className="flex-row items-center gap-2">
               <Text className="text-white text-2xl font-bold">{creator.display_name}</Text>
-              {creator.is_verified && <Ionicons name="checkmark-circle" size={20} color="#22C55E" />}
+              {creator.is_verified && (
+                <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+              )}
             </View>
 
-            {/* 등급 + 모드 뱃지 */}
             <View className="flex-row items-center gap-2 mt-1.5">
               <View className="bg-white/20 rounded-full px-2.5 py-1 flex-row items-center gap-1">
                 <Ionicons name={gradeConfig.icon} size={12} color="white" />
@@ -258,7 +303,7 @@ export default function CreatorProfileScreen() {
           </View>
         </View>
 
-        {/* 바디 */}
+        {/* ── 바디 ── */}
         <View className="px-5 pt-5">
           {/* 소개글 */}
           {creator.bio && (
@@ -267,27 +312,38 @@ export default function CreatorProfileScreen() {
             </Text>
           )}
 
-          {/* 통계 카드 */}
-          <View className="flex-row gap-3 mb-6">
+          {/* ★ 3가지 지표 카드 */}
+          <View className="flex-row gap-3 mb-5">
             <View className="flex-1 bg-gray-50 rounded-2xl p-4 items-center">
-              <Text className="text-navy text-xl font-bold">{creator.total_calls ?? 0}</Text>
-              <Text className="text-gray-500 text-xs mt-1">총 통화 수</Text>
+              <Text className="text-navy text-xl font-bold">{creator.total_calls}</Text>
+              <Text className="text-gray-500 text-xs mt-1">총 통화</Text>
             </View>
             <View className="flex-1 bg-gray-50 rounded-2xl p-4 items-center">
-              <Text className="text-navy text-xl font-bold">
-                {Math.round((creator.monthly_minutes ?? 0))}분
-              </Text>
-              <Text className="text-gray-500 text-xs mt-1">이번달 통화</Text>
+              <Text className="text-navy text-xl font-bold">{creator.avg_call_min}분</Text>
+              <Text className="text-gray-500 text-xs mt-1">평균 통화</Text>
             </View>
-            <View className="flex-1 bg-gray-50 rounded-2xl p-4 items-center">
+            <View className="flex-1 bg-pink/10 rounded-2xl p-4 items-center">
               <Text className="text-pink text-xl font-bold">
-                {(callMode === "blue" ? 900 : 1300).toLocaleString()}P
+                {creator.avg_rating > 0 ? Number(creator.avg_rating).toFixed(1) : "-"}
               </Text>
-              <Text className="text-gray-500 text-xs mt-1">분당</Text>
+              {creator.avg_rating > 0
+                ? <StarRating rating={creator.avg_rating} />
+                : <Text className="text-gray-400 text-xs mt-1">평점없음</Text>}
             </View>
           </View>
 
-          {/* 모드 선택 (두 모드 모두 있을 때) */}
+          {/* 카테고리 태그 */}
+          {creator.categories.length > 0 && (
+            <View className="flex-row flex-wrap gap-2 mb-5">
+              {creator.categories.map((cat) => (
+                <View key={cat} className="bg-gray-100 rounded-full px-3 py-1">
+                  <Text className="text-gray-600 text-xs font-medium">#{cat}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* 모드 선택 */}
           {creator.mode_blue && creator.mode_red && (
             <View className="flex-row gap-2 mb-5">
               <TouchableOpacity
@@ -299,7 +355,10 @@ export default function CreatorProfileScreen() {
                 onPress={() => setCallMode("blue")}
               >
                 <View className="flex-row items-center gap-1.5">
-                  <View className="w-2 h-2 rounded-full" style={{ backgroundColor: callMode === "blue" ? "#4D9FFF" : "#9CA3AF" }} />
+                  <View
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: callMode === "blue" ? "#4D9FFF" : "#9CA3AF" }}
+                  />
                   <Text className={`text-sm font-semibold ${callMode === "blue" ? "text-blue" : "text-gray-500"}`}>
                     파란불 · 900P/분
                   </Text>
@@ -314,7 +373,10 @@ export default function CreatorProfileScreen() {
                 onPress={() => setCallMode("red")}
               >
                 <View className="flex-row items-center gap-1.5">
-                  <View className="w-2 h-2 rounded-full" style={{ backgroundColor: callMode === "red" ? "#FF5C7A" : "#9CA3AF" }} />
+                  <View
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: callMode === "red" ? "#FF5C7A" : "#9CA3AF" }}
+                  />
                   <Text className={`text-sm font-semibold ${callMode === "red" ? "text-red" : "text-gray-500"}`}>
                     빨간불 · 1,300P/분
                   </Text>
@@ -323,14 +385,36 @@ export default function CreatorProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* ── 포스트 그리드 ── */}
+        <View className="mt-1">
+          <View className="flex-row items-center justify-between px-5 mb-3">
+            <Text className="text-navy text-sm font-bold">
+              게시물{creator.post_count > 0 ? ` ${creator.post_count}` : ""}
+            </Text>
+            {creator.post_count > 18 && (
+              <Text className="text-gray-400 text-xs">최근 18개</Text>
+            )}
+          </View>
+          <View className="h-px bg-gray-100 mb-1" />
+          {postsLoading ? (
+            <View className="py-8 items-center">
+              <ActivityIndicator size="small" color="#FF6B9D" />
+            </View>
+          ) : (
+            <PostGrid posts={gridPosts} />
+          )}
+        </View>
+
+        {/* CTA 버튼 공간 확보 */}
+        <View style={{ height: 130 }} />
       </ScrollView>
 
-      {/* 하단 CTA 버튼 */}
+      {/* ── 하단 CTA ── */}
       <View
-        className="bg-white border-t border-gray-100 px-5 pt-3 gap-3"
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 pt-3 gap-3"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
-        {/* 즉시 통화 버튼 */}
         <TouchableOpacity
           className={`h-[52px] rounded-full items-center justify-center flex-row gap-2 ${
             creator.is_online ? "bg-pink" : "bg-gray-100"
@@ -352,12 +436,9 @@ export default function CreatorProfileScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* 예약 통화 버튼 */}
         <TouchableOpacity
           className="h-[44px] rounded-full items-center justify-center border-[1.5px] border-pink flex-row gap-2"
-          onPress={() => {
-            Toast.show({ type: "info", text1: "예약 기능은 곧 업데이트됩니다." });
-          }}
+          onPress={() => router.push({ pathname: "/(app)/(tabs)/reservations" })}
           activeOpacity={0.8}
         >
           <Ionicons name="calendar-outline" size={18} color="#FF6B9D" />
@@ -378,7 +459,6 @@ export default function CreatorProfileScreen() {
         />
       )}
 
-      {/* 신고 바텀시트 */}
       <ReportBottomSheet
         visible={showReport}
         targetId={creator.id}

@@ -25,9 +25,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const mode = (searchParams.get("mode") ?? "blue") as FeedMode;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10)));
+  const mode     = (searchParams.get("mode") ?? "blue") as FeedMode;
+  const page     = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit    = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10)));
+  const category = searchParams.get("category") ?? ""; // 카테고리 필터
 
   if (mode !== "blue" && mode !== "red") {
     return NextResponse.json({ message: "Invalid mode" }, { status: 400 });
@@ -35,25 +36,29 @@ export async function GET(req: NextRequest) {
 
   const column = mode === "blue" ? "mode_blue" : "mode_red";
   const admin = createSupabaseAdmin();
-  const { data: rows, error } = await admin
+
+  let query = admin
     .from("creators")
     .select(
-      `
-      id, display_name, grade, is_online, mode_blue, mode_red, settlement_rate, monthly_minutes, created_at,
-      users!inner(nickname, profile_img, is_verified)
-    `
+      `id, display_name, grade, is_online, mode_blue, mode_red,
+       settlement_rate, monthly_minutes, created_at, avg_rating, categories,
+       users!inner(nickname, profile_img, is_verified)`
     )
-    .eq(column, true)
+    .eq(column, true);
+
+  // 카테고리 필터 (PostgreSQL 배열 포함 쿼리)
+  if (category && category !== "전체") {
+    query = query.contains("categories", [category]);
+  }
+
+  const { data: rows, error } = await query
     .order("is_online", { ascending: false })
     .order("created_at", { ascending: true })
     .range((page - 1) * limit, page * limit - 1);
 
   if (error) {
     if (error.code === "42P01") {
-      return NextResponse.json(
-        { creators: [], total: 0, hasMore: false },
-        { status: 200 }
-      );
+      return NextResponse.json({ creators: [], total: 0, hasMore: false }, { status: 200 });
     }
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
@@ -61,26 +66,21 @@ export async function GET(req: NextRequest) {
   const creators = (rows ?? []).map((r: any) => {
     const u = r.users ?? {};
     return {
-      id: r.id,
-      display_name: r.display_name ?? u.nickname ?? "크리에이터",
+      id:               r.id,
+      display_name:     r.display_name ?? u.nickname ?? "크리에이터",
       profile_image_url: u.profile_img ?? null,
-      grade: r.grade ?? "신규",
-      is_online: r.is_online ?? false,
-      mode_blue: r.mode_blue ?? true,
-      mode_red: r.mode_red ?? false,
-      settlement_rate: r.settlement_rate ?? 0.75,
-      monthly_minutes: r.monthly_minutes ?? 0,
-      is_verified: u.is_verified ?? false,
-      rate_per_min: PER_MIN_RATES[mode],
+      grade:            r.grade ?? "신규",
+      is_online:        r.is_online ?? false,
+      mode_blue:        r.mode_blue ?? true,
+      mode_red:         r.mode_red ?? false,
+      settlement_rate:  r.settlement_rate ?? 0.75,
+      monthly_minutes:  r.monthly_minutes ?? 0,
+      is_verified:      u.is_verified ?? false,
+      avg_rating:       r.avg_rating ?? 0,
+      categories:       r.categories ?? [],
+      rate_per_min:     PER_MIN_RATES[mode],
     };
   });
 
-  const total = creators.length;
-  const hasMore = total >= limit;
-
-  return NextResponse.json({
-    creators,
-    total,
-    hasMore,
-  });
+  return NextResponse.json({ creators, total: creators.length, hasMore: creators.length >= limit });
 }

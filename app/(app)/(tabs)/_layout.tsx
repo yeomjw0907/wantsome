@@ -35,6 +35,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="posts"
+        options={{
+          title: "피드",
+          tabBarLabel: "피드",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "grid" : "grid-outline"}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="reservations"
         options={{
           title: "예약",

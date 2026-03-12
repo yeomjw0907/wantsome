@@ -137,7 +137,7 @@ export default function ProfileTabScreen() {
                 {user?.nickname ?? "유저"}
               </Text>
               {user?.is_verified && (
-                <Text className="text-sm">✅</Text>
+                <Ionicons name="checkmark-circle" size={18} color="#22C55E" />
               )}
             </View>
             <Text className="text-gray-500 text-sm mt-0.5">
