@@ -68,7 +68,7 @@ export default function Sidebar({ role, pendingCreators = 0, pendingReports = 0 
             <div key={section.section}>
               <div className="nav-section">{section.section}</div>
               {section.items.map((item) => {
-                const isActive = item.exact
+                const isActive = (item as { href: string; label: string; exact?: boolean }).exact
                   ? pathname === item.href
                   : pathname.startsWith(item.href);
 
