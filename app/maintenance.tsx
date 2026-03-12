@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, BackHandler, Platform } from "react-native";
 import { useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { apiCall } from "@/lib/api";
 import { useRouter } from "expo-router";
 
@@ -42,7 +43,7 @@ export default function MaintenanceScreen() {
 
   return (
     <View className="flex-1 bg-navy items-center justify-center px-6">
-      <Text className="text-4xl mb-4">🔧</Text>
+      <Ionicons name="construct-outline" size={52} color="rgba(255,255,255,0.7)" style={{ marginBottom: 16 }} />
       <Text className="text-white text-2xl font-bold mb-3">서비스 점검 중</Text>
       <Text className="text-white/70 text-center text-sm mb-2">{message}</Text>
       {!!eta && (

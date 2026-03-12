@@ -44,10 +44,10 @@ interface Creator {
 }
 
 const GRADE_CONFIG = {
-  신규: { emoji: "🌱", color: "#8E8EA0" },
-  일반: { emoji: "⭐", color: "#4D9FFF" },
-  인기: { emoji: "🔥", color: "#FF9800" },
-  탑: { emoji: "💎", color: "#FF6B9D" },
+  신규: { icon: "leaf-outline"  as const, color: "#8E8EA0" },
+  일반: { icon: "star-outline"  as const, color: "#4D9FFF" },
+  인기: { icon: "flame-outline" as const, color: "#FF9800" },
+  탑:  { icon: "trophy-outline" as const, color: "#FF6B9D" },
 };
 
 export default function CreatorProfileScreen() {
@@ -205,7 +205,7 @@ export default function CreatorProfileScreen() {
                 className="flex-row items-center px-4 py-3 gap-3 border-b border-gray-100"
                 onPress={() => { setShowMenu(false); setShowReport(true); }}
               >
-                <Text>🚩</Text>
+                <Ionicons name="flag-outline" size={16} color="#FF5C7A" />
                 <Text className="text-gray-900 text-sm">신고하기</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -231,24 +231,27 @@ export default function CreatorProfileScreen() {
             </View>
 
             {/* 닉네임 + 인증뱃지 */}
-            <Text className="text-white text-2xl font-bold">
-              {creator.display_name} {creator.is_verified && "✅"}
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-white text-2xl font-bold">{creator.display_name}</Text>
+              {creator.is_verified && <Ionicons name="checkmark-circle" size={20} color="#22C55E" />}
+            </View>
 
             {/* 등급 + 모드 뱃지 */}
             <View className="flex-row items-center gap-2 mt-1.5">
               <View className="bg-white/20 rounded-full px-2.5 py-1 flex-row items-center gap-1">
-                <Text className="text-sm">{gradeConfig.emoji}</Text>
+                <Ionicons name={gradeConfig.icon} size={12} color="white" />
                 <Text className="text-white text-xs font-medium">{creator.grade}</Text>
               </View>
               {creator.mode_blue && (
-                <View className="bg-blue/30 rounded-full px-2.5 py-1">
-                  <Text className="text-white text-xs font-medium">🔵 파란불</Text>
+                <View className="bg-blue/30 rounded-full px-2.5 py-1 flex-row items-center gap-1">
+                  <View className="w-2 h-2 rounded-full bg-blue-300" />
+                  <Text className="text-white text-xs font-medium">파란불</Text>
                 </View>
               )}
               {creator.mode_red && (
-                <View className="bg-red/30 rounded-full px-2.5 py-1">
-                  <Text className="text-white text-xs font-medium">🔴 빨간불</Text>
+                <View className="bg-red/30 rounded-full px-2.5 py-1 flex-row items-center gap-1">
+                  <View className="w-2 h-2 rounded-full bg-red-300" />
+                  <Text className="text-white text-xs font-medium">빨간불</Text>
                 </View>
               )}
             </View>
@@ -295,13 +298,12 @@ export default function CreatorProfileScreen() {
                 }`}
                 onPress={() => setCallMode("blue")}
               >
-                <Text
-                  className={`text-sm font-semibold ${
-                    callMode === "blue" ? "text-blue" : "text-gray-500"
-                  }`}
-                >
-                  🔵 파란불 · 900P/분
-                </Text>
+                <View className="flex-row items-center gap-1.5">
+                  <View className="w-2 h-2 rounded-full" style={{ backgroundColor: callMode === "blue" ? "#4D9FFF" : "#9CA3AF" }} />
+                  <Text className={`text-sm font-semibold ${callMode === "blue" ? "text-blue" : "text-gray-500"}`}>
+                    파란불 · 900P/분
+                  </Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
                 className={`flex-1 py-3 rounded-2xl items-center border-[1.5px] ${
@@ -311,13 +313,12 @@ export default function CreatorProfileScreen() {
                 }`}
                 onPress={() => setCallMode("red")}
               >
-                <Text
-                  className={`text-sm font-semibold ${
-                    callMode === "red" ? "text-red" : "text-gray-500"
-                  }`}
-                >
-                  🔴 빨간불 · 1,300P/분
-                </Text>
+                <View className="flex-row items-center gap-1.5">
+                  <View className="w-2 h-2 rounded-full" style={{ backgroundColor: callMode === "red" ? "#FF5C7A" : "#9CA3AF" }} />
+                  <Text className={`text-sm font-semibold ${callMode === "red" ? "text-red" : "text-gray-500"}`}>
+                    빨간불 · 1,300P/분
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
           )}

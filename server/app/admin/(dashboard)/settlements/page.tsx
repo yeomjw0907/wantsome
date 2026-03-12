@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { CreditCard } from "lucide-react";
 
 interface Settlement {
   id: string;
@@ -113,7 +114,7 @@ export default function SettlementsPage() {
             <div className="loading-center"><div className="spinner" /></div>
           ) : settlements.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">💳</div>
+              <div className="icon"><CreditCard size={32} color="#C8C8D8" /></div>
               <p>{period} 정산 데이터가 없습니다.</p>
             </div>
           ) : (

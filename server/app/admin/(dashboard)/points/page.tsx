@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Coins, ClipboardList, FileText, ArrowUp, ArrowDown } from "lucide-react";
 
 interface UserResult {
   id: string;
@@ -99,7 +100,7 @@ export default function PointsPage() {
           {/* 포인트 지급/차감 폼 */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">💰 포인트 지급 / 차감</span>
+              <span className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}><Coins size={16} /> 포인트 지급 / 차감</span>
             </div>
             <div className="card-body">
               {/* 유저 검색 */}
@@ -211,7 +212,11 @@ export default function PointsPage() {
                 disabled={!selected || !amount || !reason.trim() || isSubmitting}
                 style={{ justifyContent: "center" }}
               >
-                {isSubmitting ? "처리 중..." : parseInt(amount || "0") >= 0 ? "💰 포인트 지급" : "💸 포인트 차감"}
+                {isSubmitting ? "처리 중..." : (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {parseInt(amount || "0") >= 0 ? <><ArrowUp size={15} /> 포인트 지급</> : <><ArrowDown size={15} /> 포인트 차감</>}
+                </span>
+              )}
               </button>
             </div>
           </div>
@@ -219,11 +224,11 @@ export default function PointsPage() {
           {/* 최근 처리 이력 */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">📋 처리 이력</span>
+              <span className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}><ClipboardList size={16} /> 처리 이력</span>
               <span style={{ fontSize: 12, color: "var(--gray-400)" }}>최근 100건</span>
             </div>
             {logs.length === 0 ? (
-              <div className="empty-state"><div className="icon">📝</div><p>아직 처리 이력이 없습니다.</p></div>
+              <div className="empty-state"><div className="icon"><FileText size={32} color="#C8C8D8" /></div><p>아직 처리 이력이 없습니다.</p></div>
             ) : (
               <div style={{ maxHeight: 540, overflowY: "auto" }}>
                 {logs.map((log) => {

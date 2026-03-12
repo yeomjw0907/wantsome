@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePointStore } from "@/stores/usePointStore";
 import { useCreatorStore } from "@/stores/useCreatorStore";
@@ -179,7 +180,7 @@ export default function FeedScreen() {
             onPress={() => {}}
             className="w-9 h-9 items-center justify-center"
           >
-            <Text className="text-xl">🔔</Text>
+            <Ionicons name="notifications-outline" size={22} color="#1B2A4A" />
           </TouchableOpacity>
         </View>
       </View>

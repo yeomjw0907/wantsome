@@ -7,6 +7,7 @@ import {
   Linking,
 } from "react-native";
 import { useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { apiCall } from "@/lib/api";
 
@@ -43,7 +44,7 @@ export default function SuspendedScreen() {
 
   return (
     <View className="flex-1 bg-navy items-center justify-center px-6">
-      <Text className="text-4xl mb-4">🚫</Text>
+      <Ionicons name="ban-outline" size={52} color="rgba(255,255,255,0.7)" style={{ marginBottom: 16 }} />
       <Text className="text-white text-2xl font-bold mb-3">
         이용이 제한되었습니다
       </Text>

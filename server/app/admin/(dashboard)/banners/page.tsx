@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { ImageOff, Link as LinkIcon, Megaphone } from "lucide-react";
 
 interface Banner {
   id: string;
@@ -128,7 +129,7 @@ export default function BannersPage() {
           <div className="loading-center"><div className="spinner" /></div>
         ) : banners.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">🎨</div>
+            <div className="icon"><Megaphone size={32} color="#C8C8D8" /></div>
             <p>등록된 배너가 없습니다.</p>
             <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={openAdd}>첫 배너 추가하기</button>
           </div>
@@ -171,9 +172,9 @@ export default function BannersPage() {
                       width: 80, height: 48, borderRadius: 8,
                       background: "var(--gray-100)",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 20, flexShrink: 0,
+                      flexShrink: 0,
                     }}>
-                      🖼️
+                      <ImageOff size={20} color="#C8C8D8" />
                     </div>
                   )}
 
@@ -188,7 +189,7 @@ export default function BannersPage() {
                       <div style={{ fontSize: 13, color: "var(--gray-500)", marginBottom: 4 }}>{b.subtitle}</div>
                     )}
                     <div style={{ fontSize: 12, color: "var(--gray-400)", display: "flex", gap: 12 }}>
-                      {b.link_url && <span>🔗 {b.link_url}</span>}
+                      {b.link_url && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><LinkIcon size={11} /> {b.link_url}</span>}
                       {b.starts_at && <span>시작: {new Date(b.starts_at).toLocaleDateString("ko-KR")}</span>}
                       {b.ends_at && <span>종료: {new Date(b.ends_at).toLocaleDateString("ko-KR")}</span>}
                     </div>

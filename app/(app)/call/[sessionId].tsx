@@ -278,11 +278,12 @@ export default function CallScreen() {
 
       {/* 포인트 경고 배너 */}
       {isLowPoints && (
-        <View className="absolute top-28 left-5 right-5 bg-yellow-500/90 rounded-xl px-4 py-3">
-          <Text className="text-black font-bold text-sm text-center">
+        <View className="absolute top-28 left-5 right-5 bg-yellow-500/90 rounded-xl px-4 py-3 flex-row items-center gap-2">
+          <Ionicons name="warning-outline" size={18} color="black" />
+          <Text className="text-black font-bold text-sm flex-1">
             {isCriticalPoints
-              ? "⚠️ 포인트가 거의 소진됐습니다. 곧 통화가 종료됩니다."
-              : `⚠️ 잔여 포인트 ${Math.floor(points / rate)}분치 남았습니다.`}
+              ? "포인트가 거의 소진됐습니다. 곧 통화가 종료됩니다."
+              : `잔여 포인트 ${Math.floor(points / rate)}분치 남았습니다.`}
           </Text>
         </View>
       )}
@@ -292,7 +293,7 @@ export default function CallScreen() {
         className="absolute top-14 right-4 w-10 h-10 items-center justify-center rounded-full bg-black/40"
         onPress={() => setShowReport(true)}
       >
-        <Text className="text-lg">🚩</Text>
+        <Ionicons name="flag-outline" size={18} color="white" />
       </TouchableOpacity>
 
       {/* 하단 컨트롤 바 */}

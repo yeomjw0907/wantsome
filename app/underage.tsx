@@ -6,6 +6,7 @@ import {
   Platform,
 } from "react-native";
 import { useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function UnderageScreen() {
   // 뒤로가기 완전 차단
@@ -22,7 +23,7 @@ export default function UnderageScreen() {
 
   return (
     <View className="flex-1 bg-navy items-center justify-center px-6">
-      <Text className="text-4xl mb-4">🔒</Text>
+      <Ionicons name="lock-closed-outline" size={52} color="rgba(255,255,255,0.7)" style={{ marginBottom: 16 }} />
       <Text className="text-white text-2xl font-bold mb-3">
         이용하실 수 없습니다
       </Text>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { User, CheckCircle2 } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -84,7 +85,9 @@ export default function UsersPage() {
       <div className="page-content">
         <div className="filter-bar">
           <div className="search-input-wrap">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon" style={{ display: "flex", alignItems: "center" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </span>
             <input
               type="text"
               className="form-input search-input"
@@ -111,7 +114,7 @@ export default function UsersPage() {
             <div className="loading-center"><div className="spinner" /></div>
           ) : users.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">👤</div>
+              <div className="icon"><User size={32} color="#C8C8D8" /></div>
               <p>유저가 없습니다.</p>
             </div>
           ) : (
@@ -136,8 +139,8 @@ export default function UsersPage() {
                           <div className="flex items-center gap-2">
                             <div className="avatar">{u.nickname?.charAt(0) ?? "?"}</div>
                             <div>
-                              <div style={{ fontWeight: 600, fontSize: "13px" }}>
-                                {u.nickname} {u.is_verified && "✅"}
+                              <div style={{ fontWeight: 600, fontSize: "13px", display: "flex", alignItems: "center", gap: 4 }}>
+                                {u.nickname} {u.is_verified && <CheckCircle2 size={13} color="#22C55E" />}
                               </div>
                               <div style={{ fontSize: "11px", color: "#9CA3AF" }}>{u.id.slice(0, 8)}...</div>
                             </div>

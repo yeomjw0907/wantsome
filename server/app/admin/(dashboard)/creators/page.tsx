@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { Sprout, Star, Flame, Trophy, Users, User } from "lucide-react";
 
 interface Creator {
   id: string;
@@ -16,11 +17,18 @@ interface Creator {
   users: { nickname: string; email: string; suspended_until: string | null; deleted_at: string | null } | null;
 }
 
-const GRADE_MAP: Record<string, { label: string; color: string; emoji: string }> = {
-  NEWBIE:  { label: "신규",  color: "badge-gray",   emoji: "🌱" },
-  NORMAL:  { label: "일반",  color: "badge-blue",   emoji: "⭐" },
-  POPULAR: { label: "인기",  color: "badge-pink",   emoji: "🔥" },
-  TOP:     { label: "탑",   color: "badge-yellow",  emoji: "👑" },
+const GRADE_ICON: Record<string, React.ElementType> = {
+  NEWBIE: Sprout,
+  NORMAL: Star,
+  POPULAR: Flame,
+  TOP: Trophy,
+};
+
+const GRADE_MAP: Record<string, { label: string; color: string }> = {
+  NEWBIE:  { label: "신규",  color: "badge-gray" },
+  NORMAL:  { label: "일반",  color: "badge-blue" },
+  POPULAR: { label: "인기",  color: "badge-pink" },
+  TOP:     { label: "탑",   color: "badge-yellow" },
 };
 
 export default function CreatorsListPage() {
@@ -109,7 +117,9 @@ export default function CreatorsListPage() {
             <span className="card-title">크리에이터 목록</span>
             <div className="filter-bar" style={{ marginBottom: 0 }}>
               <div className="search-input-wrap">
-                <span className="search-icon">🔍</span>
+                <span className="search-icon" style={{ display: "flex", alignItems: "center" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                </span>
                 <input
                   className="form-input search-input"
                   placeholder="닉네임 검색..."
@@ -144,7 +154,7 @@ export default function CreatorsListPage() {
           {isLoading ? (
             <div className="loading-center"><div className="spinner" /></div>
           ) : creators.length === 0 ? (
-            <div className="empty-state"><div className="icon">👥</div><p>조건에 맞는 크리에이터가 없습니다.</p></div>
+            <div className="empty-state"><div className="icon"><Users size={32} color="#C8C8D8" /></div><p>조건에 맞는 크리에이터가 없습니다.</p></div>
           ) : (
             <div className="table-wrap">
               <table>
@@ -170,7 +180,7 @@ export default function CreatorsListPage() {
                             <div className="avatar">
                               {c.profile_image_url
                                 ? <img src={c.profile_image_url} alt="" />
-                                : "👤"}
+                                : <User size={18} color="#C8C8D8" />}
                             </div>
                             <div>
                               <div style={{ fontWeight: 600, fontSize: 13 }}>{c.display_name}</div>
@@ -190,12 +200,16 @@ export default function CreatorsListPage() {
                           </div>
                         </td>
                         <td>
-                          <span className={`badge ${grade.color}`}>{grade.emoji} {grade.label}</span>
+                          {(() => { const GIcon = GRADE_ICON[c.grade] ?? Sprout; return (
+                            <span className={`badge ${grade.color}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              <GIcon size={11} /> {grade.label}
+                            </span>
+                          ); })()}
                         </td>
                         <td>
                           <div style={{ display: "flex", gap: 4 }}>
-                            {c.mode_blue && <span className="badge badge-blue">🔵</span>}
-                            {c.mode_red && <span className="badge badge-red">🔴</span>}
+                            {c.mode_blue && <span className="badge badge-blue" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4D9FFF", display: "inline-block" }} /> 파란불</span>}
+                            {c.mode_red && <span className="badge badge-red" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF5C7A", display: "inline-block" }} /> 빨간불</span>}
                           </div>
                         </td>
                         <td style={{ fontWeight: 600 }}>{(c.total_calls ?? 0).toLocaleString()}</td>
@@ -238,19 +252,21 @@ export default function CreatorsListPage() {
               <div className="form-group">
                 <label className="form-label">현재 등급</label>
                 <div style={{ padding: "8px 0" }}>
-                  <span className={`badge ${GRADE_MAP[gradeModal.grade]?.color ?? "badge-gray"}`}>
-                    {GRADE_MAP[gradeModal.grade]?.emoji} {GRADE_MAP[gradeModal.grade]?.label}
-                  </span>
+                  {(() => { const GIcon = GRADE_ICON[gradeModal.grade] ?? Sprout; return (
+                    <span className={`badge ${GRADE_MAP[gradeModal.grade]?.color ?? "badge-gray"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <GIcon size={11} /> {GRADE_MAP[gradeModal.grade]?.label}
+                    </span>
+                  ); })()}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">변경할 등급</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[
-                    { key: "NEWBIE", emoji: "🌱", label: "신규" },
-                    { key: "NORMAL", emoji: "⭐", label: "일반" },
-                    { key: "POPULAR", emoji: "🔥", label: "인기" },
-                    { key: "TOP", emoji: "👑", label: "탑" },
+                    { key: "NEWBIE", Icon: Sprout, label: "신규" },
+                    { key: "NORMAL", Icon: Star, label: "일반" },
+                    { key: "POPULAR", Icon: Flame, label: "인기" },
+                    { key: "TOP", Icon: Trophy, label: "탑" },
                   ].map((g) => (
                     <button
                       key={g.key}
@@ -265,15 +281,19 @@ export default function CreatorsListPage() {
                         fontWeight: 600,
                         fontSize: 14,
                         color: newGrade === g.key ? "var(--pink)" : "var(--gray-700)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        justifyContent: "center",
                       }}
                     >
-                      {g.emoji} {g.label}
+                      <g.Icon size={15} /> {g.label}
                     </button>
                   ))}
                 </div>
               </div>
               <p style={{ fontSize: 12, color: "var(--gray-400)", marginTop: 8 }}>
-                ⚠️ superadmin 전용 기능입니다. 등급 변경은 즉시 반영됩니다.
+                superadmin 전용 기능입니다. 등급 변경은 즉시 반영됩니다.
               </p>
             </div>
             <div className="modal-footer">

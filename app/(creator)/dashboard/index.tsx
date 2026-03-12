@@ -52,11 +52,18 @@ interface Reservation {
   consumer: { nickname: string; profile_img: string | null };
 }
 
+const GRADE_ICON: Record<string, string> = {
+  "신규": "leaf-outline",
+  "일반": "star-outline",
+  "인기": "flame-outline",
+  "탑":   "trophy-outline",
+};
+
 const GRADE_THRESHOLDS = [
-  { grade: "신규", min: 0, max: 500, emoji: "🌱", color: "#8E8EA0" },
-  { grade: "일반", min: 500, max: 1500, emoji: "⭐", color: "#4D9FFF" },
-  { grade: "인기", min: 1500, max: 9999, emoji: "🔥", color: "#FF9800" },
-  { grade: "탑", min: 9999, max: 9999, emoji: "💎", color: "#FF6B9D" },
+  { grade: "신규", min: 0,    max: 500,  color: "#8E8EA0" },
+  { grade: "일반", min: 500,  max: 1500, color: "#4D9FFF" },
+  { grade: "인기", min: 1500, max: 9999, color: "#FF9800" },
+  { grade: "탑",  min: 9999, max: 9999, color: "#FF6B9D" },
 ];
 
 function getGradeInfo(minutes: number) {
@@ -208,7 +215,7 @@ export default function CreatorDashboardScreen() {
             </View>
             <View>
               <Text className="text-navy font-bold text-base">
-                {isOnline ? "🟢 온라인" : "⚫ 오프라인"}
+                {isOnline ? "온라인" : "오프라인"}
               </Text>
               <Text className="text-gray-500 text-xs mt-0.5">
                 {isOnline ? "소비자에게 노출 중" : "피드에 표시 안됨"}
@@ -228,12 +235,12 @@ export default function CreatorDashboardScreen() {
       {/* 수익 카드 3개 */}
       <View className="mx-4 mt-4 flex-row gap-3">
         {[
-          { label: "오늘 수익", value: formatKRW(earnings?.today ?? 0), icon: "☀️" },
-          { label: "이번달", value: formatKRW(earnings?.month ?? 0), icon: "📅" },
-          { label: "누적 수익", value: formatKRW(earnings?.total ?? 0), icon: "💰" },
+          { label: "오늘 수익", value: formatKRW(earnings?.today ?? 0), icon: "sunny-outline" as const, color: "#FF9800" },
+          { label: "이번달",   value: formatKRW(earnings?.month ?? 0),  icon: "calendar-outline" as const, color: "#4D9FFF" },
+          { label: "누적 수익", value: formatKRW(earnings?.total ?? 0), icon: "wallet-outline" as const, color: "#22C55E" },
         ].map((card) => (
           <View key={card.label} className="flex-1 bg-white rounded-2xl p-4 items-center">
-            <Text className="text-xl mb-1">{card.icon}</Text>
+            <Ionicons name={card.icon} size={20} color={card.color} style={{ marginBottom: 4 }} />
             <Text className="text-navy font-bold text-sm">{card.value}</Text>
             <Text className="text-gray-400 text-xs mt-0.5">{card.label}</Text>
           </View>
@@ -242,11 +249,16 @@ export default function CreatorDashboardScreen() {
 
       {/* 등급 카드 */}
       <View className="mx-4 mt-4 bg-white rounded-3xl p-5">
-        <Text className="text-navy font-bold text-base mb-4">📊 등급 현황</Text>
+        <View className="flex-row items-center gap-2 mb-4">
+          <Ionicons name="bar-chart-outline" size={18} color="#1B2A4A" />
+          <Text className="text-navy font-bold text-base">등급 현황</Text>
+        </View>
 
         <View className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center gap-2">
-            <Text className="text-2xl">{gradeInfo.current.emoji}</Text>
+            <View className="w-10 h-10 rounded-2xl items-center justify-center" style={{ backgroundColor: gradeInfo.current.color + "20" }}>
+              <Ionicons name={(GRADE_ICON[gradeInfo.current.grade] ?? "star-outline") as any} size={20} color={gradeInfo.current.color} />
+            </View>
             <View>
               <Text className="text-navy font-bold">{gradeInfo.current.grade}</Text>
               <Text className="text-gray-400 text-xs">
@@ -256,9 +268,15 @@ export default function CreatorDashboardScreen() {
           </View>
           <View className="items-end">
             <Text className="text-gray-400 text-xs">다음 등급</Text>
-            <Text className="text-sm font-semibold" style={{ color: gradeInfo.next?.color ?? "#FF6B9D" }}>
-              {gradeInfo.next?.emoji} {gradeInfo.next?.grade ?? "탑 선정"}
-            </Text>
+            {gradeInfo.next && (
+              <View className="flex-row items-center gap-1">
+                <Ionicons name={(GRADE_ICON[gradeInfo.next.grade] ?? "trophy-outline") as any} size={13} color={gradeInfo.next.color} />
+                <Text className="text-sm font-semibold" style={{ color: gradeInfo.next.color }}>
+                  {gradeInfo.next.grade}
+                </Text>
+              </View>
+            )}
+            {!gradeInfo.next && <Text className="text-sm font-semibold" style={{ color: "#FF6B9D" }}>탑 선정</Text>}
           </View>
         </View>
 
@@ -284,9 +302,10 @@ export default function CreatorDashboardScreen() {
       {/* 예약 관리 */}
       {reservations.length > 0 && (
         <View className="mx-4 mt-4 bg-white rounded-3xl p-5">
-          <Text className="text-navy font-bold text-base mb-4">
-            📅 예약 요청 ({reservations.length})
-          </Text>
+          <View className="flex-row items-center gap-2 mb-4">
+            <Ionicons name="calendar-outline" size={18} color="#1B2A4A" />
+            <Text className="text-navy font-bold text-base">예약 요청 ({reservations.length})</Text>
+          </View>
           {reservations.map((res) => (
             <View
               key={res.id}
@@ -298,16 +317,18 @@ export default function CreatorDashboardScreen() {
                 </Text>
                 <View className={`rounded-full px-2 py-0.5 ${res.mode === "blue" ? "bg-bluebell" : "bg-red-light"}`}>
                   <Text className={`text-xs font-semibold ${res.mode === "blue" ? "text-blue" : "text-red"}`}>
-                    {res.mode === "blue" ? "🔵 파란불" : "🔴 빨간불"}
+                    {res.mode === "blue" ? "파란불" : "빨간불"}
                   </Text>
                 </View>
               </View>
-              <Text className="text-gray-500 text-xs mb-1">
-                📆 {new Date(res.reserved_at).toLocaleString("ko-KR")}
-              </Text>
-              <Text className="text-gray-500 text-xs mb-3">
-                ⏱ {res.duration_min}분 · 예약금 {res.deposit_points.toLocaleString()}P
-              </Text>
+              <View className="flex-row items-center gap-1 mb-1">
+                <Ionicons name="calendar-outline" size={11} color="#8E8EA0" />
+                <Text className="text-gray-500 text-xs">{new Date(res.reserved_at).toLocaleString("ko-KR")}</Text>
+              </View>
+              <View className="flex-row items-center gap-1 mb-3">
+                <Ionicons name="time-outline" size={11} color="#8E8EA0" />
+                <Text className="text-gray-500 text-xs">{res.duration_min}분 · 예약금 {res.deposit_points.toLocaleString()}P</Text>
+              </View>
               <View className="flex-row gap-2">
                 <TouchableOpacity
                   className="flex-1 bg-gray-100 rounded-xl py-2.5 items-center"
@@ -329,7 +350,10 @@ export default function CreatorDashboardScreen() {
 
       {/* 정산 내역 */}
       <View className="mx-4 mt-4 bg-white rounded-3xl p-5 mb-6">
-        <Text className="text-navy font-bold text-base mb-4">💳 정산 내역</Text>
+        <View className="flex-row items-center gap-2 mb-4">
+          <Ionicons name="card-outline" size={18} color="#1B2A4A" />
+          <Text className="text-navy font-bold text-base">정산 내역</Text>
+        </View>
         {settlements.length === 0 ? (
           <Text className="text-gray-400 text-sm text-center py-4">
             아직 정산 내역이 없습니다.

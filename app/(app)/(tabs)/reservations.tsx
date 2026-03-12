@@ -87,9 +87,10 @@ function ReservationCard({
       </View>
 
       {/* 상대방 */}
-      <Text className="text-gray-700 text-sm mb-2">
-        {isCreator ? "👤" : "🎭"} {otherName}
-      </Text>
+      <View className="flex-row items-center gap-1 mb-2">
+        <Ionicons name={isCreator ? "person-outline" : "person"} size={13} color="#6B7280" />
+        <Text className="text-gray-700 text-sm">{otherName}</Text>
+      </View>
 
       {/* 통화 정보 뱃지 */}
       <View className="flex-row gap-2 mb-3">
@@ -104,7 +105,7 @@ function ReservationCard({
             className="text-xs font-medium"
             style={{ color: item.mode === "blue" ? "#4D9FFF" : "#FF5C7A" }}
           >
-            {item.mode === "blue" ? "🔵 파란불" : "🔴 빨간불"}
+            {item.mode === "blue" ? "파란불" : "빨간불"}
           </Text>
         </View>
         <View className="bg-gray-50 rounded-lg px-2.5 py-1">
@@ -120,9 +121,10 @@ function ReservationCard({
       {/* 확정 안내 */}
       {item.status === "confirmed" && !isPast && (
         <View className="bg-green-50 rounded-xl p-3 mb-2">
-          <Text className="text-green-700 text-xs text-center">
-            ✅ 예약 확정 · 예약 시간에 앱을 열어주세요
-          </Text>
+          <View className="flex-row items-center justify-center gap-1">
+            <Ionicons name="checkmark-circle" size={13} color="#15803D" />
+            <Text className="text-green-700 text-xs">예약 확정 · 예약 시간에 앱을 열어주세요</Text>
+          </View>
         </View>
       )}
 

@@ -107,14 +107,18 @@ export default function CallsHistoryScreen() {
           <View className="flex-row items-center gap-2">
             <Text className="text-navy text-sm font-semibold">{creatorName}</Text>
             <View
-              className="rounded-full px-2 py-0.5"
+              className="rounded-full px-2 py-0.5 flex-row items-center gap-1"
               style={{ backgroundColor: item.mode === "blue" ? "#EFF6FF" : "#FFF1F3" }}
             >
+              <View
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: item.mode === "blue" ? "#4D9FFF" : "#FF5C7A" }}
+              />
               <Text
                 className="text-xs"
                 style={{ color: item.mode === "blue" ? "#4D9FFF" : "#FF5C7A" }}
               >
-                {item.mode === "blue" ? "🔵" : "🔴"}
+                {item.mode === "blue" ? "파란불" : "빨간불"}
               </Text>
             </View>
           </View>

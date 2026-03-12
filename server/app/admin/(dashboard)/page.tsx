@@ -1,4 +1,5 @@
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { AlertCircle, Clock, AlertTriangle, User, CreditCard, Bell } from "lucide-react";
 
 async function getDashboardData() {
   const admin = createSupabaseAdmin();
@@ -88,7 +89,7 @@ export default async function AdminDashboard() {
         {(data.pendingCreators > 0 || data.pendingReports > 0) && (
           <div className="card mb-6" style={{ borderColor: "#FCA5A5" }}>
             <div className="card-header" style={{ background: "#FEF2F2" }}>
-              <span className="card-title" style={{ color: "#DC2626" }}>🚨 즉시 처리 필요</span>
+              <span className="card-title" style={{ color: "#DC2626", display: "flex", alignItems: "center", gap: 6 }}><AlertCircle size={16} /> 즉시 처리 필요</span>
             </div>
             <div className="card-body">
               <div className="flex gap-4">
@@ -133,11 +134,11 @@ export default async function AdminDashboard() {
           <div className="card-body">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "10px" }}>
               {[
-                { href: "/admin/creators/pending", label: "⏳ 크리에이터 심사" },
-                { href: "/admin/reports", label: "🚨 신고 처리" },
-                { href: "/admin/users", label: "👤 유저 조회" },
-                { href: "/admin/settlements", label: "💳 정산 관리" },
-                { href: "/admin/push", label: "🔔 푸시 발송" },
+                { href: "/admin/creators/pending", label: "크리에이터 심사", icon: Clock },
+                { href: "/admin/reports", label: "신고 처리", icon: AlertTriangle },
+                { href: "/admin/users", label: "유저 조회", icon: User },
+                { href: "/admin/settlements", label: "정산 관리", icon: CreditCard },
+                { href: "/admin/push", label: "푸시 발송", icon: Bell },
               ].map((item) => (
                 <a
                   key={item.href}
@@ -145,6 +146,7 @@ export default async function AdminDashboard() {
                   style={{
                     display: "flex",
                     alignItems: "center",
+                    gap: "8px",
                     padding: "12px 14px",
                     background: "#F9FAFB",
                     borderRadius: "10px",
@@ -155,6 +157,7 @@ export default async function AdminDashboard() {
                     border: "1px solid #E5E7EB",
                   }}
                 >
+                  <item.icon size={15} style={{ opacity: 0.6 }} />
                   {item.label}
                 </a>
               ))}

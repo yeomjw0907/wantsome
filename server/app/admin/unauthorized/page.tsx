@@ -1,3 +1,5 @@
+import { ShieldOff } from "lucide-react";
+
 export default function UnauthorizedPage() {
   return (
     <div style={{
@@ -11,7 +13,7 @@ export default function UnauthorizedPage() {
       color: "white",
       fontFamily: "sans-serif",
     }}>
-      <div style={{ fontSize: "48px" }}>🚫</div>
+      <ShieldOff size={48} color="rgba(255,255,255,0.4)" />
       <h1 style={{ fontSize: "24px", fontWeight: 700 }}>접근 권한이 없습니다</h1>
       <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "14px" }}>이 페이지는 관리자만 접근할 수 있습니다.</p>
       <a href="/admin/login" style={{

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Wrench, Smartphone, Building2, Settings2, AlertTriangle, CheckCircle2, CircleDot, Activity } from "lucide-react";
 
 interface SysConfig {
   maintenance_mode: string;
@@ -75,7 +76,7 @@ export default function SystemPage() {
       body: JSON.stringify({ maintenance_mode: String(newVal) }),
     });
     setIsSaving(false);
-    showToast(newVal ? "🔴 점검 모드 활성화됨" : "🟢 점검 모드 해제됨", newVal ? "error" : "success");
+    showToast(newVal ? "점검 모드 활성화됨" : "점검 모드 해제됨", newVal ? "error" : "success");
     loadConfig();
   };
 
@@ -88,7 +89,7 @@ export default function SystemPage() {
         <div className="topbar-actions">
           <span className="badge badge-red" style={{ fontSize: 11 }}>superadmin 전용</span>
           {isMaintenance && (
-            <span className="badge badge-red" style={{ animation: "pulse 1.5s infinite" }}>🔴 점검 모드 ON</span>
+            <span className="badge badge-red" style={{ animation: "pulse 1.5s infinite", display: "inline-flex", alignItems: "center", gap: 4 }}><CircleDot size={11} /> 점검 모드 ON</span>
           )}
         </div>
       </div>
@@ -104,8 +105,8 @@ export default function SystemPage() {
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: isMaintenance ? "#DC2626" : "#15803D" }}>
-              {isMaintenance ? "🔴 점검 모드 활성화 중" : "🟢 서비스 정상 운영 중"}
+            <div style={{ fontWeight: 700, fontSize: 16, color: isMaintenance ? "#DC2626" : "#15803D", display: "flex", alignItems: "center", gap: 6 }}>
+              {isMaintenance ? <><CircleDot size={16} /> 점검 모드 활성화 중</> : <><Activity size={16} /> 서비스 정상 운영 중</>}
             </div>
             <div style={{ fontSize: 13, color: "var(--gray-500)", marginTop: 4 }}>
               {isMaintenance ? `점검 메시지: ${cfg.maintenance_message}` : "앱이 정상적으로 운영되고 있습니다."}
@@ -116,24 +117,27 @@ export default function SystemPage() {
             onClick={toggleMaintenance}
             disabled={isSaving}
           >
-            {isMaintenance ? "✅ 점검 해제" : "🔴 점검 모드 켜기"}
+            {isMaintenance
+              ? <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><CheckCircle2 size={15} /> 점검 해제</span>
+              : <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><CircleDot size={15} /> 점검 모드 켜기</span>}
           </button>
         </div>
 
         {/* 탭 */}
         <div className="tabs">
           {([
-            ["maintenance", "🔧 점검 설정"],
-            ["version", "📱 앱 버전"],
-            ["business", "🏢 사업자 정보"],
-            ["operation", "⚙️ 운영 설정"],
-          ] as const).map(([key, label]) => (
+            ["maintenance", "점검 설정", Wrench],
+            ["version", "앱 버전", Smartphone],
+            ["business", "사업자 정보", Building2],
+            ["operation", "운영 설정", Settings2],
+          ] as const).map(([key, label, Icon]) => (
             <button
               key={key}
               className={`tab ${activeTab === key ? "active" : ""}`}
               onClick={() => setActiveTab(key)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              {label}
+              <Icon size={14} /> {label}
             </button>
           ))}
         </div>
@@ -142,7 +146,7 @@ export default function SystemPage() {
         {activeTab === "maintenance" && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🔧 점검 설정</span>
+              <span className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}><Wrench size={16} /> 점검 설정</span>
             </div>
             <div className="card-body">
               <div className="form-group">
@@ -179,7 +183,7 @@ export default function SystemPage() {
         {activeTab === "version" && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">📱 최소 앱 버전 설정</span>
+              <span className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}><Smartphone size={16} /> 최소 앱 버전 설정</span>
             </div>
             <div className="card-body">
               <p style={{ fontSize: 13, color: "var(--gray-500)", marginBottom: 20, lineHeight: 1.6 }}>
@@ -207,8 +211,8 @@ export default function SystemPage() {
                 </div>
               </div>
               <div style={{ background: "#FEF9C3", border: "1px solid #FDE68A", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
-                <p style={{ fontSize: 13, color: "#92400E" }}>
-                  ⚠️ 버전 변경 시 해당 버전 미만 사용자는 즉시 강제 업데이트 화면으로 이동됩니다.
+                <p style={{ fontSize: 13, color: "#92400E", display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} /> 버전 변경 시 해당 버전 미만 사용자는 즉시 강제 업데이트 화면으로 이동됩니다.
                   스토어 심사 완료 후 변경하세요.
                 </p>
               </div>
@@ -227,7 +231,7 @@ export default function SystemPage() {
         {activeTab === "business" && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🏢 사업자 정보</span>
+              <span className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}><Building2 size={16} /> 사업자 정보</span>
             </div>
             <div className="card-body">
               <p style={{ fontSize: 13, color: "var(--gray-500)", marginBottom: 20 }}>
@@ -275,7 +279,7 @@ export default function SystemPage() {
         {activeTab === "operation" && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">⚙️ 운영 설정</span>
+              <span className="card-title" style={{ display: "flex", alignItems: "center", gap: 6 }}><Settings2 size={16} /> 운영 설정</span>
             </div>
             <div className="card-body">
               <div className="grid-2">

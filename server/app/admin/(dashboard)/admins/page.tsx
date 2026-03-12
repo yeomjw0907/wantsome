@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Crown, KeyRound, ClipboardList, ShieldCheck, AlertCircle } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -99,14 +100,16 @@ export default function AdminsPage() {
           <button
             className={`tab ${activeTab === "accounts" ? "active" : ""}`}
             onClick={() => setActiveTab("accounts")}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            👑 계정 목록 ({admins.length})
+            <Crown size={14} /> 계정 목록 ({admins.length})
           </button>
           <button
             className={`tab ${activeTab === "logs" ? "active" : ""}`}
             onClick={() => setActiveTab("logs")}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            📋 활동 로그
+            <ClipboardList size={14} /> 활동 로그
           </button>
         </div>
 
@@ -117,8 +120,8 @@ export default function AdminsPage() {
               border: "1px solid #FDE68A",
               borderRadius: 12, padding: "14px 18px", marginBottom: 20,
             }}>
-              <p style={{ fontSize: 13, color: "#92400E" }}>
-                ⚠️ 관리자 계정 추가는 Supabase에서 직접 회원가입 후, 아래 SQL로 권한을 부여해주세요:<br />
+              <p style={{ fontSize: 13, color: "#92400E", display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}><AlertCircle size={14} /> 관리자 계정 추가는 Supabase에서 직접 회원가입 후, 아래 SQL로 권한을 부여해주세요:</span><br />
                 <code style={{ background: "rgba(0,0,0,0.06)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>
                   UPDATE users SET role = &apos;admin&apos; WHERE email = &apos;new@wantsome.kr&apos;;
                 </code>
@@ -130,7 +133,7 @@ export default function AdminsPage() {
                 <span className="card-title">관리자 계정 목록</span>
               </div>
               {admins.length === 0 ? (
-                <div className="empty-state"><div className="icon">👑</div><p>관리자 계정이 없습니다.</p></div>
+                <div className="empty-state"><div className="icon"><ShieldCheck size={32} color="#C8C8D8" /></div><p>관리자 계정이 없습니다.</p></div>
               ) : (
                 <div className="table-wrap">
                   <table>
@@ -151,8 +154,8 @@ export default function AdminsPage() {
                             <div style={{ fontSize: 11, color: "var(--gray-400)" }}>{a.email}</div>
                           </td>
                           <td>
-                            <span className={`badge ${a.role === "superadmin" ? "badge-pink" : "badge-blue"}`}>
-                              {a.role === "superadmin" ? "👑 superadmin" : "🔑 admin"}
+                            <span className={`badge ${a.role === "superadmin" ? "badge-pink" : "badge-blue"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              {a.role === "superadmin" ? <><Crown size={11} /> superadmin</> : <><KeyRound size={11} /> admin</>}
                             </span>
                           </td>
                           <td>
@@ -215,7 +218,7 @@ export default function AdminsPage() {
               <span style={{ fontSize: 12, color: "var(--gray-400)" }}>최근 50건</span>
             </div>
             {logs.length === 0 ? (
-              <div className="empty-state"><div className="icon">📋</div><p>활동 로그가 없습니다.</p></div>
+              <div className="empty-state"><div className="icon"><ClipboardList size={32} color="#C8C8D8" /></div><p>활동 로그가 없습니다.</p></div>
             ) : (
               <div className="table-wrap">
                 <table>
