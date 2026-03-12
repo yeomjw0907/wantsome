@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
   } else {
     // 일반 신고: 슬랙 일일 요약으로 전달
     await sendSlackAlert(
-      `📝 *신고 접수*\n카테고리: ${category}\n신고자: ${reporterUser?.nickname ?? authUser.id}\n피신고자: ${targetUser?.nickname ?? target_id}\n사유: ${description ?? "(없음")}\n신고 ID: ${report.id}`,
+      `📝 *신고 접수*\n카테고리: ${category}\n신고자: ${reporterUser?.nickname ?? authUser.id}\n피신고자: ${targetUser?.nickname ?? target_id}\n사유: ${description ?? "(없음)"}\n신고 ID: ${report.id}`,
       "daily"
     );
   }
