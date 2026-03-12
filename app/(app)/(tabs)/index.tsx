@@ -16,8 +16,10 @@ import { PointBadge } from "@/components/ui/PointBadge";
 import { ModeTab, type FeedMode } from "@/components/feed/ModeTab";
 import { CreatorCard } from "@/components/feed/CreatorCard";
 import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
+import CallWaitingModal from "@/components/CallWaitingModal";
 import { apiCall } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import Toast from "react-native-toast-message";
 
 const PAGE_SIZE = 20;
 
@@ -41,6 +43,13 @@ export default function FeedScreen() {
   const [mode, setMode] = useState<FeedMode>("blue");
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
+  const [callModal, setCallModal] = useState<{
+    sessionId: string;
+    creatorId: string;
+    creatorName: string;
+    creatorAvatar: string | null;
+    perMinRate: number;
+  } | null>(null);
 
   const canAccessRed = Boolean(user?.is_verified && user?.red_mode);
   const creators = mode === "blue" ? feedBlue : feedRed;
@@ -111,10 +120,34 @@ export default function FeedScreen() {
   }, [updateOnlineStatus]);
 
   const handleCallPress = useCallback(
-    (creator: { id: string }) => {
-      router.push(`/call/${creator.id}`);
+    async (creator: {
+      id: string;
+      display_name: string;
+      profile_image_url: string | null;
+      rate_per_min?: number;
+    }) => {
+      const perMinRate = creator.rate_per_min ?? (mode === "blue" ? 900 : 1300);
+      try {
+        const res = await apiCall<{ session_id: string }>("/api/calls/start", {
+          method: "POST",
+          body: JSON.stringify({
+            creator_id: creator.id,
+            mode,
+          }),
+        });
+        setCallModal({
+          sessionId: res.session_id,
+          creatorId: creator.id,
+          creatorName: creator.display_name,
+          creatorAvatar: creator.profile_image_url ?? null,
+          perMinRate,
+        });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "통화 요청에 실패했습니다.";
+        Toast.show({ type: "error", text1: "통화 요청 실패", text2: message });
+      }
     },
-    [router]
+    [mode]
   );
 
   const renderItem = useCallback(
@@ -194,6 +227,18 @@ export default function FeedScreen() {
           ) : null
         }
       />
+
+      {callModal && (
+        <CallWaitingModal
+          visible={!!callModal}
+          sessionId={callModal.sessionId}
+          creatorId={callModal.creatorId}
+          creatorName={callModal.creatorName}
+          creatorAvatar={callModal.creatorAvatar}
+          perMinRate={callModal.perMinRate}
+          onClose={() => setCallModal(null)}
+        />
+      )}
     </View>
   );
 }
