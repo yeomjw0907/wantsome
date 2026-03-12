@@ -8,28 +8,28 @@
 ## 🔴 필수 (앱 동작에 필수)
 
 ### 1. Supabase 프로젝트 설정
-- [ ] [supabase.com](https://supabase.com) → 프로젝트 생성
-- [ ] `server/supabase/001_initial.sql` 실행 (users, creators, system_config 등)
-- [ ] `server/supabase/002_point_charges.sql` 실행
-- [ ] `server/supabase/003_calls.sql` 실행 (call_sessions, call_signals)
-- [ ] `server/supabase/004_creator_profiles.sql` 실행 (Phase 2에서 생성됨)
-- [ ] `server/supabase/005_reservations.sql` 실행 (Phase 3에서 생성됨)
-- [ ] `server/supabase/006_reports.sql` 실행
-- [ ] `server/supabase/007_admin.sql` 실행 (Phase 5에서 생성됨)
-- [ ] **Row Level Security(RLS)** 활성화 확인 (각 SQL 파일에 포함됨)
-- [ ] **Realtime** 활성화: `creators`, `call_signals`, `users` 테이블 → Supabase 대시보드 → Table Editor → Realtime 토글 ON
-- [ ] `system_config` 초기값 INSERT (docs/admin/01_admin_page.md 참고)
-- [ ] Storage 버킷 생성:
+- [x] [supabase.com](https://supabase.com) → 프로젝트 생성
+- [x] `server/supabase/001_initial.sql` 실행 (users, creators, system_config 등)
+- [x] `server/supabase/002_point_charges.sql` 실행
+- [x] `server/supabase/003_calls.sql` 실행 (call_sessions, call_signals)
+- [x] `server/supabase/004_creator_profiles.sql` 실행 (Phase 2에서 생성됨)
+- [x] `server/supabase/005_reservations.sql` 실행 (Phase 3에서 생성됨)
+- [x] `server/supabase/006_reports.sql` 실행
+- [x] `server/supabase/007_admin.sql` 실행 (Phase 5에서 생성됨)
+- [x] **Row Level Security(RLS)** 활성화 확인 (각 SQL 파일에 포함됨)
+- [x] **Realtime** 활성화: `creators`, `call_signals`, `users` 테이블 → Supabase 대시보드 → Table Editor → Realtime 토글 ON
+- [x] `system_config` 초기값 INSERT (docs/admin/01_admin_page.md 참고)
+- [x] Storage 버킷 생성:
   - `id-cards` (private) — 크리에이터 신분증
   - `profile-images` (public) — 프로필 사진
   - `contracts` (private) — 계약서 PDF
 
 ### 2. Agora 설정
-- [ ] [agora.io](https://www.agora.io) → 계정 생성 → 프로젝트 생성
-- [ ] App ID 복사 → `.env` / `server/.env`에 `EXPO_PUBLIC_AGORA_APP_ID=` 입력
-- [ ] **App Certificate** 활성화 → `server/.env`에 `AGORA_APP_CERTIFICATE=` 입력
+- [x] [agora.io](https://www.agora.io) → 계정 생성 → 프로젝트 생성
+- [x] App ID 복사 → `.env` / `server/.env`에 `EXPO_PUBLIC_AGORA_APP_ID=` 입력
+- [x] **App Certificate** 활성화 → `server/.env`에 `AGORA_APP_CERTIFICATE=` 입력
   - ⚠️ App Certificate가 없으면 토큰 없이 테스트는 가능하지만, 프로덕션에서는 반드시 필요
-- [ ] Agora 콘솔 → 사용량 확인 (무료 플랜: 월 10,000분)
+- [x] Agora 콘솔 → 사용량 확인 (무료 플랜: 월 10,000분)
 
 ### 3. 소셜 로그인 (Supabase Auth)
 - [ ] Supabase 대시보드 → Authentication → Providers
