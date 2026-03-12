@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +49,8 @@ export async function POST(
   // reports 상태 업데이트
   await admin.from("reports").update({
     status: newStatus,
-    processed_by: adminId,
-    processed_at: new Date().toISOString(),
+    resolved_at: new Date().toISOString(),
+    admin_note: body.action,
   }).eq("id", id);
 
   // 대상 유저 정지 처리
@@ -66,36 +67,21 @@ export async function POST(
     if (suspendedUntil) {
       await admin.from("users").update({ suspended_until: suspendedUntil }).eq("id", report.target_id);
 
-      // 대상 유저 푸시 알림
-      const { data: pushToken } = await admin.from("push_tokens").select("token").eq("user_id", report.target_id).single();
-      if (pushToken?.token) {
-        const suspendMsg = body.action === "permanently_ban" ? "계정이 영구 정지됐습니다." :
-          body.action === "suspend_7" ? "7일간 이용이 제한됩니다." : "30일간 이용이 제한됩니다.";
-        await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: pushToken.token,
-            title: "계정 제한 안내",
-            body: suspendMsg,
-            sound: "default",
-          }),
-        }).catch(() => null);
-      }
+      const suspendMsg = body.action === "permanently_ban"
+        ? "계정이 영구 정지됐습니다."
+        : body.action === "suspend_7"
+        ? "7일간 이용이 제한됩니다."
+        : "30일간 이용이 제한됩니다.";
+
+      await sendPushToUser(admin, report.target_id, {
+        title: "계정 제한 안내",
+        body: suspendMsg,
+      });
     } else if (body.action === "warn") {
-      const { data: pushToken } = await admin.from("push_tokens").select("token").eq("user_id", report.target_id).single();
-      if (pushToken?.token) {
-        await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: pushToken.token,
-            title: "이용 경고",
-            body: "서비스 이용 규정 위반으로 경고 처리됐습니다.",
-            sound: "default",
-          }),
-        }).catch(() => null);
-      }
+      await sendPushToUser(admin, report.target_id, {
+        title: "이용 경고",
+        body: "서비스 이용 규정 위반으로 경고 처리됐습니다.",
+      });
     }
   }
 
@@ -106,7 +92,6 @@ export async function POST(
     target_type: "report",
     target_id: id,
     detail: { action: body.action, target_id: report.target_id },
-    ip: req.headers.get("x-forwarded-for") ?? "unknown",
   }).catch(() => null);
 
   return NextResponse.json({ success: true });

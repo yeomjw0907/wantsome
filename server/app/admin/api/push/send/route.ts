@@ -20,28 +20,21 @@ export async function POST(req: NextRequest) {
 
   const admin = createSupabaseAdmin();
 
-  // 대상 유저 토큰 조회
-  let tokensQuery = admin
-    .from("push_tokens")
-    .select("token, user_id");
+  // 대상 유저 토큰 조회 (users.push_token)
+  let usersQuery = admin
+    .from("users")
+    .select("id, push_token")
+    .not("push_token", "is", null)
+    .is("deleted_at", null);
 
   if (body.target !== "all") {
-    // 특정 역할의 유저 ID 조회
-    const { data: targetUsers } = await admin
-      .from("users")
-      .select("id")
-      .eq("role", body.target)
-      .is("deleted_at", null);
-
-    const userIds = (targetUsers ?? []).map((u) => u.id);
-    if (userIds.length === 0) {
-      return NextResponse.json({ success: true, sentCount: 0 });
-    }
-    tokensQuery = tokensQuery.in("user_id", userIds);
+    usersQuery = usersQuery.eq("role", body.target);
   }
 
-  const { data: tokens } = await tokensQuery;
-  const validTokens = (tokens ?? []).filter((t) => t.token);
+  const { data: usersWithTokens } = await usersQuery;
+  const validTokens = (usersWithTokens ?? [])
+    .filter((u) => u.push_token)
+    .map((u) => ({ token: u.push_token as string, user_id: u.id }));
 
   if (validTokens.length === 0) {
     return NextResponse.json({ success: true, sentCount: 0 });
@@ -75,12 +68,11 @@ export async function POST(req: NextRequest) {
 
   // 발송 이력 저장
   await admin.from("push_logs").insert({
-    admin_id: adminId,
+    sender_id: adminId,
     target: body.target,
     title: body.title,
     body: body.body,
     sent_count: validTokens.length,
-    success_count: successCount,
   }).catch(() => null);
 
   // 관리자 로그

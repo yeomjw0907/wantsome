@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -54,24 +55,10 @@ export async function DELETE(
   }).catch(() => null);
 
   // 크리에이터 푸시 알림
-  const { data: pushToken } = await admin
-    .from("push_tokens")
-    .select("token")
-    .eq("user_id", reservation.creator_id)
-    .single();
-
-  if (pushToken?.token) {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: pushToken.token,
-        title: "예약이 취소됐습니다",
-        body: "소비자가 예약을 취소했습니다.",
-        sound: "default",
-      }),
-    }).catch(() => null);
-  }
+  await sendPushToUser(admin, reservation.creator_id, {
+    title: "예약이 취소됐습니다",
+    body: "소비자가 예약을 취소했습니다.",
+  });
 
   return NextResponse.json({ success: true });
 }

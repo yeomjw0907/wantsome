@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +19,7 @@ export async function GET(req: NextRequest) {
 
   const { data: noshows, error } = await admin
     .from("reservations")
-    .select(`
-      id,
-      consumer_id,
-      creator_id,
-      deposit_points,
-      reserved_at
-    `)
+    .select("id, consumer_id, creator_id, deposit_points, reserved_at")
     .eq("status", "confirmed")
     .lt("reserved_at", cutoff);
 
@@ -35,16 +30,11 @@ export async function GET(req: NextRequest) {
   let processed = 0;
 
   for (const res of noshows) {
-    // 노쇼 상태로 변경
     await admin
       .from("reservations")
-      .update({
-        status: "noshow",
-        noshow_at: now.toISOString(),
-      })
+      .update({ status: "noshow", noshow_at: now.toISOString() })
       .eq("id", res.id);
 
-    // 크리에이터에게 예약금 50% 지급
     const compensation = Math.floor(res.deposit_points * 0.5);
     await admin.rpc("add_points", {
       p_user_id: res.creator_id,
@@ -52,29 +42,15 @@ export async function GET(req: NextRequest) {
       p_reason: `noshow_compensation:${res.id}`,
     }).catch(() => null);
 
-    // 소비자 + 크리에이터 푸시 알림
-    const { data: tokens } = await admin
-      .from("push_tokens")
-      .select("user_id, token")
-      .in("user_id", [res.consumer_id, res.creator_id]);
+    await sendPushToUser(admin, res.consumer_id, {
+      title: "크리에이터가 나타나지 않았습니다",
+      body: "다음 이용 시 포인트 혜택을 드립니다.",
+    });
 
-    if (tokens) {
-      for (const t of tokens) {
-        const isConsumer = t.user_id === res.consumer_id;
-        await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: t.token,
-            title: isConsumer ? "크리에이터가 나타나지 않았습니다" : "노쇼로 처리됐습니다",
-            body: isConsumer
-              ? "다음 이용 시 포인트 혜택을 드립니다."
-              : `예약금의 50% (${compensation.toLocaleString()}P)가 지급됩니다.`,
-            sound: "default",
-          }),
-        }).catch(() => null);
-      }
-    }
+    await sendPushToUser(admin, res.creator_id, {
+      title: "노쇼로 처리됐습니다",
+      body: `예약금의 50% (${compensation.toLocaleString()}P)가 지급됩니다.`,
+    });
 
     processed++;
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -32,19 +33,10 @@ export async function POST(
   await admin.from("users").update({ role: "consumer" }).eq("id", userId);
 
   // 앱 푸시
-  const { data: pushToken } = await admin.from("push_tokens").select("token").eq("user_id", userId).single();
-  if (pushToken?.token) {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: pushToken.token,
-        title: "크리에이터 심사 결과",
-        body: `재제출 요청: ${body.reason}`,
-        sound: "default",
-      }),
-    }).catch(() => null);
-  }
+  await sendPushToUser(admin, userId, {
+    title: "크리에이터 심사 결과",
+    body: `재제출 요청: ${body.reason}`,
+  });
 
   // 관리자 로그
   await admin.from("admin_logs").insert({

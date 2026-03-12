@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -151,39 +152,14 @@ export async function POST(req: NextRequest) {
     p_reason: `reservation_deposit:${reservation.id}`,
   }).catch(() => null);
 
-  // 크리에이터에게 푸시 알림 (push_tokens 테이블에서 토큰 조회)
-  const { data: pushToken } = await admin
-    .from("push_tokens")
-    .select("token")
-    .eq("user_id", body.creator_id)
-    .single();
-
-  if (pushToken?.token) {
-    await sendPushNotification(pushToken.token, {
-      title: "예약 통화 요청이 왔어요 📅",
-      body: `${userData.nickname}님이 ${new Date(body.reserved_at).toLocaleString("ko-KR")} 예약을 요청했어요`,
-    });
-  }
+  // 크리에이터에게 푸시 알림
+  await sendPushToUser(admin, body.creator_id, {
+    title: "예약 통화 요청이 왔어요 📅",
+    body: `${userData.nickname}님이 ${new Date(body.reserved_at).toLocaleString("ko-KR")} 예약을 요청했어요`,
+  });
 
   return NextResponse.json({
     reservation_id: reservation.id,
     deposit_points: depositPoints,
   }, { status: 201 });
-}
-
-async function sendPushNotification(token: string, notification: { title: string; body: string }) {
-  const expoToken = process.env.EXPO_ACCESS_TOKEN;
-  await fetch("https://exp.host/--/api/v2/push/send", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(expoToken ? { "Authorization": `Bearer ${expoToken}` } : {}),
-    },
-    body: JSON.stringify({
-      to: token,
-      title: notification.title,
-      body: notification.body,
-      sound: "default",
-    }),
-  }).catch(() => null);
 }

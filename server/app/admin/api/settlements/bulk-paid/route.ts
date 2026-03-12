@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUsers } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,8 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
 
   const { data: settlements, error } = await admin
-    .from("settlements")
-    .update({ status: "PAID", paid_at: now, paid_by: adminId })
+    .from("creator_settlements")
+    .update({ status: "PAID", paid_at: now })
     .eq("period", body.period)
     .eq("status", "PENDING")
     .select();
@@ -30,27 +31,10 @@ export async function POST(req: NextRequest) {
   // 각 크리에이터에게 푸시 알림
   const creatorIds = (settlements ?? []).map((s) => s.creator_id);
   if (creatorIds.length > 0) {
-    const { data: tokens } = await admin
-      .from("push_tokens")
-      .select("user_id, token")
-      .in("user_id", creatorIds);
-
-    const settlementMap = new Map((settlements ?? []).map((s) => [s.creator_id, s.net_amount]));
-
-    if (tokens && tokens.length > 0) {
-      const messages = tokens.map((t) => ({
-        to: t.token,
-        title: "정산이 완료됐습니다 💰",
-        body: `${(settlementMap.get(t.user_id) ?? 0).toLocaleString()}원이 입금됐습니다.`,
-        sound: "default",
-      }));
-
-      await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(messages),
-      }).catch(() => null);
-    }
+    await sendPushToUsers(admin, creatorIds, {
+      title: "정산이 완료됐습니다 💰",
+      body: `${body.period} 정산이 입금됐습니다. 확인해보세요.`,
+    });
   }
 
   return NextResponse.json({ success: true, processed: settlements?.length ?? 0 });

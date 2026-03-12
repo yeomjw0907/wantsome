@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function POST(
   const admin = createSupabaseAdmin();
 
   const { data: settlement, error: fetchErr } = await admin
-    .from("settlements")
+    .from("creator_settlements")
     .select("*")
     .eq("id", id)
     .single();
@@ -34,7 +35,7 @@ export async function POST(
   }
 
   const { error } = await admin
-    .from("settlements")
+    .from("creator_settlements")
     .update({
       status: "PAID",
       paid_at: new Date().toISOString(),
@@ -45,19 +46,10 @@ export async function POST(
   if (error) return NextResponse.json({ message: "처리 실패" }, { status: 500 });
 
   // 크리에이터 푸시 알림
-  const { data: pushToken } = await admin.from("push_tokens").select("token").eq("user_id", settlement.creator_id).single();
-  if (pushToken?.token) {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: pushToken.token,
-        title: "정산이 완료됐습니다 💰",
-        body: `${settlement.net_amount.toLocaleString()}원이 등록된 계좌로 입금됐습니다.`,
-        sound: "default",
-      }),
-    }).catch(() => null);
-  }
+  await sendPushToUser(admin, settlement.creator_id, {
+    title: "정산이 완료됐습니다 💰",
+    body: `${Number(settlement.net_amount).toLocaleString()}원이 등록된 계좌로 입금됐습니다.`,
+  });
 
   // 관리자 로그
   await admin.from("admin_logs").insert({

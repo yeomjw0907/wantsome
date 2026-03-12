@@ -3,11 +3,7 @@ import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export async function PATCH(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
   if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
@@ -17,18 +13,17 @@ export async function GET(
     return NextResponse.json({ message: "Invalid token" }, { status: 401 });
   }
 
+  const { push_token } = await req.json() as { push_token: string | null };
+
   const admin = createSupabaseAdmin();
+  const { error } = await admin
+    .from("users")
+    .update({ push_token: push_token ?? null })
+    .eq("id", authUser.id);
 
-  const { data: settlements, error } = await admin
-    .from("creator_settlements")
-    .select("*")
-    .eq("creator_id", id)
-    .order("created_at", { ascending: false })
-    .limit(24);
-
-  if (error && error.code !== "42P01") {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ message: "업데이트 실패" }, { status: 500 });
   }
 
-  return NextResponse.json({ settlements: settlements ?? [] });
+  return NextResponse.json({ success: true });
 }

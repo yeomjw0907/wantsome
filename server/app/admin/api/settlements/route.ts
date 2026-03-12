@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const admin = createSupabaseAdmin();
 
   let query = admin
-    .from("settlements")
+    .from("creator_settlements")
     .select(`
       id,
       creator_id,

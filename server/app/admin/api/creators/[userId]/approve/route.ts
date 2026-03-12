@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -30,19 +31,10 @@ export async function POST(
   await admin.from("users").update({ role: "CREATOR", is_verified: true }).eq("id", userId);
 
   // 앱 푸시 알림
-  const { data: pushToken } = await admin.from("push_tokens").select("token").eq("user_id", userId).single();
-  if (pushToken?.token) {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: pushToken.token,
-        title: "크리에이터 심사가 완료됐습니다 🎉",
-        body: "이제 파란불/빨간불 모드로 통화를 시작하세요!",
-        sound: "default",
-      }),
-    }).catch(() => null);
-  }
+  await sendPushToUser(admin, userId, {
+    title: "크리에이터 심사가 완료됐습니다 🎉",
+    body: "이제 파란불/빨간불 모드로 통화를 시작하세요!",
+  });
 
   // 관리자 로그
   await admin.from("admin_logs").insert({
