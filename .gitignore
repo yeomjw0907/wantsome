@@ -41,3 +41,7 @@ server/.env
 # generated native folders
 /ios
 /android
+
+# Next.js build output
+server/.next/
+.next/
