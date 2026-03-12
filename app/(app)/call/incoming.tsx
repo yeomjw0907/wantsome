@@ -17,6 +17,11 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle } from "react-native-svg";
+import {
+  usePreventScreenCapture,
+  addScreenshotListener,
+} from "expo-screen-capture";
+import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
 
 const TIMER_TOTAL = 30;
@@ -26,6 +31,19 @@ const RADIUS = (RING_SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function IncomingCallScreen() {
+  usePreventScreenCapture();
+
+  useEffect(() => {
+    const sub = addScreenshotListener(() => {
+      Toast.show({
+        type: "error",
+        text1: "캡처 금지",
+        text2: "통화 화면은 캡처할 수 없습니다.",
+      });
+    });
+    return () => sub.remove();
+  }, []);
+
   const router = useRouter();
   const {
     sessionId,
