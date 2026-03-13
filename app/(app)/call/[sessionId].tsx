@@ -3,7 +3,7 @@
  * - Agora RTC 연결 (react-native-agora)
  * - 원격 영상 풀스크린 + 로컬 영상 PiP
  * - 타이머 + 잔여 포인트 실시간 표시
- * - 하단 컨트롤: 카메라 전환 / 마이크 / 종료 / 신고
+ * - 하단 컨트롤: 카메라 전환 / 마이크 / 종료 / 신고 / 채팅
  */
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -18,6 +18,9 @@ import {
   Animated,
   StyleSheet,
   Dimensions,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,40 +43,63 @@ import { usePointStore } from "@/stores/usePointStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import ReportBottomSheet from "@/components/ReportBottomSheet";
 
+// ─── 선물 아이템 정의 ────────────────────────────────────────────────────────
+const GIFT_ITEMS = [
+  { name: "하트",     emoji: "💗", points: 100  },
+  { name: "별빛",     emoji: "⭐", points: 300  },
+  { name: "장미",     emoji: "🌹", points: 500  },
+  { name: "다이아",   emoji: "💎", points: 1000 },
+  { name: "왕관",     emoji: "👑", points: 3000 },
+  { name: "슈퍼스타", emoji: "🌟", points: 5000 },
+] as const;
+
+type GiftItemType = (typeof GIFT_ITEMS)[number];
+
 // ─── GiftParticles: 아프리카TV 별풍선 스타일 이팩트 ──────────────────────────
-function getGiftConfig(amount: number) {
-  if (amount >= 5000) return { emojis: ["🌟", "🌟", "🌟", "💝", "✨"], count: 18, size: 42 };
-  if (amount >= 3000) return { emojis: ["🌟", "🌟", "💝", "✨"], count: 14, size: 36 };
-  if (amount >= 1000) return { emojis: ["🌟", "💝", "✨"], count: 10, size: 32 };
-  if (amount >= 500)  return { emojis: ["💝", "✨", "🌟"], count: 8, size: 28 };
-  if (amount >= 300)  return { emojis: ["💝", "✨"], count: 6, size: 24 };
-  return               { emojis: ["💝"], count: 4, size: 20 };
+function getGiftConfig(points: number) {
+  if (points >= 5000) return { count: 18, size: 42 };
+  if (points >= 3000) return { count: 14, size: 36 };
+  if (points >= 1000) return { count: 10, size: 32 };
+  if (points >= 500)  return { count: 8,  size: 28 };
+  if (points >= 300)  return { count: 6,  size: 24 };
+  return               { count: 4,  size: 20 };
 }
 
-function GiftParticles({ amount, fromNickname }: { amount: number; fromNickname: string }) {
-  const { emojis, count, size } = getGiftConfig(amount);
+const SPARKLE_EMOJIS = ["✨", "⭐", "🌟"];
+
+function GiftParticles({
+  amount,
+  fromNickname,
+  itemName,
+  itemEmoji,
+}: {
+  amount: number;
+  fromNickname: string;
+  itemName: string;
+  itemEmoji: string;
+}) {
+  const { count, size } = getGiftConfig(amount);
   const { width: SW, height: SH } = Dimensions.get("window");
 
   const particles = React.useRef(
     Array.from({ length: count }, (_, i) => ({
-      y:      new Animated.Value(0),
+      y:       new Animated.Value(0),
       opacity: new Animated.Value(1),
-      x:      (0.05 + Math.random() * 0.88) * SW - size / 2,
-      emoji:  emojis[i % emojis.length],
+      x:       (0.05 + Math.random() * 0.88) * SW - size / 2,
+      // 아이템 이모지 2개 중 1개, 나머지는 스파클
+      emoji:   i % 3 === 0 ? itemEmoji : SPARKLE_EMOJIS[i % SPARKLE_EMOJIS.length],
     }))
   ).current;
 
   const bannerOpacity = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    // 배너 페이드인 → 유지 → 페이드아웃
     Animated.sequence([
       Animated.timing(bannerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
       Animated.delay(2000),
       Animated.timing(bannerOpacity, { toValue: 0, duration: 700, useNativeDriver: true }),
     ]).start();
 
-    // 파티클 떠오르기
     particles.forEach((p, i) => {
       Animated.sequence([
         Animated.delay(i * 55),
@@ -111,7 +137,7 @@ function GiftParticles({ amount, fromNickname }: { amount: number; fromNickname:
         }}
       >
         <Text style={{ color: "white", fontWeight: "700", fontSize: 17 }}>
-          🎉 {fromNickname}님이 {amount.toLocaleString()}P 후원!
+          🎉 {fromNickname}님이 {itemEmoji} {itemName}를 보냈어요!
         </Text>
       </Animated.View>
 
@@ -173,15 +199,21 @@ export default function CallScreen() {
 
   const callStore = useCallStore();
   const { points } = usePointStore();
-  const userId = useAuthStore((s) => s.user?.id);
+  const authUser = useAuthStore((s) => s.user);
+  const userId = authUser?.id;
 
-  /** 현재 사용자가 크리에이터인지 여부 (후원버튼 숨김 + 이팩트 표시 판별) */
+  /** 현재 사용자가 크리에이터인지 여부 */
   const isCreator = userId === creatorId;
+  /** 채팅 발신자 표시 이름 */
+  const chatDisplayName = isCreator
+    ? (creatorName ?? "크리에이터")
+    : ((authUser as any)?.nickname ?? (authUser as any)?.user_metadata?.nickname ?? "나");
 
   const engineRef = useRef<IRtcEngine | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isEndingRef = useRef(false);
   const lowPointsWarnedRef = useRef(false);
+  const chatChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -190,17 +222,30 @@ export default function CallScreen() {
   const [showReport, setShowReport] = useState(false);
   const [showGift, setShowGift] = useState(false);
   const [giftSending, setGiftSending] = useState(false);
-  type GiftEffectItem = { id: number; amount: number; fromNickname: string };
+
+  type GiftEffectItem = { id: number; amount: number; fromNickname: string; itemName: string; itemEmoji: string };
   const [giftEffects, setGiftEffects] = useState<GiftEffectItem[]>([]);
+
+  // ─── 채팅 상태 ───
+  type ChatMessage = { id: number; text: string; fromNickname: string; isOwn: boolean };
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [showChatInput, setShowChatInput] = useState(false);
 
   const rate = Number(perMinRate ?? 900);
   const isLowPoints = points < rate * 5;
   const isCriticalPoints = points < rate;
 
-  const GIFT_OPTIONS = [100, 300, 500, 1000, 3000, 5000];
-
-  const handleGift = async (amount: number) => {
+  const handleGift = async (item: GiftItemType) => {
     if (giftSending) return;
+    if (points < item.points) {
+      Toast.show({
+        type: "error",
+        text1: "포인트가 부족해요",
+        text2: "통화 종료 후 포인트를 충전해주세요.",
+      });
+      return;
+    }
     setGiftSending(true);
     try {
       const res = await apiCall<{ remaining_points: number }>("/api/gifts", {
@@ -208,12 +253,12 @@ export default function CallScreen() {
         body: JSON.stringify({
           call_session_id: sessionId,
           to_creator_id: creatorId,
-          amount,
+          amount: item.points,
         }),
       });
       usePointStore.getState().setPoints(res.remaining_points);
       setShowGift(false);
-      Toast.show({ type: "success", text1: `💝 ${amount.toLocaleString()}P 선물 완료!` });
+      Toast.show({ type: "success", text1: `${item.emoji} ${item.name} 선물 완료!` });
     } catch (e) {
       Toast.show({ type: "error", text1: e instanceof Error ? e.message : "선물 실패" });
     } finally {
@@ -305,7 +350,7 @@ export default function CallScreen() {
     };
   }, [userId]);
 
-  // ─── call_signals Realtime 구독 (low_points, call_cancelled 등) ───
+  // ─── call_signals Realtime 구독 ───
   useEffect(() => {
     if (!sessionId) return;
     const channel = supabase
@@ -337,7 +382,6 @@ export default function CallScreen() {
               }
               break;
             case "call_cancelled":
-              // tick 크론이 강제종료한 경우
               if (!isEndingRef.current) {
                 handleEnd();
               }
@@ -345,13 +389,17 @@ export default function CallScreen() {
             case "gift_received": {
               // 크리에이터 화면에만 이팩트 표시
               if (isCreator && signal.payload?.amount) {
+                const amt = signal.payload.amount;
+                const giftItem = GIFT_ITEMS.find((g) => g.points === amt);
                 const effectId = Date.now();
                 setGiftEffects((prev) => [
                   ...prev,
                   {
                     id: effectId,
-                    amount: signal.payload!.amount,
+                    amount: amt,
                     fromNickname: signal.payload!.from_nickname ?? "익명",
+                    itemName: giftItem?.name ?? `${amt.toLocaleString()}P`,
+                    itemEmoji: giftItem?.emoji ?? "💝",
                   },
                 ]);
                 setTimeout(() => {
@@ -371,6 +419,29 @@ export default function CallScreen() {
       supabase.removeChannel(channel);
     };
   }, [sessionId]);
+
+  // ─── 채팅 Broadcast 구독 ───
+  useEffect(() => {
+    if (!sessionId) return;
+    const channel = supabase
+      .channel(`call-chat-${sessionId}`)
+      .on("broadcast", { event: "chat_message" }, ({ payload }) => {
+        if (!payload?.from_user_id || payload.from_user_id === userId) return;
+        const id = Date.now();
+        setChatMessages((prev) => [
+          ...prev.slice(-3),
+          { id, text: payload.text, fromNickname: payload.from_nickname ?? "상대방", isOwn: false },
+        ]);
+        setTimeout(() => setChatMessages((prev) => prev.filter((m) => m.id !== id)), 8000);
+      })
+      .subscribe();
+    chatChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      chatChannelRef.current = null;
+    };
+  }, [sessionId, userId]);
 
   // ─── 하드웨어 뒤로가기 차단 ───
   useEffect(() => {
@@ -411,6 +482,28 @@ export default function CallScreen() {
       router.replace("/(app)/(tabs)");
     }
   }, [sessionId]);
+
+  // ─── 채팅 전송 ───
+  const sendChatMessage = useCallback(async () => {
+    const text = chatInput.trim().slice(0, 100);
+    if (!text) return;
+    setChatInput("");
+
+    // 내 화면에 즉시 표시
+    const id = Date.now();
+    setChatMessages((prev) => [
+      ...prev.slice(-3),
+      { id, text, fromNickname: "나", isOwn: true },
+    ]);
+    setTimeout(() => setChatMessages((prev) => prev.filter((m) => m.id !== id)), 8000);
+
+    // 상대방에게 broadcast
+    await chatChannelRef.current?.send({
+      type: "broadcast",
+      event: "chat_message",
+      payload: { text, from_nickname: chatDisplayName, from_user_id: userId },
+    });
+  }, [chatInput, chatDisplayName, userId]);
 
   const confirmEnd = () => {
     Alert.alert("통화 종료", "통화를 종료하시겠습니까?", [
@@ -460,14 +553,11 @@ export default function CallScreen() {
 
       {/* 상단 HUD */}
       <View className="absolute top-14 left-0 right-0 flex-row justify-between items-center px-5">
-        {/* 타이머 */}
         <View className="bg-black/50 rounded-full px-3 py-1">
           <Text className="text-white font-bold text-base tracking-widest">
             {formatTime(elapsed)}
           </Text>
         </View>
-
-        {/* 잔여 포인트 */}
         <View className={`rounded-full px-3 py-1 ${isCriticalPoints ? "bg-red-600" : isLowPoints ? "bg-yellow-500" : "bg-black/50"}`}>
           <Text className="text-white font-bold text-sm">
             {points.toLocaleString()}P
@@ -495,89 +585,206 @@ export default function CallScreen() {
         <Ionicons name="flag-outline" size={18} color="white" />
       </TouchableOpacity>
 
-      {/* 하단 컨트롤 바 */}
+      {/* ─── 채팅 메시지 오버레이 ─────────────────────────────────────────── */}
+      <View
+        style={{
+          position: "absolute",
+          bottom: showChatInput ? 148 : 92,
+          left: 12,
+          right: 86,
+        }}
+        pointerEvents="none"
+      >
+        {chatMessages.map((m) => (
+          <View
+            key={m.id}
+            style={{
+              backgroundColor: "rgba(0,0,0,0.58)",
+              borderRadius: 10,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              marginBottom: 5,
+              alignSelf: "flex-start",
+              maxWidth: "100%",
+            }}
+          >
+            <Text style={{ color: m.isOwn ? "#FF6B9D" : "white", fontSize: 13 }}>
+              <Text style={{ fontWeight: "700" }}>{m.fromNickname}</Text>: {m.text}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {/* ─── 채팅 입력창 (토글 시 표시) ──────────────────────────────────── */}
+      {showChatInput && (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "position" : undefined}
+          style={{ position: "absolute", bottom: 86, left: 12, right: 12 }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              value={chatInput}
+              onChangeText={setChatInput}
+              placeholder="메시지 입력..."
+              placeholderTextColor="rgba(255,255,255,0.38)"
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.72)",
+                color: "white",
+                borderRadius: 22,
+                paddingHorizontal: 16,
+                paddingVertical: 9,
+                fontSize: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.15)",
+              }}
+              maxLength={100}
+              returnKeyType="send"
+              onSubmitEditing={sendChatMessage}
+              autoFocus
+            />
+            <TouchableOpacity
+              onPress={sendChatMessage}
+              style={{
+                width: 42,
+                height: 42,
+                backgroundColor: "#FF6B9D",
+                borderRadius: 21,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="arrow-up" size={18} color="white" />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
+
+      {/* ─── 하단 컨트롤 바 ──────────────────────────────────────────────── */}
       <View className="absolute bottom-10 left-0 right-0">
-        <View className="flex-row justify-center items-center gap-6 bg-black/60 mx-6 rounded-2xl py-4 px-4">
+        <View className="flex-row justify-center items-center gap-5 bg-black/60 mx-5 rounded-2xl py-4 px-3">
           {/* 카메라 전환 */}
           <TouchableOpacity
-            className="w-13 h-13 rounded-full bg-white/20 items-center justify-center"
-            style={{ width: 52, height: 52, borderRadius: 26 }}
+            style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}
             onPress={flipCamera}
           >
-            <Ionicons name="camera-reverse" size={22} color="white" />
+            <Ionicons name="camera-reverse" size={20} color="white" />
           </TouchableOpacity>
 
           {/* 마이크 토글 */}
           <TouchableOpacity
-            style={{ width: 52, height: 52, borderRadius: 26 }}
-            className={`items-center justify-center ${isMuted ? "bg-white/80" : "bg-white/20"}`}
+            style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: isMuted ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}
             onPress={toggleMute}
           >
-            <Ionicons name={isMuted ? "mic-off" : "mic"} size={22} color={isMuted ? "#000" : "white"} />
+            <Ionicons name={isMuted ? "mic-off" : "mic"} size={20} color={isMuted ? "#000" : "white"} />
           </TouchableOpacity>
 
           {/* 통화 종료 */}
           <TouchableOpacity
-            style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: "#EF4444" }}
-            className="items-center justify-center"
+            style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center" }}
             onPress={confirmEnd}
             disabled={isEnding}
           >
-            <Ionicons name="call" size={26} color="white" style={{ transform: [{ rotate: "135deg" }] }} />
+            <Ionicons name="call" size={24} color="white" style={{ transform: [{ rotate: "135deg" }] }} />
           </TouchableOpacity>
 
-          {/* 선물 버튼 — 소비자만 표시 */}
+          {/* 채팅 토글 버튼 (양측 모두) */}
+          <TouchableOpacity
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: showChatInput ? "rgba(255,107,157,0.65)" : "rgba(255,255,255,0.2)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onPress={() => setShowChatInput((v) => !v)}
+          >
+            <Ionicons name="chatbubble-ellipses" size={20} color="white" />
+          </TouchableOpacity>
+
+          {/* 선물 버튼 — 소비자만 */}
           {!isCreator && (
             <TouchableOpacity
-              style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#FF6B9D33" }}
-              className="items-center justify-center"
+              style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(255,107,157,0.2)", alignItems: "center", justifyContent: "center" }}
               onPress={() => setShowGift(true)}
             >
-              <Text style={{ fontSize: 22 }}>💝</Text>
+              <Text style={{ fontSize: 20 }}>💝</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* 선물 모달 — 소비자만 */}
-      {!isCreator && <Modal visible={showGift} transparent animationType="slide" onRequestClose={() => setShowGift(false)}>
-        <TouchableOpacity
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
-          activeOpacity={1}
-          onPress={() => setShowGift(false)}
-        >
-          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-            <View style={{ backgroundColor: "#1A1A2E", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
-              <Text style={{ color: "white", fontSize: 16, fontWeight: "700", marginBottom: 6 }}>💝 선물 보내기</Text>
-              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 20 }}>
-                {creatorName}님에게 포인트를 선물해보세요
-              </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                {GIFT_OPTIONS.map((amt) => (
-                  <TouchableOpacity
-                    key={amt}
-                    onPress={() => handleGift(amt)}
-                    disabled={giftSending || points < amt}
-                    style={{
-                      paddingHorizontal: 18, paddingVertical: 10,
-                      borderRadius: 20,
-                      backgroundColor: points >= amt ? "#FF6B9D" : "#333",
-                      opacity: points < amt ? 0.4 : 1,
-                    }}
-                  >
-                    <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>
-                      {amt.toLocaleString()}P
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+      {/* ─── 선물 모달 — 소비자만 ──────────────────────────────────────────── */}
+      {!isCreator && (
+        <Modal visible={showGift} transparent animationType="slide" onRequestClose={() => setShowGift(false)}>
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+            activeOpacity={1}
+            onPress={() => setShowGift(false)}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+              <View style={{ backgroundColor: "#1A1A2E", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
+                <Text style={{ color: "white", fontSize: 16, fontWeight: "700", marginBottom: 4 }}>💝 선물 보내기</Text>
+                <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 20 }}>
+                  {creatorName}님에게 선물을 보내보세요
+                </Text>
+
+                {/* 아이템 그리드 */}
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                  {GIFT_ITEMS.map((item) => {
+                    const canAfford = points >= item.points;
+                    return (
+                      <TouchableOpacity
+                        key={item.name}
+                        onPress={() => handleGift(item)}
+                        disabled={giftSending}
+                        style={{
+                          width: "30%",
+                          alignItems: "center",
+                          paddingVertical: 12,
+                          borderRadius: 16,
+                          backgroundColor: canAfford ? "rgba(255,107,157,0.18)" : "rgba(255,255,255,0.05)",
+                          borderWidth: 1,
+                          borderColor: canAfford ? "rgba(255,107,157,0.5)" : "rgba(255,255,255,0.1)",
+                          opacity: canAfford ? 1 : 0.45,
+                        }}
+                      >
+                        <Text style={{ fontSize: 28, marginBottom: 4 }}>{item.emoji}</Text>
+                        <Text style={{ color: canAfford ? "white" : "rgba(255,255,255,0.5)", fontWeight: "700", fontSize: 13 }}>
+                          {item.name}
+                        </Text>
+                        <Text style={{ color: canAfford ? "#FF6B9D" : "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 2 }}>
+                          {item.points.toLocaleString()}P
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* 보유 포인트 + 잔액 부족 안내 */}
+                <View style={{ marginTop: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>
+                    보유: {points.toLocaleString()}P
+                  </Text>
+                  {points < GIFT_ITEMS[0].points && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowGift(false);
+                        Toast.show({ type: "info", text1: "통화 종료 후 포인트를 충전하세요." });
+                      }}
+                    >
+                      <Text style={{ color: "#FF6B9D", fontSize: 12, fontWeight: "600" }}>
+                        💰 잔액 부족 — 충전하러 가기
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-              <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 16, textAlign: "right" }}>
-                보유 포인트: {points.toLocaleString()}P
-              </Text>
-            </View>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>}
+        </Modal>
+      )}
 
       {/* 신고 바텀시트 */}
       <ReportBottomSheet
@@ -593,6 +800,8 @@ export default function CallScreen() {
           key={effect.id}
           amount={effect.amount}
           fromNickname={effect.fromNickname}
+          itemName={effect.itemName}
+          itemEmoji={effect.itemEmoji}
         />
       ))}
     </View>
