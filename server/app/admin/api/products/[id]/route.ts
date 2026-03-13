@@ -14,10 +14,17 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  const allowedFields = ["name", "description", "price", "original_price", "category", "tags", "images", "stock", "is_active"];
+  const allowedFields = [
+    "name", "description", "detail_content", "price", "original_price",
+    "category", "tags", "images", "stock", "is_active", "owner_type", "creator_id",
+  ];
   const updateData: Record<string, unknown> = {};
   for (const key of allowedFields) {
     if (key in body) updateData[key] = body[key];
+  }
+  // owner_type이 company로 변경되면 creator_id를 null로
+  if (updateData.owner_type === "company") {
+    updateData.creator_id = null;
   }
 
   if (Object.keys(updateData).length === 0) {

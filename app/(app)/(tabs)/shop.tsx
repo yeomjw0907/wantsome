@@ -29,6 +29,12 @@ const CATEGORIES = [
   { key: "adult",   label: "성인",   icon: "flame-outline" },
 ];
 
+const SELLER_FILTERS = [
+  { key: "all",     label: "전체" },
+  { key: "company", label: "🌸 원썸" },
+  { key: "creator", label: "⭐ 크리에이터" },
+];
+
 interface Product {
   id: string;
   name: string;
@@ -36,6 +42,9 @@ interface Product {
   price: number;
   original_price?: number;
   category: string;
+  owner_type: "company" | "creator";
+  creator_id: string | null;
+  creator_display_name?: string | null;
   tags: string[];
   images: string[];
   stock: number;
@@ -105,6 +114,30 @@ function ProductCard({ product, onPress }: { product: Product; onPress: () => vo
             {product.sold_count.toLocaleString()}개 판매
           </Text>
         )}
+        {/* 판매자 뱃지 */}
+        <View style={{ marginTop: 6 }}>
+          {product.owner_type === "creator" ? (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 4,
+              backgroundColor: "#FFF8FB", borderRadius: 8,
+              paddingHorizontal: 6, paddingVertical: 2, alignSelf: "flex-start",
+            }}>
+              <Text style={{ fontSize: 9 }}>⭐</Text>
+              <Text style={{ fontSize: 10, fontWeight: "600", color: "#FF6B9D" }} numberOfLines={1}>
+                {product.creator_display_name ?? "크리에이터"}
+              </Text>
+            </View>
+          ) : (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 4,
+              backgroundColor: "#F3F4F6", borderRadius: 8,
+              paddingHorizontal: 6, paddingVertical: 2, alignSelf: "flex-start",
+            }}>
+              <Text style={{ fontSize: 9 }}>🌸</Text>
+              <Text style={{ fontSize: 10, fontWeight: "600", color: "#6B7280" }}>원썸</Text>
+            </View>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -114,23 +147,28 @@ export default function ShopScreen() {
   const insets = useSafeAreaInsets();
   const { points, setPoints } = usePointStore();
 
-  const [products,   setProducts]   = useState<Product[]>([]);
-  const [page,       setPage]       = useState(1);
-  const [hasMore,    setHasMore]    = useState(true);
-  const [isLoading,  setIsLoading]  = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [category,   setCategory]   = useState("all");
-  const [searchText, setSearchText] = useState("");
+  const [products,    setProducts]    = useState<Product[]>([]);
+  const [page,        setPage]        = useState(1);
+  const [hasMore,     setHasMore]     = useState(true);
+  const [isLoading,   setIsLoading]   = useState(true);
+  const [refreshing,  setRefreshing]  = useState(false);
+  const [category,    setCategory]    = useState("all");
+  const [sellerFilter, setSellerFilter] = useState("all");
+  const [searchText,  setSearchText]  = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [buying,     setBuying]     = useState<string | null>(null);
+  const [buying,      setBuying]      = useState<string | null>(null);
 
-  const loadProducts = useCallback(async (nextPage: number, append: boolean, cat = category, q = searchQuery) => {
+  const loadProducts = useCallback(async (
+    nextPage: number, append: boolean,
+    cat = category, q = searchQuery, seller = sellerFilter
+  ) => {
     try {
       if (!append) setIsLoading(true);
-      const catParam = cat !== "all" ? `&category=${cat}` : "";
-      const qParam   = q ? `&q=${encodeURIComponent(q)}` : "";
+      const catParam    = cat !== "all"    ? `&category=${cat}` : "";
+      const qParam      = q               ? `&q=${encodeURIComponent(q)}` : "";
+      const sellerParam = seller !== "all" ? `&owner_type=${seller}` : "";
       const data = await apiCall<{ products: Product[]; hasMore: boolean }>(
-        `/api/products?page=${nextPage}&limit=${PAGE_SIZE}${catParam}${qParam}`
+        `/api/products?page=${nextPage}&limit=${PAGE_SIZE}${catParam}${qParam}${sellerParam}`
       );
       if (append) {
         setProducts((prev) => [...prev, ...(data.products ?? [])]);
@@ -145,13 +183,13 @@ export default function ShopScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [category, searchQuery]);
+  }, [category, searchQuery, sellerFilter]);
 
   useEffect(() => {
     setPage(1);
     setProducts([]);
-    loadProducts(1, false, category, searchQuery);
-  }, [category, searchQuery]);
+    loadProducts(1, false, category, searchQuery, sellerFilter);
+  }, [category, searchQuery, sellerFilter]);
 
   const handleSearch = () => {
     setSearchQuery(searchText.trim());
@@ -259,21 +297,13 @@ export default function ShopScreen() {
                 key={cat.key}
                 onPress={() => setCategory(cat.key)}
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: 20,
-                  backgroundColor: active ? "#FF6B9D" : "#F5F5FA",
-                  gap: 5,
+                  flexDirection: "row", alignItems: "center",
+                  paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+                  backgroundColor: active ? "#FF6B9D" : "#F5F5FA", gap: 5,
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={cat.icon as any}
-                  size={14}
-                  color={active ? "#fff" : "#9CA3AF"}
-                />
+                <Ionicons name={cat.icon as any} size={14} color={active ? "#fff" : "#9CA3AF"} />
                 <Text style={{ fontSize: 13, fontWeight: active ? "700" : "500", color: active ? "#fff" : "#666" }}>
                   {cat.label}
                 </Text>
@@ -281,6 +311,30 @@ export default function ShopScreen() {
             );
           })}
         </ScrollView>
+      </View>
+
+      {/* 판매자 필터 */}
+      <View style={{ backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F0F0F8", paddingHorizontal: 12, paddingVertical: 8 }}>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {SELLER_FILTERS.map((sf) => {
+            const active = sellerFilter === sf.key;
+            return (
+              <TouchableOpacity
+                key={sf.key}
+                onPress={() => setSellerFilter(sf.key)}
+                style={{
+                  paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16,
+                  backgroundColor: active ? "#1B2A4A" : "#F3F4F6",
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 12, fontWeight: active ? "700" : "500", color: active ? "#fff" : "#6B7280" }}>
+                  {sf.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {isLoading && products.length === 0 ? (

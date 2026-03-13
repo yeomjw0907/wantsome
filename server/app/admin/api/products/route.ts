@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
   if (!adminUser) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, description, price, original_price, category, tags, images, stock } = body;
+  const {
+    name, description, detail_content, price, original_price,
+    category, tags, images, stock, owner_type, creator_id,
+  } = body;
 
   if (!name || !price || !category) {
     return NextResponse.json({ message: "name, price, category는 필수입니다." }, { status: 400 });
@@ -48,14 +51,17 @@ export async function POST(req: NextRequest) {
     .from("products")
     .insert({
       name,
-      description: description ?? null,
-      price: parseInt(price, 10),
+      description:    description ?? null,
+      detail_content: detail_content ?? null,
+      price:          parseInt(price, 10),
       original_price: original_price ? parseInt(original_price, 10) : null,
       category,
-      tags: tags ?? [],
-      images: images ?? [],
-      stock: stock ?? -1,
-      is_active: true,
+      owner_type:     owner_type ?? "company",
+      creator_id:     owner_type === "creator" && creator_id ? creator_id : null,
+      tags:           tags ?? [],
+      images:         images ?? [],
+      stock:          stock ?? -1,
+      is_active:      true,
     })
     .select("id")
     .single();

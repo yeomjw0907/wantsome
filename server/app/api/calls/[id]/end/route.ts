@@ -50,12 +50,15 @@ export async function POST(
     })
     .eq("id", sessionId);
 
-  // 크리에이터 정산율 조회
+  // 크리에이터 정산율 조회 + is_busy 해제
   const { data: creator } = await admin
     .from("creators")
     .select("settlement_rate, monthly_minutes")
     .eq("id", session.creator_id)
     .single();
+
+  // 통화 종료 — is_busy=false
+  await admin.from("creators").update({ is_busy: false }).eq("id", session.creator_id);
 
   const settlement_rate = creator?.settlement_rate ?? 0.75;
   const creator_earning = Math.floor(points_charged * settlement_rate);

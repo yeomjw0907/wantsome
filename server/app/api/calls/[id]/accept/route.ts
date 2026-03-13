@@ -52,6 +52,9 @@ export async function POST(
     })
     .eq("id", sessionId);
 
+  // 크리에이터 is_busy=true (통화 중 상태 표시)
+  await admin.from("creators").update({ is_busy: true }).eq("id", session.creator_id);
+
   // 소비자에게 call_accepted 신호
   await admin.from("call_signals").insert({
     session_id: sessionId,

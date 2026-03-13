@@ -12,6 +12,7 @@ import {
   UIManager,
   Platform,
   Image,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -28,11 +29,170 @@ import { apiCall } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import Toast from "react-native-toast-message";
 
+const SCREEN_W = Dimensions.get("window").width;
+
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const PAGE_SIZE = 20;
+
+// ─────────────────────────────────────────────
+// 배너 캐러셀
+// ─────────────────────────────────────────────
+interface Banner {
+  id: string;
+  title: string;
+  image_url: string | null;
+  link_url: string | null;
+}
+
+function BannerCarousel() {
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    apiCall<{ banners: Banner[] }>("/api/banners")
+      .then((r) => setBanners(r.banners ?? []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (banners.length < 2) return;
+    timerRef.current = setInterval(() => {
+      setActiveIdx((prev) => {
+        const next = (prev + 1) % banners.length;
+        scrollRef.current?.scrollTo({ x: next * SCREEN_W, animated: true });
+        return next;
+      });
+    }, 4000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [banners]);
+
+  if (banners.length === 0) return null;
+
+  return (
+    <View style={{ height: 140, marginBottom: 4 }}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => {
+          setActiveIdx(Math.round(e.nativeEvent.contentOffset.x / SCREEN_W));
+        }}
+        scrollEventThrottle={16}
+      >
+        {banners.map((b) => (
+          <View key={b.id} style={{ width: SCREEN_W, height: 140, backgroundColor: "#F0F0F8" }}>
+            {b.image_url ? (
+              <Image source={{ uri: b.image_url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+            ) : (
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#1B2A4A" }}>{b.title}</Text>
+              </View>
+            )}
+          </View>
+        ))}
+      </ScrollView>
+      {/* 인디케이터 도트 */}
+      {banners.length > 1 && (
+        <View style={{ position: "absolute", bottom: 8, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 5 }}>
+          {banners.map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: i === activeIdx ? 16 : 6, height: 6, borderRadius: 3,
+                backgroundColor: i === activeIdx ? "#FF6B9D" : "rgba(255,255,255,0.6)",
+              }}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 출석 체크인 카드
+// ─────────────────────────────────────────────
+interface CheckInStatus {
+  checked_today: boolean;
+  streak: number;
+  next_points: number;
+}
+
+function CheckInCard() {
+  const [status, setStatus] = useState<CheckInStatus | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    apiCall<CheckInStatus>("/api/check-in")
+      .then((r) => setStatus(r))
+      .catch(() => {});
+  }, []);
+
+  if (!status || status.checked_today) return null;
+
+  const handleCheckIn = async () => {
+    if (checking) return;
+    setChecking(true);
+    try {
+      const res = await apiCall<{ streak: number; points_awarded: number }>("/api/check-in", { method: "POST" });
+      setStatus((prev) => prev ? { ...prev, checked_today: true, streak: res.streak } : null);
+      Toast.show({ type: "success", text1: `🎁 출석 체크인 완료!`, text2: `+${res.points_awarded}P 지급됐습니다.` });
+    } catch (e) {
+      Toast.show({ type: "error", text1: e instanceof Error ? e.message : "체크인 실패" });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <View style={{
+      marginHorizontal: 12, marginBottom: 8,
+      backgroundColor: "#fff", borderRadius: 16,
+      borderWidth: 1.5, borderColor: "#FFD6E8",
+      padding: 14,
+      flexDirection: "row", alignItems: "center", gap: 12,
+    }}>
+      <View style={{
+        width: 44, height: 44, borderRadius: 22,
+        backgroundColor: "#FFF0F5",
+        alignItems: "center", justifyContent: "center",
+      }}>
+        <Text style={{ fontSize: 22 }}>🎁</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: "#1B2A4A" }}>오늘의 출석 체크인</Text>
+          {status.streak > 1 && (
+            <View style={{ backgroundColor: "#FF6B9D20", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 }}>
+              <Text style={{ fontSize: 11, color: "#FF6B9D", fontWeight: "700" }}>🔥 {status.streak}일 연속</Text>
+            </View>
+          )}
+        </View>
+        <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
+          체크인하면 +{status.next_points}P 지급
+        </Text>
+      </View>
+      <TouchableOpacity
+        onPress={handleCheckIn}
+        disabled={checking}
+        style={{
+          backgroundColor: checking ? "#F3F4F6" : "#FF6B9D",
+          borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+        }}
+      >
+        <Text style={{ fontSize: 12, fontWeight: "700", color: checking ? "#9CA3AF" : "#fff" }}>
+          {checking ? "처리중..." : "체크인"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 // ─────────────────────────────────────────────
 // 랭킹 섹션
@@ -450,7 +610,11 @@ export default function FeedScreen() {
           <TouchableOpacity onPress={() => router.push("/charge")} activeOpacity={0.8}>
             <PointBadge points={points} />
           </TouchableOpacity>
-          <TouchableOpacity className="w-9 h-9 items-center justify-center">
+          <TouchableOpacity
+            className="w-9 h-9 items-center justify-center"
+            onPress={() => router.push("/notifications" as any)}
+            activeOpacity={0.7}
+          >
             <Ionicons name="notifications-outline" size={22} color="#1B2A4A" />
           </TouchableOpacity>
         </View>
@@ -577,6 +741,8 @@ export default function FeedScreen() {
           contentContainerStyle={{ paddingBottom: 24 }}
           ListHeaderComponent={!isSearching ? (
             <View>
+              <BannerCarousel />
+              <CheckInCard />
               <RankingSection mode={mode} />
               <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Text style={{ fontSize: 14 }}>👥</Text>

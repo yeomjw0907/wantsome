@@ -10,7 +10,9 @@ import { View, Text, TouchableOpacity, Image, BackHandler } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { usePointStore } from "@/stores/usePointStore";
+import { apiCall } from "@/lib/api";
 import RatingModal from "@/components/RatingModal";
+import Toast from "react-native-toast-message";
 
 export default function CallSummaryScreen() {
   const router = useRouter();
@@ -60,8 +62,25 @@ export default function CallSummaryScreen() {
 
   const goHome = () => router.replace("/(app)/(tabs)");
   const goCharge = () => router.push("/(app)/charge");
-  const goReservation = () =>
-    router.push({ pathname: "/(app)/(tabs)/reservations" });
+  const goReservation = () => router.push("/(app)/(tabs)/messages" as any);
+  const goCreator = () => {
+    if (creatorId) router.push(`/creator/${creatorId}` as any);
+  };
+  const goDM = async () => {
+    if (!creatorId) return;
+    try {
+      const res = await apiCall<{ id: string }>("/api/conversations", {
+        method: "POST",
+        body: JSON.stringify({
+          creator_id: creatorId,
+          message: "안녕하세요! 통화 잘 했어요 😊",
+        }),
+      });
+      router.replace(`/messages/${res.id}` as any);
+    } catch {
+      Toast.show({ type: "error", text1: "DM 개설에 실패했습니다." });
+    }
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -102,20 +121,52 @@ export default function CallSummaryScreen() {
         </Row>
       </View>
 
-      {/* 다음 예약 유도 */}
-      {showReservation && (
-        <View className="mx-5 mt-4 rounded-2xl border border-gray-200 px-6 py-5">
-          <Text className="text-gray-900 font-semibold text-base mb-3">
-            또 만나고 싶으신가요? 😊
-          </Text>
+      {/* 재통화 / DM / 예약 3-버튼 CTA */}
+      <View style={{ marginHorizontal: 20, marginTop: 16 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {/* 다시 통화 */}
           <TouchableOpacity
-            className="border border-gray-300 rounded-xl py-3 items-center"
-            onPress={goReservation}
+            onPress={goCreator}
+            style={{
+              flex: 1, backgroundColor: "#FFF0F5",
+              borderRadius: 16, paddingVertical: 14,
+              alignItems: "center", gap: 4,
+            }}
+            activeOpacity={0.8}
           >
-            <Text className="text-gray-700 font-semibold">예약 통화하기</Text>
+            <Text style={{ fontSize: 20 }}>♡</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#FF6B9D" }}>다시 통화</Text>
+          </TouchableOpacity>
+
+          {/* DM 보내기 */}
+          <TouchableOpacity
+            onPress={goDM}
+            style={{
+              flex: 1, backgroundColor: "#EFF6FF",
+              borderRadius: 16, paddingVertical: 14,
+              alignItems: "center", gap: 4,
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#4D9FFF" />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#4D9FFF" }}>DM 보내기</Text>
+          </TouchableOpacity>
+
+          {/* 예약하기 */}
+          <TouchableOpacity
+            onPress={goReservation}
+            style={{
+              flex: 1, backgroundColor: "#F0FFF4",
+              borderRadius: 16, paddingVertical: 14,
+              alignItems: "center", gap: 4,
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="calendar-outline" size={20} color="#22C55E" />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#22C55E" }}>예약하기</Text>
           </TouchableOpacity>
         </View>
-      )}
+      </View>
 
       {/* 하단 버튼 */}
       <View className="absolute bottom-12 left-5 right-5 gap-3">

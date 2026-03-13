@@ -10,6 +10,8 @@ interface Product {
   price: number;
   original_price?: number;
   category: string;
+  owner_type: "company" | "creator";
+  creator_id?: string | null;
   tags: string[];
   images: string[];
   stock: number;
@@ -31,6 +33,8 @@ const EMPTY_FORM = {
   price: "",
   original_price: "",
   category: "general",
+  owner_type: "company" as "company" | "creator",
+  creator_id: "",
   tags: "",
   imageUrls: [] as string[],
   stock: "-1",
@@ -85,6 +89,8 @@ export default function AdminProductsPage() {
       price:          String(p.price),
       original_price: p.original_price ? String(p.original_price) : "",
       category:       p.category,
+      owner_type:     p.owner_type ?? "company",
+      creator_id:     p.creator_id ?? "",
       tags:           p.tags.join(", "),
       imageUrls:      [...(p.images ?? [])],
       stock:          String(p.stock),
@@ -138,6 +144,8 @@ export default function AdminProductsPage() {
       price:          parseInt(form.price, 10),
       original_price: form.original_price ? parseInt(form.original_price, 10) : null,
       category:       form.category,
+      owner_type:     form.owner_type,
+      creator_id:     form.owner_type === "creator" && form.creator_id.trim() ? form.creator_id.trim() : null,
       tags:           form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
       images:         form.imageUrls,
       stock:          parseInt(form.stock, 10),
@@ -334,6 +342,51 @@ export default function AdminProductsPage() {
                   placeholder="리스트에 표시되는 한 줄 설명"
                 />
               </div>
+
+              {/* 판매자 유형 */}
+              <div className="form-group">
+                <label className="form-label">판매자 유형 *</label>
+                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                  {(["company", "creator"] as const).map((type) => (
+                    <label
+                      key={type}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "8px 16px", borderRadius: 8, cursor: "pointer",
+                        border: `1.5px solid ${form.owner_type === type ? "var(--pink)" : "var(--gray-200)"}`,
+                        background: form.owner_type === type ? "var(--pink-light)" : "#fff",
+                        fontWeight: form.owner_type === type ? 700 : 400,
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="owner_type"
+                        value={type}
+                        checked={form.owner_type === type}
+                        onChange={() => F("owner_type", type)}
+                        style={{ accentColor: "var(--pink)" }}
+                      />
+                      {type === "company" ? "🌸 원썸 본사" : "⭐ 크리에이터"}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* 크리에이터 ID (크리에이터 소유 시) */}
+              {form.owner_type === "creator" && (
+                <div className="form-group">
+                  <label className="form-label">크리에이터 User ID</label>
+                  <input
+                    className="form-input"
+                    value={form.creator_id}
+                    onChange={(e) => F("creator_id", e.target.value)}
+                    placeholder="크리에이터의 UUID 입력 (users 테이블 id)"
+                  />
+                  <p style={{ fontSize: 11, color: "var(--gray-400)", marginTop: 4 }}>
+                    어드민 → 크리에이터 목록에서 ID를 복사하여 입력하세요
+                  </p>
+                </div>
+              )}
 
               {/* 가격 + 원가 */}
               <div className="grid-2">

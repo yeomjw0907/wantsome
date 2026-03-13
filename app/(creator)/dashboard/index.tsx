@@ -18,6 +18,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -105,6 +106,18 @@ export default function CreatorDashboardScreen() {
   const [showTimesModal, setShowTimesModal] = useState(false);
   const [timesSaving, setTimesSaving] = useState(false);
 
+  // 내 상품 + 판매 내역
+  type MyProduct = { id: string; name: string; price: number; sold_count: number; images: string[] };
+  type MyOrder = {
+    id: string; created_at: string; quantity: number; total_price: number; status: string;
+    products: { name: string } | null;
+    users: { nickname: string; profile_img: string | null } | null;
+  };
+  const [myProducts, setMyProducts] = useState<MyProduct[]>([]);
+  const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
+  const [shopTab, setShopTab] = useState<"products" | "orders">("products");
+  const [totalRevenue, setTotalRevenue] = useState(0);
+
   const creatorId = user?.id;
 
   const loadSchedules = async () => {
@@ -146,16 +159,21 @@ export default function CreatorDashboardScreen() {
   const loadData = useCallback(async () => {
     if (!creatorId) return;
     try {
-      const [earningsData, settlementsData, reservationsData] = await Promise.all([
+      const [earningsData, settlementsData, reservationsData, productsData, ordersData] = await Promise.all([
         apiCall<Earnings>(`/api/creators/${creatorId}/earnings`),
         apiCall<{ settlements: Settlement[] }>(`/api/creators/${creatorId}/settlements`),
         apiCall<{ reservations: Reservation[] }>(`/api/reservations?role=creator`),
+        apiCall<{ products: MyProduct[] }>(`/api/creators/${creatorId}/products`).catch(() => ({ products: [] })),
+        apiCall<{ orders: MyOrder[]; total_revenue: number }>(`/api/creators/${creatorId}/orders`).catch(() => ({ orders: [], total_revenue: 0 })),
       ]);
       setEarnings(earningsData);
       setSettlements(settlementsData.settlements ?? []);
       setReservations(
         reservationsData.reservations?.filter((r) => r.status === "pending") ?? []
       );
+      setMyProducts(productsData.products ?? []);
+      setMyOrders(ordersData.orders ?? []);
+      setTotalRevenue(ordersData.total_revenue ?? 0);
       loadSchedules();
       // 통화 가능 시간 로드
       if (creatorId) {
@@ -553,6 +571,99 @@ export default function CreatorDashboardScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* ── 내 상품 + 판매 내역 ── */}
+      <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="bag-outline" size={18} color="#1B2A4A" />
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#1B2A4A" }}>상품 & 판매</Text>
+          </View>
+          {totalRevenue > 0 && (
+            <View style={{ backgroundColor: "#FFF0F5", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#FF6B9D" }}>
+                총 수익 {totalRevenue.toLocaleString()}P
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* 서브탭 */}
+        <View style={{ flexDirection: "row", backgroundColor: "#F3F4F6", borderRadius: 12, padding: 3, marginBottom: 14 }}>
+          {(["products", "orders"] as const).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setShopTab(tab)}
+              style={{
+                flex: 1, paddingVertical: 7, borderRadius: 10, alignItems: "center",
+                backgroundColor: shopTab === tab ? "#fff" : "transparent",
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 13, fontWeight: shopTab === tab ? "700" : "500", color: shopTab === tab ? "#1B2A4A" : "#9CA3AF" }}>
+                {tab === "products" ? `내 상품 (${myProducts.length})` : `판매 내역 (${myOrders.length})`}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* 내 상품 목록 */}
+        {shopTab === "products" && (
+          myProducts.length === 0 ? (
+            <Text style={{ color: "#C8C8D8", fontSize: 13, textAlign: "center", paddingVertical: 16 }}>
+              등록된 상품이 없습니다.{"\n"}어드민에서 상품을 등록해주세요.
+            </Text>
+          ) : (
+            myProducts.map((p) => (
+              <View key={p.id} style={{ flexDirection: "row", gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F0F0F8", alignItems: "center" }}>
+                <View style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: "#F5F5FA", overflow: "hidden" }}>
+                  {p.images[0] ? (
+                    <Image source={{ uri: p.images[0] }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                  ) : (
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="image-outline" size={20} color="#C8C8D8" />
+                    </View>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#1B2A4A" }} numberOfLines={1}>{p.name}</Text>
+                  <Text style={{ fontSize: 12, color: "#FF6B9D", fontWeight: "700", marginTop: 2 }}>{p.price.toLocaleString()}P</Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ fontSize: 11, color: "#9CA3AF" }}>판매 {p.sold_count}개</Text>
+                </View>
+              </View>
+            ))
+          )
+        )}
+
+        {/* 판매 내역 */}
+        {shopTab === "orders" && (
+          myOrders.length === 0 ? (
+            <Text style={{ color: "#C8C8D8", fontSize: 13, textAlign: "center", paddingVertical: 16 }}>
+              아직 판매 내역이 없습니다.
+            </Text>
+          ) : (
+            myOrders.slice(0, 10).map((o) => (
+              <View key={o.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F0F0F8" }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#1B2A4A" }} numberOfLines={1}>
+                      {o.products?.name ?? "상품"}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
+                      {o.users?.nickname ?? "유저"} · {new Date(o.created_at).toLocaleDateString("ko-KR")}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#FF6B9D", marginLeft: 8 }}>
+                    +{o.total_price.toLocaleString()}P
+                  </Text>
+                </View>
+              </View>
+            ))
+          )
+        )}
+      </View>
 
       {/* 정산 내역 */}
       <View className="mx-4 mt-4 bg-white rounded-3xl p-5 mb-6">

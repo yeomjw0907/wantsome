@@ -37,6 +37,7 @@ interface Creator {
   bio: string | null;
   grade: "신규" | "일반" | "인기" | "탑";
   is_online: boolean;
+  is_busy: boolean;
   mode_blue: boolean;
   mode_red: boolean;
   is_verified: boolean;
@@ -48,6 +49,13 @@ interface Creator {
   categories: string[];
   post_count: number;
   available_times: string | null;
+}
+
+interface CreatorProduct {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
 }
 
 const GRADE_CONFIG = {
@@ -110,11 +118,15 @@ export default function CreatorProfileScreen() {
   type Schedule = { id: string; scheduled_at: string; note: string | null };
   const [schedules, setSchedules] = useState<Schedule[]>([]);
 
+  // 크리에이터 상품
+  const [creatorProducts, setCreatorProducts] = useState<CreatorProduct[]>([]);
+
   useEffect(() => {
     loadCreator();
     loadPosts();
     loadReviews();
     loadSchedules();
+    loadCreatorProducts();
   }, [id]);
 
   const loadCreator = async () => {
@@ -164,15 +176,27 @@ export default function CreatorProfileScreen() {
     }
   };
 
+  const loadCreatorProducts = async () => {
+    if (!id) return;
+    try {
+      const res = await apiCall<{ products: CreatorProduct[] }>(`/api/creators/${id}/products`);
+      setCreatorProducts(res.products ?? []);
+    } catch { /* ignore */ }
+  };
+
   const handleCallPress = useCallback(async () => {
     if (!creator) return;
+    if (!creator.is_online) {
+      Toast.show({ type: "info", text1: "오프라인 상태입니다.", text2: "DM 또는 예약을 이용해 주세요." });
+      return;
+    }
+    if (creator.is_busy) {
+      Toast.show({ type: "info", text1: "통화 중입니다.", text2: "DM 또는 예약을 이용해 주세요." });
+      return;
+    }
     const perMinRate = callMode === "blue" ? 900 : 1300;
     if (points < perMinRate) {
-      Toast.show({
-        type: "info",
-        text1: "포인트 부족",
-        text2: "충전 화면으로 이동합니다.",
-      });
+      Toast.show({ type: "info", text1: "포인트 부족", text2: "충전 화면으로 이동합니다." });
       router.push("/charge");
       return;
     }
@@ -187,6 +211,32 @@ export default function CreatorProfileScreen() {
       Toast.show({ type: "error", text1: "통화 요청 실패", text2: msg });
     }
   }, [creator, callMode, points]);
+
+  const handleDMPress = useCallback(async () => {
+    if (!creator) return;
+    Alert.alert(
+      "DM 보내기",
+      "기존 채팅방이 있으면 무료로 이동합니다.\n없으면 500P가 차감되어 채팅방이 개설됩니다.",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "확인",
+          onPress: async () => {
+            try {
+              const res = await apiCall<{ id: string }>("/api/conversations", {
+                method: "POST",
+                body: JSON.stringify({ creator_id: creator.id, message: "안녕하세요! 👋" }),
+              });
+              router.push(`/messages/${res.id}` as any);
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "DM 개설에 실패했습니다.";
+              Toast.show({ type: "error", text1: msg });
+            }
+          },
+        },
+      ]
+    );
+  }, [creator]);
 
   const handleBlock = () => {
     if (!creator) return;
@@ -297,10 +347,13 @@ export default function CreatorProfileScreen() {
           <View className="absolute bottom-0 left-0 right-0 px-5 pb-5">
             <View className="flex-row items-center gap-1.5 mb-2">
               <View
-                className={`w-2 h-2 rounded-full ${creator.is_online ? "bg-green-400" : "bg-gray-400"}`}
+                style={{
+                  width: 8, height: 8, borderRadius: 4,
+                  backgroundColor: !creator.is_online ? "#9CA3AF" : creator.is_busy ? "#F59E0B" : "#22C55E",
+                }}
               />
               <Text className="text-white/80 text-xs">
-                {creator.is_online ? "지금 통화 가능" : "오프라인"}
+                {!creator.is_online ? "오프라인" : creator.is_busy ? "통화 중" : "지금 통화 가능"}
               </Text>
             </View>
 
@@ -486,6 +539,41 @@ export default function CreatorProfileScreen() {
           </View>
         )}
 
+        {/* ── 크리에이터 상품 ── */}
+        {creatorProducts.length > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#1B2A4A" }}>🛍️ 상품</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+              {creatorProducts.map((p) => (
+                <View
+                  key={p.id}
+                  style={{
+                    width: 120, backgroundColor: "#fff",
+                    borderRadius: 14, overflow: "hidden",
+                    shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+                  }}
+                >
+                  <View style={{ width: 120, height: 120, backgroundColor: "#F5F5FA" }}>
+                    {p.images[0] ? (
+                      <Image source={{ uri: p.images[0] }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                    ) : (
+                      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="image-outline" size={28} color="#C8C8D8" />
+                      </View>
+                    )}
+                  </View>
+                  <View style={{ padding: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#1B2A4A" }} numberOfLines={2}>{p.name}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: "#FF6B9D", marginTop: 2 }}>{p.price.toLocaleString()}P</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* ── 포스트 그리드 ── */}
         <View className="mt-1">
           <View className="flex-row items-center justify-between px-5 mb-3">
@@ -507,43 +595,66 @@ export default function CreatorProfileScreen() {
         </View>
 
         {/* CTA 버튼 공간 확보 */}
-        <View style={{ height: 130 }} />
+        <View style={{ height: 160 }} />
       </ScrollView>
 
       {/* ── 하단 CTA ── */}
       <View
-        className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 pt-3 gap-3"
-        style={{ paddingBottom: insets.bottom + 12 }}
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 pt-3"
+        style={{ paddingBottom: insets.bottom + 12, gap: 10 }}
       >
-        <TouchableOpacity
-          className={`h-[52px] rounded-full items-center justify-center flex-row gap-2 ${
-            creator.is_online ? "bg-pink" : "bg-gray-100"
-          }`}
-          onPress={creator.is_online ? handleCallPress : undefined}
-          activeOpacity={creator.is_online ? 0.8 : 1}
-        >
-          <Ionicons
-            name="videocam"
-            size={20}
-            color={creator.is_online ? "white" : "#8E8EA0"}
-          />
-          <Text
-            className={`text-base font-semibold ${
-              creator.is_online ? "text-white" : "text-gray-500"
-            }`}
-          >
-            {creator.is_online ? "즉시 통화하기" : "오프라인 상태"}
-          </Text>
-        </TouchableOpacity>
+        {/* 통화 버튼 — 3단계 */}
+        {(() => {
+          const available = creator.is_online && !creator.is_busy;
+          const busy = creator.is_online && creator.is_busy;
+          const bgColor = available ? "#FF6B9D" : "#F3F4F6";
+          const textColor = available ? "#fff" : "#9CA3AF";
+          const label = available ? "즉시 통화하기" : busy ? "통화 중 · 연결 불가" : "오프라인 · 통화 불가";
+          return (
+            <TouchableOpacity
+              style={{
+                height: 52, borderRadius: 28, alignItems: "center", justifyContent: "center",
+                flexDirection: "row", gap: 8, backgroundColor: bgColor,
+              }}
+              onPress={available ? handleCallPress : undefined}
+              activeOpacity={available ? 0.8 : 1}
+            >
+              <Ionicons name="videocam" size={20} color={textColor} />
+              <Text style={{ fontSize: 16, fontWeight: "700", color: textColor }}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })()}
 
-        <TouchableOpacity
-          className="h-[44px] rounded-full items-center justify-center border-[1.5px] border-pink flex-row gap-2"
-          onPress={() => router.push({ pathname: "/(app)/(tabs)/reservations" })}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="calendar-outline" size={18} color="#FF6B9D" />
-          <Text className="text-pink text-sm font-semibold">예약 통화</Text>
-        </TouchableOpacity>
+        {/* DM + 예약 버튼 행 */}
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <TouchableOpacity
+            style={{
+              flex: 1, height: 44, borderRadius: 22,
+              alignItems: "center", justifyContent: "center",
+              flexDirection: "row", gap: 6,
+              borderWidth: 1.5, borderColor: "#4D9FFF",
+            }}
+            onPress={handleDMPress}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color="#4D9FFF" />
+            <Text style={{ color: "#4D9FFF", fontSize: 13, fontWeight: "700" }}>DM 보내기</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              flex: 1, height: 44, borderRadius: 22,
+              alignItems: "center", justifyContent: "center",
+              flexDirection: "row", gap: 6,
+              borderWidth: 1.5, borderColor: "#FF6B9D",
+            }}
+            onPress={() => router.push("/(app)/(tabs)/messages" as any)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="calendar-outline" size={16} color="#FF6B9D" />
+            <Text style={{ color: "#FF6B9D", fontSize: 13, fontWeight: "700" }}>예약 통화</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 통화 대기 모달 */}
