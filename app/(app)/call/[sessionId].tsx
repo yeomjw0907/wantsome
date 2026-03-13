@@ -15,6 +15,9 @@ import {
   StatusBar,
   Modal,
   ScrollView,
+  Animated,
+  StyleSheet,
+  Dimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,6 +39,101 @@ import { useCallStore } from "@/stores/useCallStore";
 import { usePointStore } from "@/stores/usePointStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import ReportBottomSheet from "@/components/ReportBottomSheet";
+
+// ─── GiftParticles: 아프리카TV 별풍선 스타일 이팩트 ──────────────────────────
+function getGiftConfig(amount: number) {
+  if (amount >= 5000) return { emojis: ["🌟", "🌟", "🌟", "💝", "✨"], count: 18, size: 42 };
+  if (amount >= 3000) return { emojis: ["🌟", "🌟", "💝", "✨"], count: 14, size: 36 };
+  if (amount >= 1000) return { emojis: ["🌟", "💝", "✨"], count: 10, size: 32 };
+  if (amount >= 500)  return { emojis: ["💝", "✨", "🌟"], count: 8, size: 28 };
+  if (amount >= 300)  return { emojis: ["💝", "✨"], count: 6, size: 24 };
+  return               { emojis: ["💝"], count: 4, size: 20 };
+}
+
+function GiftParticles({ amount, fromNickname }: { amount: number; fromNickname: string }) {
+  const { emojis, count, size } = getGiftConfig(amount);
+  const { width: SW, height: SH } = Dimensions.get("window");
+
+  const particles = React.useRef(
+    Array.from({ length: count }, (_, i) => ({
+      y:      new Animated.Value(0),
+      opacity: new Animated.Value(1),
+      x:      (0.05 + Math.random() * 0.88) * SW - size / 2,
+      emoji:  emojis[i % emojis.length],
+    }))
+  ).current;
+
+  const bannerOpacity = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    // 배너 페이드인 → 유지 → 페이드아웃
+    Animated.sequence([
+      Animated.timing(bannerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(bannerOpacity, { toValue: 0, duration: 700, useNativeDriver: true }),
+    ]).start();
+
+    // 파티클 떠오르기
+    particles.forEach((p, i) => {
+      Animated.sequence([
+        Animated.delay(i * 55),
+        Animated.parallel([
+          Animated.timing(p.y, {
+            toValue: -(SH * 0.72 + Math.random() * 120),
+            duration: 2200 + Math.random() * 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(p.opacity, {
+            toValue: 0,
+            duration: 2600,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    });
+  }, []);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* 상단 배너 */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          top: 104,
+          left: 20,
+          right: 20,
+          backgroundColor: "rgba(255,107,157,0.92)",
+          borderRadius: 14,
+          paddingVertical: 12,
+          paddingHorizontal: 20,
+          alignItems: "center",
+          opacity: bannerOpacity,
+        }}
+      >
+        <Text style={{ color: "white", fontWeight: "700", fontSize: 17 }}>
+          🎉 {fromNickname}님이 {amount.toLocaleString()}P 후원!
+        </Text>
+      </Animated.View>
+
+      {/* 파티클 */}
+      {particles.map((p, i) => (
+        <Animated.Text
+          key={i}
+          style={{
+            position: "absolute",
+            bottom: 120,
+            left: p.x,
+            fontSize: size,
+            opacity: p.opacity,
+            transform: [{ translateY: p.y }],
+          }}
+        >
+          {p.emoji}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
 
 export default function CallScreen() {
   usePreventScreenCapture();
@@ -77,6 +175,9 @@ export default function CallScreen() {
   const { points } = usePointStore();
   const userId = useAuthStore((s) => s.user?.id);
 
+  /** 현재 사용자가 크리에이터인지 여부 (후원버튼 숨김 + 이팩트 표시 판별) */
+  const isCreator = userId === creatorId;
+
   const engineRef = useRef<IRtcEngine | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isEndingRef = useRef(false);
@@ -89,6 +190,8 @@ export default function CallScreen() {
   const [showReport, setShowReport] = useState(false);
   const [showGift, setShowGift] = useState(false);
   const [giftSending, setGiftSending] = useState(false);
+  type GiftEffectItem = { id: number; amount: number; fromNickname: string };
+  const [giftEffects, setGiftEffects] = useState<GiftEffectItem[]>([]);
 
   const rate = Number(perMinRate ?? 900);
   const isLowPoints = points < rate * 5;
@@ -216,7 +319,11 @@ export default function CallScreen() {
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          const signal = payload.new as { type: string; to_user_id?: string };
+          const signal = payload.new as {
+            type: string;
+            to_user_id?: string;
+            payload?: { amount: number; from_nickname: string };
+          };
           switch (signal.type) {
             case "low_points":
               if (!lowPointsWarnedRef.current) {
@@ -235,6 +342,24 @@ export default function CallScreen() {
                 handleEnd();
               }
               break;
+            case "gift_received": {
+              // 크리에이터 화면에만 이팩트 표시
+              if (isCreator && signal.payload?.amount) {
+                const effectId = Date.now();
+                setGiftEffects((prev) => [
+                  ...prev,
+                  {
+                    id: effectId,
+                    amount: signal.payload!.amount,
+                    fromNickname: signal.payload!.from_nickname ?? "익명",
+                  },
+                ]);
+                setTimeout(() => {
+                  setGiftEffects((prev) => prev.filter((e) => e.id !== effectId));
+                }, 3500);
+              }
+              break;
+            }
             default:
               break;
           }
@@ -401,19 +526,21 @@ export default function CallScreen() {
             <Ionicons name="call" size={26} color="white" style={{ transform: [{ rotate: "135deg" }] }} />
           </TouchableOpacity>
 
-          {/* 선물 버튼 */}
-          <TouchableOpacity
-            style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#FF6B9D33" }}
-            className="items-center justify-center"
-            onPress={() => setShowGift(true)}
-          >
-            <Text style={{ fontSize: 22 }}>💝</Text>
-          </TouchableOpacity>
+          {/* 선물 버튼 — 소비자만 표시 */}
+          {!isCreator && (
+            <TouchableOpacity
+              style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#FF6B9D33" }}
+              className="items-center justify-center"
+              onPress={() => setShowGift(true)}
+            >
+              <Text style={{ fontSize: 22 }}>💝</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* 선물 모달 */}
-      <Modal visible={showGift} transparent animationType="slide" onRequestClose={() => setShowGift(false)}>
+      {/* 선물 모달 — 소비자만 */}
+      {!isCreator && <Modal visible={showGift} transparent animationType="slide" onRequestClose={() => setShowGift(false)}>
         <TouchableOpacity
           style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
           activeOpacity={1}
@@ -450,7 +577,7 @@ export default function CallScreen() {
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
-      </Modal>
+      </Modal>}
 
       {/* 신고 바텀시트 */}
       <ReportBottomSheet
@@ -459,6 +586,15 @@ export default function CallScreen() {
         callSessionId={sessionId}
         onClose={() => setShowReport(false)}
       />
+
+      {/* 선물 이팩트 오버레이 (크리에이터 수신 시) */}
+      {giftEffects.map((effect) => (
+        <GiftParticles
+          key={effect.id}
+          amount={effect.amount}
+          fromNickname={effect.fromNickname}
+        />
+      ))}
     </View>
   );
 }

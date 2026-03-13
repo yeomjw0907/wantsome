@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   // 포인트 차감 (users.points)
   const { data: userRow } = await admin
     .from("users")
-    .select("points")
+    .select("points, nickname")
     .eq("id", user.id)
     .single();
 
@@ -81,6 +81,18 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (giftErr) return NextResponse.json({ message: giftErr.message }, { status: 500 });
+
+  // ─── Realtime 시그널 — 크리에이터 화면에 선물 이팩트 표시 ───
+  await admin.from("call_signals").insert({
+    session_id: call_session_id,
+    type: "gift_received",
+    to_user_id: to_creator_id,
+    from_user_id: user.id,
+    payload: {
+      amount,
+      from_nickname: (userRow as any)?.nickname ?? "익명",
+    },
+  }).then(null, () => null); // non-blocking
 
   return NextResponse.json({ success: true, gift, remaining_points: currentPoints - amount });
 }
