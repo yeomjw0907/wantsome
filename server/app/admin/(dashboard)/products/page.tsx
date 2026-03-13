@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ImagePlus, X } from "lucide-react";
 
 interface Product {
   id: string;
   name: string;
   description?: string;
+  detail_content?: string;
   price: number;
   original_price?: number;
   category: string;
@@ -26,25 +27,28 @@ const CATEGORY_MAP: Record<string, string> = {
 const EMPTY_FORM = {
   name: "",
   description: "",
+  detail_content: "",
   price: "",
   original_price: "",
   category: "general",
   tags: "",
-  images: "",
+  imageUrls: [] as string[],
   stock: "-1",
 };
 
 export default function AdminProductsPage() {
-  const [products,   setProducts]   = useState<Product[]>([]);
-  const [isLoading,  setIsLoading]  = useState(true);
-  const [toast,      setToast]      = useState<{ msg: string; type: string } | null>(null);
-  const [filterCat,  setFilterCat]  = useState("all");
-  const [showModal,  setShowModal]  = useState(false);
-  const [editing,    setEditing]    = useState<Product | null>(null);
-  const [form,       setForm]       = useState(EMPTY_FORM);
-  const [isSaving,   setIsSaving]   = useState(false);
-  const [page,       setPage]       = useState(1);
-  const [hasMore,    setHasMore]    = useState(true);
+  const [products,       setProducts]       = useState<Product[]>([]);
+  const [isLoading,      setIsLoading]      = useState(true);
+  const [toast,          setToast]          = useState<{ msg: string; type: string } | null>(null);
+  const [filterCat,      setFilterCat]      = useState("all");
+  const [showModal,      setShowModal]      = useState(false);
+  const [editing,        setEditing]        = useState<Product | null>(null);
+  const [form,           setForm]           = useState(EMPTY_FORM);
+  const [isSaving,       setIsSaving]       = useState(false);
+  const [uploadingImg,   setUploadingImg]   = useState(false);
+  const [page,           setPage]           = useState(1);
+  const [hasMore,        setHasMore]        = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadProducts(1); }, [filterCat]);
 
@@ -75,16 +79,50 @@ export default function AdminProductsPage() {
   const openEdit = (p: Product) => {
     setEditing(p);
     setForm({
-      name: p.name,
-      description: p.description ?? "",
-      price: String(p.price),
+      name:           p.name,
+      description:    p.description ?? "",
+      detail_content: p.detail_content ?? "",
+      price:          String(p.price),
       original_price: p.original_price ? String(p.original_price) : "",
-      category: p.category,
-      tags: p.tags.join(", "),
-      images: p.images.join("\n"),
-      stock: String(p.stock),
+      category:       p.category,
+      tags:           p.tags.join(", "),
+      imageUrls:      [...(p.images ?? [])],
+      stock:          String(p.stock),
     });
     setShowModal(true);
+  };
+
+  /** 이미지 업로드 핸들러 */
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    if (form.imageUrls.length + files.length > 5) {
+      showToast("이미지는 최대 5장까지 등록할 수 있습니다.", "error");
+      return;
+    }
+    setUploadingImg(true);
+    const uploaded: string[] = [];
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("bucket", "product-images");
+      const res = await fetch("/admin/api/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const d = await res.json();
+        uploaded.push(d.url);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showToast(d.message ?? "업로드 실패", "error");
+      }
+    }
+    setForm((prev) => ({ ...prev, imageUrls: [...prev.imageUrls, ...uploaded] }));
+    setUploadingImg(false);
+    // 파일 인풋 초기화
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeImage = (idx: number) => {
+    setForm((prev) => ({ ...prev, imageUrls: prev.imageUrls.filter((_, i) => i !== idx) }));
   };
 
   const handleSave = async () => {
@@ -94,14 +132,15 @@ export default function AdminProductsPage() {
     }
     setIsSaving(true);
     const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      price: parseInt(form.price, 10),
+      name:           form.name.trim(),
+      description:    form.description.trim() || null,
+      detail_content: form.detail_content.trim() || null,
+      price:          parseInt(form.price, 10),
       original_price: form.original_price ? parseInt(form.original_price, 10) : null,
-      category: form.category,
-      tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-      images: form.images ? form.images.split("\n").map((u) => u.trim()).filter(Boolean) : [],
-      stock: parseInt(form.stock, 10),
+      category:       form.category,
+      tags:           form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      images:         form.imageUrls,
+      stock:          parseInt(form.stock, 10),
     };
 
     const url    = editing ? `/admin/api/products/${editing.id}` : "/admin/api/products";
@@ -142,170 +181,317 @@ export default function AdminProductsPage() {
     }
   };
 
+  const F = <K extends keyof typeof EMPTY_FORM>(key: K, value: (typeof EMPTY_FORM)[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <div>
-          <h1 className="page-title">상품 관리</h1>
-          <p className="page-desc">쇼핑 탭에 표시되는 상품을 관리합니다.</p>
-        </div>
-        <button className="btn btn-primary" onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Plus size={16} /> 상품 등록
-        </button>
-      </div>
-
-      {/* 필터 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["all", "general", "digital", "adult"].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setFilterCat(cat)}
-            className={`btn ${filterCat === cat ? "btn-primary" : "btn-secondary"}`}
-            style={{ fontSize: 12, padding: "6px 14px" }}
-          >
-            {cat === "all" ? "전체" : CATEGORY_MAP[cat]}
+    <>
+      <div className="topbar">
+        <h2 className="topbar-title">상품 관리</h2>
+        <div className="topbar-actions">
+          <button className="btn btn-primary" onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Plus size={15} /> 상품 등록
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* 테이블 */}
-      <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>상품명</th>
-              <th>카테고리</th>
-              <th>판매가</th>
-              <th>원가</th>
-              <th>재고</th>
-              <th>판매수</th>
-              <th>상태</th>
-              <th>등록일</th>
-              <th>관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && products.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "#9CA3AF" }}>로딩 중...</td></tr>
-            ) : products.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "#9CA3AF" }}>등록된 상품이 없습니다</td></tr>
-            ) : (
-              products.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {p.images[0] && (
-                        <img src={p.images[0]} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover" }} />
-                      )}
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</span>
-                    </div>
-                  </td>
-                  <td><span className="badge badge-gray">{CATEGORY_MAP[p.category] ?? p.category}</span></td>
-                  <td style={{ fontWeight: 700, color: "#FF6B9D" }}>{p.price.toLocaleString()}P</td>
-                  <td style={{ color: "#9CA3AF", textDecoration: "line-through", fontSize: 12 }}>
-                    {p.original_price ? `${p.original_price.toLocaleString()}P` : "-"}
-                  </td>
-                  <td>{p.stock === -1 ? "무제한" : p.stock}</td>
-                  <td>{p.sold_count.toLocaleString()}</td>
-                  <td>
-                    <span className={`badge ${p.is_active ? "badge-green" : "badge-gray"}`}>
-                      {p.is_active ? "판매중" : "숨김"}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: 12, color: "#9CA3AF" }}>
-                    {new Date(p.created_at).toLocaleDateString("ko-KR")}
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ padding: "4px 8px", fontSize: 11 }}
-                        onClick={() => openEdit(p)}
-                      >
-                        <Pencil size={12} />
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ padding: "4px 8px", fontSize: 11 }}
-                        onClick={() => handleToggleActive(p)}
-                        title={p.is_active ? "숨기기" : "활성화"}
-                      >
-                        {p.is_active ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        style={{ padding: "4px 8px", fontSize: 11 }}
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </td>
+      <div className="page-content">
+        {/* 필터 */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          {["all", "general", "digital", "adult"].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setFilterCat(cat)}
+              className={`btn ${filterCat === cat ? "btn-primary" : "btn-secondary"}`}
+              style={{ fontSize: 12, padding: "6px 14px" }}
+            >
+              {cat === "all" ? "전체" : CATEGORY_MAP[cat]}
+            </button>
+          ))}
+        </div>
+
+        {/* 테이블 */}
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>상품명</th>
+                  <th>카테고리</th>
+                  <th>판매가</th>
+                  <th>원가</th>
+                  <th>재고</th>
+                  <th>판매수</th>
+                  <th>상태</th>
+                  <th>등록일</th>
+                  <th>관리</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        {hasMore && (
-          <div style={{ textAlign: "center", padding: 16 }}>
-            <button className="btn btn-secondary" onClick={() => loadProducts(page + 1)}>더 보기</button>
+              </thead>
+              <tbody>
+                {isLoading && products.length === 0 ? (
+                  <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "#9CA3AF" }}>로딩 중...</td></tr>
+                ) : products.length === 0 ? (
+                  <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "#9CA3AF" }}>등록된 상품이 없습니다</td></tr>
+                ) : (
+                  products.map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {p.images[0] ? (
+                            <img src={p.images[0]} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: 40, height: 40, borderRadius: 8, background: "#F3F4F6", flexShrink: 0 }} />
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
+                            {p.description && (
+                              <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.description}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td><span className="badge badge-gray">{CATEGORY_MAP[p.category] ?? p.category}</span></td>
+                      <td style={{ fontWeight: 700, color: "#FF6B9D" }}>{p.price.toLocaleString()}P</td>
+                      <td style={{ color: "#9CA3AF", textDecoration: "line-through", fontSize: 12 }}>
+                        {p.original_price ? `${p.original_price.toLocaleString()}P` : "-"}
+                      </td>
+                      <td>{p.stock === -1 ? "무제한" : p.stock}</td>
+                      <td>{p.sold_count.toLocaleString()}</td>
+                      <td>
+                        <span className={`badge ${p.is_active ? "badge-green" : "badge-gray"}`}>
+                          {p.is_active ? "판매중" : "숨김"}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12, color: "#9CA3AF" }}>
+                        {new Date(p.created_at).toLocaleDateString("ko-KR")}
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button className="btn btn-sm btn-outline" onClick={() => openEdit(p)}>
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => handleToggleActive(p)}
+                            title={p.is_active ? "숨기기" : "활성화"}
+                          >
+                            {p.is_active ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
+                          </button>
+                          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}>
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+          {hasMore && (
+            <div style={{ textAlign: "center", padding: 16 }}>
+              <button className="btn btn-secondary" onClick={() => loadProducts(page + 1)}>더 보기</button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 상품 등록/수정 모달 */}
+      {/* ── 상품 등록/수정 모달 ── */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" style={{ maxWidth: 560, width: "90%" }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+          <div
+            className="modal"
+            style={{ maxWidth: 640, width: "90%", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
-              <h3>{editing ? "상품 수정" : "상품 등록"}</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9CA3AF" }}>×</button>
+              <span className="modal-title">{editing ? "상품 수정" : "상품 등록"}</span>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--gray-400)" }}
+              >×</button>
             </div>
-            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>상품명 *</label>
-                <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="상품명 입력" />
+
+            <div className="modal-body">
+              {/* 상품명 */}
+              <div className="form-group">
+                <label className="form-label">상품명 *</label>
+                <input
+                  className="form-input"
+                  value={form.name}
+                  onChange={(e) => F("name", e.target.value)}
+                  placeholder="상품명 입력"
+                />
               </div>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>설명</label>
-                <textarea className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="상품 설명" style={{ resize: "vertical" }} />
+
+              {/* 간단 설명 */}
+              <div className="form-group">
+                <label className="form-label">간단 설명</label>
+                <input
+                  className="form-input"
+                  value={form.description}
+                  onChange={(e) => F("description", e.target.value)}
+                  placeholder="리스트에 표시되는 한 줄 설명"
+                />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>판매가 (P) *</label>
-                  <input className="input" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="1000" />
+
+              {/* 가격 + 원가 */}
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">판매가 (P) *</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    value={form.price}
+                    onChange={(e) => F("price", e.target.value)}
+                    placeholder="1000"
+                  />
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>원가 (P)</label>
-                  <input className="input" type="number" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} placeholder="할인 전 가격" />
+                <div className="form-group">
+                  <label className="form-label">원가 (P) <span style={{ fontWeight: 400, color: "var(--gray-400)" }}>할인 전</span></label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    value={form.original_price}
+                    onChange={(e) => F("original_price", e.target.value)}
+                    placeholder="미입력 시 할인표시 없음"
+                  />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>카테고리</label>
-                  <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+
+              {/* 카테고리 + 재고 */}
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">카테고리</label>
+                  <select
+                    className="form-input form-select"
+                    value={form.category}
+                    onChange={(e) => F("category", e.target.value)}
+                  >
                     <option value="general">일반</option>
                     <option value="digital">디지털</option>
                     <option value="adult">성인</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>재고 (-1: 무제한)</label>
-                  <input className="input" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="-1" />
+                <div className="form-group">
+                  <label className="form-label">재고 <span style={{ fontWeight: 400, color: "var(--gray-400)" }}>-1 = 무제한</span></label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    value={form.stock}
+                    onChange={(e) => F("stock", e.target.value)}
+                    placeholder="-1"
+                  />
                 </div>
               </div>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>태그 (쉼표로 구분)</label>
-                <input className="input" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="선물, 메시지, 맞춤" />
+
+              {/* 태그 */}
+              <div className="form-group">
+                <label className="form-label">태그 <span style={{ fontWeight: 400, color: "var(--gray-400)" }}>쉼표로 구분</span></label>
+                <input
+                  className="form-input"
+                  value={form.tags}
+                  onChange={(e) => F("tags", e.target.value)}
+                  placeholder="선물, 메시지, 맞춤"
+                />
               </div>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", display: "block", marginBottom: 4 }}>이미지 URL (줄바꿈으로 구분)</label>
-                <textarea className="input" value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} rows={2} placeholder="https://..." style={{ resize: "vertical", fontFamily: "monospace", fontSize: 12 }} />
+
+              {/* 이미지 업로드 */}
+              <div className="form-group">
+                <label className="form-label">
+                  상품 이미지 <span style={{ fontWeight: 400, color: "var(--gray-400)" }}>최대 5장</span>
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {form.imageUrls.map((url, i) => (
+                    <div key={i} style={{ position: "relative", width: 88, height: 88 }}>
+                      <img
+                        src={url}
+                        alt=""
+                        style={{ width: 88, height: 88, borderRadius: 10, objectFit: "cover", border: "1px solid var(--gray-200)" }}
+                      />
+                      <button
+                        onClick={() => removeImage(i)}
+                        style={{
+                          position: "absolute", top: -6, right: -6,
+                          width: 20, height: 20, borderRadius: "50%",
+                          background: "#EF4444", color: "#fff",
+                          border: "2px solid #fff",
+                          cursor: "pointer", fontSize: 13,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          lineHeight: 1,
+                        }}
+                      >
+                        <X size={11} />
+                      </button>
+                      {i === 0 && (
+                        <div style={{
+                          position: "absolute", bottom: 0, left: 0, right: 0,
+                          textAlign: "center", fontSize: 10, fontWeight: 700,
+                          background: "rgba(0,0,0,0.5)", color: "#fff",
+                          borderRadius: "0 0 10px 10px", padding: "2px 0",
+                        }}>대표</div>
+                      )}
+                    </div>
+                  ))}
+
+                  {form.imageUrls.length < 5 && (
+                    <label
+                      style={{
+                        width: 88, height: 88, borderRadius: 10,
+                        border: "2px dashed var(--gray-300)",
+                        display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "center",
+                        cursor: uploadingImg ? "not-allowed" : "pointer",
+                        color: "var(--gray-400)", gap: 4,
+                        background: uploadingImg ? "var(--gray-100)" : "transparent",
+                        transition: "background 0.15s",
+                      }}
+                    >
+                      {uploadingImg ? (
+                        <span style={{ fontSize: 11 }}>업로드 중...</span>
+                      ) : (
+                        <>
+                          <ImagePlus size={20} />
+                          <span style={{ fontSize: 10 }}>이미지 추가</span>
+                        </>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        style={{ display: "none" }}
+                        onChange={handleImageUpload}
+                        disabled={uploadingImg}
+                      />
+                    </label>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, color: "var(--gray-400)", marginTop: 6 }}>
+                  첫 번째 이미지가 대표 이미지로 사용됩니다. JPG, PNG, WebP (최대 10MB)
+                </p>
+              </div>
+
+              {/* 상품 상세 설명 */}
+              <div className="form-group">
+                <label className="form-label">
+                  상품 상세 설명
+                  <span style={{ fontWeight: 400, color: "var(--gray-400)", marginLeft: 6 }}>상세 페이지에 표시</span>
+                </label>
+                <textarea
+                  className="form-input"
+                  value={form.detail_content}
+                  onChange={(e) => F("detail_content", e.target.value)}
+                  rows={5}
+                  placeholder="상품의 상세한 설명, 사용 방법, 주의사항 등을 입력하세요."
+                  style={{ resize: "vertical", lineHeight: 1.6 }}
+                />
               </div>
             </div>
+
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>취소</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
+              <button className="btn btn-primary" onClick={handleSave} disabled={isSaving || uploadingImg}>
                 {isSaving ? "저장 중..." : editing ? "수정" : "등록"}
               </button>
             </div>
@@ -313,9 +499,7 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {toast && (
-        <div className={`toast ${toast.type === "error" ? "toast-error" : "toast-success"}`}>{toast.msg}</div>
-      )}
-    </div>
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+    </>
   );
 }

@@ -100,6 +100,11 @@ export default function CreatorDashboardScreen() {
   const [scheduleNote, setScheduleNote] = useState("");
   const [scheduleSaving, setScheduleSaving] = useState(false);
 
+  // 통화 가능 시간
+  const [availableTimes, setAvailableTimes] = useState("");
+  const [showTimesModal, setShowTimesModal] = useState(false);
+  const [timesSaving, setTimesSaving] = useState(false);
+
   const creatorId = user?.id;
 
   const loadSchedules = async () => {
@@ -152,6 +157,13 @@ export default function CreatorDashboardScreen() {
         reservationsData.reservations?.filter((r) => r.status === "pending") ?? []
       );
       loadSchedules();
+      // 통화 가능 시간 로드
+      if (creatorId) {
+        try {
+          const creator = await apiCall<{ available_times: string | null }>(`/api/creators/${creatorId}`);
+          setAvailableTimes(creator.available_times ?? "");
+        } catch { /* 무시 */ }
+      }
     } catch {
       Toast.show({ type: "error", text1: "데이터를 불러오지 못했습니다." });
     } finally {
@@ -461,6 +473,80 @@ export default function CreatorDashboardScreen() {
               >
                 {scheduleSaving ? <ActivityIndicator color="white" /> : (
                   <Text style={{ color: scheduleDate.trim() ? "white" : "#9CA3AF", fontWeight: "700", fontSize: 15 }}>등록하기</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 통화 가능 시간 설정 */}
+      <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: "white", borderRadius: 24, padding: 20 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="time-outline" size={18} color="#1B2A4A" />
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#1B2A4A" }}>통화 가능 시간</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowTimesModal(true)}
+            style={{ backgroundColor: "#4D9FFF", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 }}
+          >
+            <Text style={{ color: "white", fontSize: 12, fontWeight: "700" }}>수정</Text>
+          </TouchableOpacity>
+        </View>
+        {availableTimes ? (
+          <View style={{ backgroundColor: "#F0F7FF", borderRadius: 12, padding: 12 }}>
+            <Text style={{ fontSize: 13, color: "#1B2A4A", lineHeight: 20 }}>{availableTimes}</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() => setShowTimesModal(true)}
+            style={{ borderWidth: 1.5, borderColor: "#E5E7EB", borderStyle: "dashed", borderRadius: 12, padding: 14, alignItems: "center" }}
+          >
+            <Ionicons name="add-circle-outline" size={22} color="#C8C8D8" />
+            <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>통화 가능 시간을 등록해 보세요</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* 통화 가능 시간 모달 */}
+      <Modal visible={showTimesModal} transparent animationType="slide" onRequestClose={() => setShowTimesModal(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }} activeOpacity={1} onPress={() => setShowTimesModal(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={{ backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: "#1B2A4A", marginBottom: 4 }}>⏰ 통화 가능 시간</Text>
+              <Text style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 16 }}>소비자에게 언제 통화 가능한지 알려주세요</Text>
+              <TextInput
+                value={availableTimes}
+                onChangeText={setAvailableTimes}
+                placeholder={"예) 평일 오후 8시~11시\n주말 오후 2시~자정"}
+                placeholderTextColor="#C8C8D8"
+                multiline
+                numberOfLines={3}
+                style={{ minHeight: 80, borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, color: "#1B2A4A", marginBottom: 20, textAlignVertical: "top" }}
+              />
+              <TouchableOpacity
+                onPress={async () => {
+                  if (!creatorId) return;
+                  setTimesSaving(true);
+                  try {
+                    await apiCall(`/api/creators/${creatorId}/profile`, {
+                      method: "PATCH",
+                      body: JSON.stringify({ available_times: availableTimes || null }),
+                    });
+                    setShowTimesModal(false);
+                    Toast.show({ type: "success", text1: "통화 가능 시간이 업데이트됐습니다 ⏰" });
+                  } catch {
+                    Toast.show({ type: "error", text1: "저장에 실패했습니다." });
+                  } finally {
+                    setTimesSaving(false);
+                  }
+                }}
+                disabled={timesSaving}
+                style={{ height: 48, borderRadius: 24, backgroundColor: "#4D9FFF", alignItems: "center", justifyContent: "center" }}
+              >
+                {timesSaving ? <ActivityIndicator color="white" /> : (
+                  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>저장하기</Text>
                 )}
               </TouchableOpacity>
             </View>

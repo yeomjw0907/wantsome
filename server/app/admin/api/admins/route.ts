@@ -33,11 +33,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "superadmin only" }, { status: 403 });
   }
 
-  const { action, targetId, role } = await req.json() as {
-    action: "change_role" | "deactivate" | "reactivate";
-    targetId: string;
+  const { action, targetId, role, email } = await req.json() as {
+    action: "change_role" | "deactivate" | "reactivate" | "add" | "remove";
+    targetId?: string;
     role?: string;
+    email?: string;
   };
+
+  const admin = createSupabaseAdmin();
+
+  // ── 관리자 추가 (이메일로 검색 후 role 부여) ──
+  if (action === "add") {
+    if (!email?.trim()) return NextResponse.json({ message: "이메일을 입력하세요." }, { status: 400 });
+    const grantRole = role && ["admin", "superadmin"].includes(role) ? role : "admin";
+
+    const { data: found, error: findErr } = await admin
+      .from("users")
+      .select("id, email, role, deleted_at")
+      .ilike("email", email.trim())
+      .maybeSingle();
+
+    if (findErr || !found) {
+      return NextResponse.json({ message: "해당 이메일의 유저를 찾을 수 없습니다." }, { status: 404 });
+    }
+    if (found.deleted_at) {
+      return NextResponse.json({ message: "탈퇴한 계정입니다." }, { status: 400 });
+    }
+    if (["admin", "superadmin"].includes(found.role)) {
+      return NextResponse.json({ message: "이미 관리자 권한을 가진 계정입니다." }, { status: 400 });
+    }
+
+    await admin.from("users").update({ role: grantRole }).eq("id", found.id);
+    await admin.from("admin_logs").insert({
+      admin_id: adminId,
+      action: "ADMIN_ADD",
+      target_type: "admin",
+      target_id: found.id,
+      detail: { email: found.email, role: grantRole },
+    });
+    return NextResponse.json({ ok: true });
+  }
 
   if (!targetId) return NextResponse.json({ message: "targetId 필수" }, { status: 400 });
 
@@ -46,7 +81,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "자신의 계정은 수정할 수 없습니다." }, { status: 400 });
   }
 
-  const admin = createSupabaseAdmin();
+  // ── 관리자 권한 제거 (role → user) ──
+  if (action === "remove") {
+    const { data: target } = await admin.from("users").select("role").eq("id", targetId).maybeSingle();
+    if (target?.role === "superadmin") {
+      return NextResponse.json({ message: "superadmin 계정은 권한을 제거할 수 없습니다." }, { status: 400 });
+    }
+    await admin.from("users").update({ role: "user" }).eq("id", targetId);
+    await admin.from("admin_logs").insert({
+      admin_id: adminId,
+      action: "ADMIN_REMOVE",
+      target_type: "admin",
+      target_id: targetId,
+      detail: { note: "권한 제거" },
+    });
+    return NextResponse.json({ ok: true });
+  }
 
   if (action === "change_role") {
     if (!role || !["admin", "superadmin"].includes(role)) {

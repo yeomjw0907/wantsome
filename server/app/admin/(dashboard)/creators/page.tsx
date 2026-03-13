@@ -4,7 +4,6 @@ import { Sprout, Star, Flame, Trophy, Users, User } from "lucide-react";
 
 interface Creator {
   id: string;
-  user_id: string;
   display_name: string;
   profile_image_url: string | null;
   grade: string;
@@ -14,6 +13,7 @@ interface Creator {
   total_calls: number;
   total_earnings: number;
   created_at: string;
+  _pending?: boolean;
   users: { nickname: string; email: string; suspended_until: string | null; deleted_at: string | null } | null;
 }
 
@@ -200,11 +200,16 @@ export default function CreatorsListPage() {
                           </div>
                         </td>
                         <td>
-                          {(() => { const GIcon = GRADE_ICON[c.grade] ?? Sprout; return (
-                            <span className={`badge ${grade.color}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                              <GIcon size={11} /> {grade.label}
-                            </span>
-                          ); })()}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {(() => { const GIcon = GRADE_ICON[c.grade] ?? Sprout; return (
+                              <span className={`badge ${grade.color}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                <GIcon size={11} /> {grade.label}
+                              </span>
+                            ); })()}
+                            {c._pending && (
+                              <span className="badge badge-orange" style={{ fontSize: 10 }}>미승인</span>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <div style={{ display: "flex", gap: 4 }}>

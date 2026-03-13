@@ -24,7 +24,7 @@ export async function GET(
     .select(`
       id, display_name, grade, is_online, mode_blue, mode_red,
       settlement_rate, monthly_minutes, bio, created_at,
-      avg_rating, total_call_duration, response_rate, categories,
+      avg_rating, total_call_duration, response_rate, categories, available_times,
       users!inner(nickname, profile_img, is_verified)
     `)
     .eq("id", id)
@@ -74,5 +74,6 @@ export async function GET(
     categories:          c.categories ?? [],
     post_count:          postCount ?? 0,
     settlement_rate:     creator.settlement_rate ?? 0.75,
+    available_times:     c.available_times ?? null,
   });
 }

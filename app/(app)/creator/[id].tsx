@@ -47,6 +47,7 @@ interface Creator {
   avg_rating: number;
   categories: string[];
   post_count: number;
+  available_times: string | null;
 }
 
 const GRADE_CONFIG = {
@@ -413,6 +414,32 @@ export default function CreatorProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* ── 통화 가능 시간 ── */}
+        {creator.available_times && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 8,
+              backgroundColor: creator.is_online ? "#F0FFF4" : "#F9FAFB",
+              borderRadius: 14, padding: 14,
+              borderWidth: 1, borderColor: creator.is_online ? "#86EFAC" : "#E5E7EB",
+            }}>
+              <View style={{
+                width: 36, height: 36, borderRadius: 18,
+                backgroundColor: creator.is_online ? "#22C55E" : "#9CA3AF",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name="time" size={18} color="white" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 2 }}>통화 가능 시간</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#1B2A4A", lineHeight: 18 }}>
+                  {creator.available_times}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* ── 예정 방송 일정 ── */}
         {schedules.length > 0 && (

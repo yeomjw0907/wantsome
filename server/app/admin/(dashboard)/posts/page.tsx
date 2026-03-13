@@ -164,8 +164,8 @@ export default function AdminPostsPage() {
 
       {/* 이미지 프리뷰 모달 */}
       {preview && (
-        <div className="modal-overlay" onClick={() => setPreview(null)}>
-          <div className="modal" style={{ maxWidth: 440, width: "90%" }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" onClick={() => setPreview(null)}>
+          <div className="modal" style={{ maxWidth: 480, width: "90%" }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{preview.creator_name}의 포스트</h3>
               <button onClick={() => setPreview(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9CA3AF" }}>×</button>
