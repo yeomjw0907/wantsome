@@ -32,5 +32,48 @@ export async function PATCH(
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
+  // 온라인 전환 시 즐겨찾기한 유저에게 푸시 알림 (비동기, 실패 무시)
+  if (is_online) {
+    sendOnlinePush(admin, id).catch(() => {});
+  }
+
   return NextResponse.json({ success: true });
+}
+
+async function sendOnlinePush(
+  admin: ReturnType<typeof createSupabaseAdmin>,
+  creatorId: string
+) {
+  const [{ data: creator }, { data: favs }] = await Promise.all([
+    admin.from("creators").select("display_name, users(nickname)").eq("id", creatorId).single(),
+    admin.from("favorites").select("user_id").eq("creator_id", creatorId),
+  ]);
+
+  if (!favs || favs.length === 0) return;
+
+  const creatorName =
+    (creator as any)?.display_name ?? (creator as any)?.users?.nickname ?? "크리에이터";
+
+  const { data: tokenRows } = await admin
+    .from("push_tokens")
+    .select("token")
+    .in("user_id", favs.map((f: any) => f.user_id));
+
+  if (!tokenRows || tokenRows.length === 0) return;
+
+  const messages = tokenRows.map((r: any) => ({
+    to: r.token,
+    title: `${creatorName}님이 접속했어요! 💫`,
+    body: "지금 바로 통화해보세요",
+    data: { creatorId, screen: "creator" },
+    sound: "default",
+  }));
+
+  for (let i = 0; i < messages.length; i += 100) {
+    await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(messages.slice(i, i + 100)),
+    });
+  }
 }

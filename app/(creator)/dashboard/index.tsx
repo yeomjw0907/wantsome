@@ -15,6 +15,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Switch,
+  Modal,
+  TextInput,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -89,7 +92,51 @@ export default function CreatorDashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
 
+  // 예정 방송 일정
+  type Schedule = { id: string; scheduled_at: string; note: string | null };
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleNote, setScheduleNote] = useState("");
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+
   const creatorId = user?.id;
+
+  const loadSchedules = async () => {
+    if (!creatorId) return;
+    try {
+      const res = await apiCall<{ schedules: Schedule[] }>(`/api/creators/${creatorId}/schedules`);
+      setSchedules(res.schedules ?? []);
+    } catch { /* 무시 */ }
+  };
+
+  const handleAddSchedule = async () => {
+    if (!scheduleDate.trim() || !creatorId) return;
+    setScheduleSaving(true);
+    try {
+      await apiCall(`/api/creators/${creatorId}/schedules`, {
+        method: "POST",
+        body: JSON.stringify({ scheduled_at: scheduleDate, note: scheduleNote }),
+      });
+      setShowScheduleModal(false);
+      setScheduleDate("");
+      setScheduleNote("");
+      await loadSchedules();
+      Toast.show({ type: "success", text1: "방송 일정이 등록됐습니다! 📅" });
+    } catch (e) {
+      Toast.show({ type: "error", text1: e instanceof Error ? e.message : "등록 실패" });
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  const handleCancelSchedule = async (scheduleId: string) => {
+    if (!creatorId) return;
+    try {
+      await apiCall(`/api/creators/${creatorId}/schedules?schedule_id=${scheduleId}`, { method: "DELETE" });
+      setSchedules((s) => s.filter((x) => x.id !== scheduleId));
+    } catch { /* 무시 */ }
+  };
 
   const loadData = useCallback(async () => {
     if (!creatorId) return;
@@ -104,6 +151,7 @@ export default function CreatorDashboardScreen() {
       setReservations(
         reservationsData.reservations?.filter((r) => r.status === "pending") ?? []
       );
+      loadSchedules();
     } catch {
       Toast.show({ type: "error", text1: "데이터를 불러오지 못했습니다." });
     } finally {
@@ -347,6 +395,78 @@ export default function CreatorDashboardScreen() {
           ))}
         </View>
       )}
+
+      {/* 예정 방송 일정 */}
+      <View className="mx-4 mt-4 bg-white rounded-3xl p-5">
+        <View className="flex-row items-center justify-between mb-4">
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="calendar-outline" size={18} color="#1B2A4A" />
+            <Text className="text-navy font-bold text-base">예정 방송</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowScheduleModal(true)}
+            style={{ backgroundColor: "#FF6B9D", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 }}
+          >
+            <Text style={{ color: "white", fontSize: 12, fontWeight: "700" }}>+ 일정 추가</Text>
+          </TouchableOpacity>
+        </View>
+        {schedules.length === 0 ? (
+          <Text className="text-gray-400 text-sm text-center py-3">예정된 방송이 없습니다</Text>
+        ) : schedules.map((s) => {
+          const dt = new Date(s.scheduled_at);
+          const dateStr = `${dt.getMonth() + 1}/${dt.getDate()} ${dt.getHours().toString().padStart(2,"0")}:${dt.getMinutes().toString().padStart(2,"0")}`;
+          return (
+            <View key={s.id} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F0F7FF", borderRadius: 12, padding: 12, marginBottom: 8, gap: 10 }}>
+              <Ionicons name="time-outline" size={16} color="#4D9FFF" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#1B2A4A" }}>{dateStr}</Text>
+                {s.note && <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{s.note}</Text>}
+              </View>
+              <TouchableOpacity onPress={() => handleCancelSchedule(s.id)}>
+                <Ionicons name="trash-outline" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* 일정 추가 모달 */}
+      <Modal visible={showScheduleModal} transparent animationType="slide" onRequestClose={() => setShowScheduleModal(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }} activeOpacity={1} onPress={() => setShowScheduleModal(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={{ backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: "#1B2A4A", marginBottom: 4 }}>📅 방송 일정 추가</Text>
+              <Text style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>팬들에게 방송 예정 시간을 알려보세요</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 6 }}>날짜/시간 (ISO 형식)</Text>
+              <TextInput
+                value={scheduleDate}
+                onChangeText={setScheduleDate}
+                placeholder="예) 2026-03-20T21:00:00"
+                placeholderTextColor="#C8C8D8"
+                style={{ height: 44, borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 14, fontSize: 13, color: "#1B2A4A", marginBottom: 12 }}
+              />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 6 }}>메모 (선택)</Text>
+              <TextInput
+                value={scheduleNote}
+                onChangeText={setScheduleNote}
+                placeholder="예) 오늘 밤 9시에 만나요 🌙"
+                placeholderTextColor="#C8C8D8"
+                maxLength={100}
+                style={{ height: 44, borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 14, fontSize: 13, color: "#1B2A4A", marginBottom: 20 }}
+              />
+              <TouchableOpacity
+                onPress={handleAddSchedule}
+                disabled={scheduleSaving || !scheduleDate.trim()}
+                style={{ height: 48, borderRadius: 24, backgroundColor: scheduleDate.trim() ? "#FF6B9D" : "#E5E7EB", alignItems: "center", justifyContent: "center" }}
+              >
+                {scheduleSaving ? <ActivityIndicator color="white" /> : (
+                  <Text style={{ color: scheduleDate.trim() ? "white" : "#9CA3AF", fontWeight: "700", fontSize: 15 }}>등록하기</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* 정산 내역 */}
       <View className="mx-4 mt-4 bg-white rounded-3xl p-5 mb-6">

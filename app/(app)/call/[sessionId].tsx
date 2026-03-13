@@ -13,6 +13,8 @@ import {
   Alert,
   BackHandler,
   StatusBar,
+  Modal,
+  ScrollView,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -84,10 +86,36 @@ export default function CallScreen() {
   const [elapsed, setElapsed] = useState(0);
   const [isEnding, setIsEnding] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showGift, setShowGift] = useState(false);
+  const [giftSending, setGiftSending] = useState(false);
 
   const rate = Number(perMinRate ?? 900);
   const isLowPoints = points < rate * 5;
   const isCriticalPoints = points < rate;
+
+  const GIFT_OPTIONS = [100, 300, 500, 1000, 3000, 5000];
+
+  const handleGift = async (amount: number) => {
+    if (giftSending) return;
+    setGiftSending(true);
+    try {
+      const res = await apiCall<{ remaining_points: number }>("/api/gifts", {
+        method: "POST",
+        body: JSON.stringify({
+          call_session_id: sessionId,
+          to_creator_id: creatorId,
+          amount,
+        }),
+      });
+      usePointStore.getState().setPoints(res.remaining_points);
+      setShowGift(false);
+      Toast.show({ type: "success", text1: `💝 ${amount.toLocaleString()}P 선물 완료!` });
+    } catch (e) {
+      Toast.show({ type: "error", text1: e instanceof Error ? e.message : "선물 실패" });
+    } finally {
+      setGiftSending(false);
+    }
+  };
 
   // ─── Agora 초기화 ───
   useEffect(() => {
@@ -298,37 +326,85 @@ export default function CallScreen() {
 
       {/* 하단 컨트롤 바 */}
       <View className="absolute bottom-10 left-0 right-0">
-        <View className="flex-row justify-center items-center gap-8 bg-black/60 mx-6 rounded-2xl py-4 px-6">
+        <View className="flex-row justify-center items-center gap-6 bg-black/60 mx-6 rounded-2xl py-4 px-4">
           {/* 카메라 전환 */}
           <TouchableOpacity
-            className="w-14 h-14 rounded-full bg-white/20 items-center justify-center"
+            className="w-13 h-13 rounded-full bg-white/20 items-center justify-center"
+            style={{ width: 52, height: 52, borderRadius: 26 }}
             onPress={flipCamera}
           >
-            <Ionicons name="camera-reverse" size={26} color="white" />
+            <Ionicons name="camera-reverse" size={22} color="white" />
           </TouchableOpacity>
 
           {/* 마이크 토글 */}
           <TouchableOpacity
-            className={`w-14 h-14 rounded-full items-center justify-center ${isMuted ? "bg-white/80" : "bg-white/20"}`}
+            style={{ width: 52, height: 52, borderRadius: 26 }}
+            className={`items-center justify-center ${isMuted ? "bg-white/80" : "bg-white/20"}`}
             onPress={toggleMute}
           >
-            <Ionicons
-              name={isMuted ? "mic-off" : "mic"}
-              size={26}
-              color={isMuted ? "#000" : "white"}
-            />
+            <Ionicons name={isMuted ? "mic-off" : "mic"} size={22} color={isMuted ? "#000" : "white"} />
           </TouchableOpacity>
 
-          {/* 통화 종료 (빨간 원형) */}
+          {/* 통화 종료 */}
           <TouchableOpacity
-            className="w-16 h-16 rounded-full bg-red-500 items-center justify-center"
+            style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: "#EF4444" }}
+            className="items-center justify-center"
             onPress={confirmEnd}
             disabled={isEnding}
           >
-            <Ionicons name="call" size={28} color="white" style={{ transform: [{ rotate: "135deg" }] }} />
+            <Ionicons name="call" size={26} color="white" style={{ transform: [{ rotate: "135deg" }] }} />
+          </TouchableOpacity>
+
+          {/* 선물 버튼 */}
+          <TouchableOpacity
+            style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#FF6B9D33" }}
+            className="items-center justify-center"
+            onPress={() => setShowGift(true)}
+          >
+            <Text style={{ fontSize: 22 }}>💝</Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 선물 모달 */}
+      <Modal visible={showGift} transparent animationType="slide" onRequestClose={() => setShowGift(false)}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          activeOpacity={1}
+          onPress={() => setShowGift(false)}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={{ backgroundColor: "#1A1A2E", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
+              <Text style={{ color: "white", fontSize: 16, fontWeight: "700", marginBottom: 6 }}>💝 선물 보내기</Text>
+              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 20 }}>
+                {creatorName}님에게 포인트를 선물해보세요
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                {GIFT_OPTIONS.map((amt) => (
+                  <TouchableOpacity
+                    key={amt}
+                    onPress={() => handleGift(amt)}
+                    disabled={giftSending || points < amt}
+                    style={{
+                      paddingHorizontal: 18, paddingVertical: 10,
+                      borderRadius: 20,
+                      backgroundColor: points >= amt ? "#FF6B9D" : "#333",
+                      opacity: points < amt ? 0.4 : 1,
+                    }}
+                  >
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>
+                      {amt.toLocaleString()}P
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 16, textAlign: "right" }}>
+                보유 포인트: {points.toLocaleString()}P
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* 신고 바텀시트 */}
       <ReportBottomSheet

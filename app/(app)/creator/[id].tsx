@@ -100,9 +100,20 @@ export default function CreatorProfileScreen() {
   const [gridPosts, setGridPosts] = useState<GridPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
 
+  // 리뷰
+  type Review = { id: string; rating: number; comment: string; created_at: string; reviewer_nickname: string; reviewer_avatar: string | null };
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  // 예정 방송 일정
+  type Schedule = { id: string; scheduled_at: string; note: string | null };
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+
   useEffect(() => {
     loadCreator();
     loadPosts();
+    loadReviews();
+    loadSchedules();
   }, [id]);
 
   const loadCreator = async () => {
@@ -118,6 +129,23 @@ export default function CreatorProfileScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadReviews = async () => {
+    if (!id) return;
+    setReviewsLoading(true);
+    try {
+      const res = await apiCall<{ reviews: Review[] }>(`/api/creators/${id}/reviews?page=1`);
+      setReviews(res.reviews ?? []);
+    } catch { /* 무시 */ } finally { setReviewsLoading(false); }
+  };
+
+  const loadSchedules = async () => {
+    if (!id) return;
+    try {
+      const res = await apiCall<{ schedules: Schedule[] }>(`/api/creators/${id}/schedules`);
+      setSchedules(res.schedules ?? []);
+    } catch { /* 무시 */ }
   };
 
   const loadPosts = async () => {
@@ -385,6 +413,51 @@ export default function CreatorProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* ── 예정 방송 일정 ── */}
+        {schedules.length > 0 && (
+          <View className="px-5 mb-5">
+            <Text className="text-navy text-sm font-bold mb-3">📅 예정 방송</Text>
+            {schedules.map((s) => {
+              const dt = new Date(s.scheduled_at);
+              const dateStr = `${dt.getMonth() + 1}/${dt.getDate()} ${dt.getHours().toString().padStart(2,"0")}:${dt.getMinutes().toString().padStart(2,"0")}`;
+              return (
+                <View key={s.id} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F0F7FF", borderRadius: 12, padding: 12, marginBottom: 8, gap: 10 }}>
+                  <Ionicons name="time-outline" size={16} color="#4D9FFF" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#1B2A4A" }}>{dateStr}</Text>
+                    {s.note && <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>{s.note}</Text>}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* ── 리뷰 목록 ── */}
+        {(reviewsLoading || reviews.length > 0) && (
+          <View className="px-5 mb-5">
+            <Text className="text-navy text-sm font-bold mb-3">💬 리뷰</Text>
+            {reviewsLoading ? (
+              <ActivityIndicator size="small" color="#FF6B9D" />
+            ) : reviews.map((r) => (
+              <View key={r.id} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 14, marginBottom: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "#D1E4F8", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                    <Ionicons name="person" size={14} color="#4D9FFF" />
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#1B2A4A" }}>{r.reviewer_nickname}</Text>
+                  <View style={{ flexDirection: "row", marginLeft: "auto" }}>
+                    {[1,2,3,4,5].map((i) => (
+                      <Ionicons key={i} name={i <= r.rating ? "star" : "star-outline"} size={11} color="#FF6B9D" />
+                    ))}
+                  </View>
+                </View>
+                <Text style={{ fontSize: 13, color: "#374151", lineHeight: 18 }}>{r.comment}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* ── 포스트 그리드 ── */}
         <View className="mt-1">

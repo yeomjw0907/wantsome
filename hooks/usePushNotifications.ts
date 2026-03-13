@@ -47,8 +47,8 @@ export function usePushNotifications() {
         const pushToken = tokenData.data;
 
         // 서버에 토큰 등록
-        await apiCall("/api/users/push-token", {
-          method: "PATCH",
+        await apiCall("/api/push/register", {
+          method: "POST",
           body: JSON.stringify({ push_token: pushToken }),
         }).catch(() => null);
       } catch {
