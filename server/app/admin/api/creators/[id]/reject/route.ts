@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { userId } = await params;
+  const { id } = await params;
   const adminId = req.headers.get("x-admin-id");
   const adminRole = req.headers.get("x-admin-role");
   if (!adminRole || !adminId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -28,22 +28,20 @@ export async function POST(
       rejected_at: new Date().toISOString(),
       rejected_by: adminId,
     })
-    .eq("user_id", userId);
+    .eq("user_id", id);
 
-  await admin.from("users").update({ role: "consumer" }).eq("id", userId);
+  await admin.from("users").update({ role: "consumer" }).eq("id", id);
 
-  // 앱 푸시
-  await sendPushToUser(admin, userId, {
+  await sendPushToUser(admin, id, {
     title: "크리에이터 심사 결과",
     body: `재제출 요청: ${body.reason}`,
   });
 
-  // 관리자 로그
   await admin.from("admin_logs").insert({
     admin_id: adminId,
     action: "CREATOR_REJECT",
     target_type: "creator",
-    target_id: userId,
+    target_id: id,
     detail: { status: "REJECTED", reason: body.reason },
     ip: req.headers.get("x-forwarded-for") ?? "unknown",
   }).then(null, () => null);

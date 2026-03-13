@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ creatorId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { creatorId } = await params;
+  const { id } = await params;
   const adminRole = req.headers.get("x-admin-role");
   if (adminRole !== "superadmin") return NextResponse.json({ message: "superadmin only" }, { status: 403 });
 
@@ -21,7 +21,7 @@ export async function POST(
   const { error } = await admin
     .from("creators")
     .update({ grade })
-    .eq("id", creatorId);
+    .eq("id", id);
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
