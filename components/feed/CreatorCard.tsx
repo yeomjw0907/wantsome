@@ -1,5 +1,7 @@
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import type { Creator } from "@/stores/useCreatorStore";
+import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import type { FeedMode } from "./ModeTab";
 
 interface CreatorCardProps {
@@ -12,6 +14,8 @@ export function CreatorCard({ creator, mode, onCallPress }: CreatorCardProps) {
   const photoUri = creator.profile_image_url || undefined;
   const ratePerMin = creator.rate_per_min ?? (mode === "blue" ? 900 : 1300);
   const isBlue = mode === "blue";
+  const { isFavorited, toggle } = useFavoriteStore();
+  const favorited = isFavorited(creator.id);
 
   return (
     <View style={styles.card}>
@@ -35,6 +39,20 @@ export function CreatorCard({ creator, mode, onCallPress }: CreatorCardProps) {
         {creator.is_online && (
           <View style={styles.onlineDot} pointerEvents="none" />
         )}
+
+        {/* 즐겨찾기 버튼 */}
+        <TouchableOpacity
+          style={styles.heartBtn}
+          onPress={() => toggle(creator.id)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons
+            name={favorited ? "heart" : "heart-outline"}
+            size={18}
+            color={favorited ? "#FF6B9D" : "rgba(255,255,255,0.85)"}
+          />
+        </TouchableOpacity>
 
         {/* 모드 뱃지 */}
         <View
@@ -99,7 +117,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 80,
     backgroundColor: "transparent",
-    // 그라데이션 대신 하단 반투명 오버레이 (expo-linear-gradient 없이)
   },
   onlineDot: {
     position: "absolute",
@@ -109,6 +126,17 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: "#22C55E",
+  },
+  heartBtn: {
+    position: "absolute",
+    top: 8,
+    right: 36,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   modeBadge: {
     position: "absolute",

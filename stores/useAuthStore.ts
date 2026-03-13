@@ -12,6 +12,8 @@ export interface User {
   red_mode: boolean;
   suspended_until: string | null;
   bio?: string | null;
+  is_first_charged?: boolean;
+  points?: number;
 }
 
 interface AuthStore {

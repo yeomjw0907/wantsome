@@ -15,10 +15,11 @@ export async function POST(req: NextRequest) {
   if (authErr || !authUser) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
 
   const body = await req.json();
-  const { call_session_id, creator_id, rating } = body as {
+  const { call_session_id, creator_id, rating, comment } = body as {
     call_session_id: string;
     creator_id: string;
     rating: number;
+    comment?: string;
   };
 
   if (!call_session_id || !creator_id || !rating) {
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       consumer_id: authUser.id,
       creator_id,
       rating,
+      comment: comment?.slice(0, 100) ?? null,
     },
     { onConflict: "call_session_id" }
   );

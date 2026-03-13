@@ -11,6 +11,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { apiCall } from "@/lib/api";
@@ -34,6 +37,7 @@ export default function RatingModal({
   onClose,
 }: Props) {
   const [selected, setSelected] = useState(0);
+  const [comment,  setComment]  = useState("");
   const [loading,  setLoading]  = useState(false);
 
   const handleSubmit = async () => {
@@ -46,6 +50,7 @@ export default function RatingModal({
           call_session_id: callSessionId,
           creator_id:      creatorId,
           rating:          selected,
+          comment:         comment.trim() || undefined,
         }),
       });
       Toast.show({ type: "success", text1: "평가해주셔서 감사합니다! 💫" });
@@ -66,6 +71,10 @@ export default function RatingModal({
       animationType="fade"
       statusBarTranslucent
     >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
       <View style={{
         flex: 1, backgroundColor: "rgba(0,0,0,0.6)",
         alignItems: "center", justifyContent: "center", padding: 24,
@@ -115,9 +124,32 @@ export default function RatingModal({
           </View>
 
           {selected > 0 && (
-            <Text style={{ fontSize: 13, color: "#FF6B9D", fontWeight: "600", marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, color: "#FF6B9D", fontWeight: "600", marginBottom: 12 }}>
               {LABELS[selected]}
             </Text>
+          )}
+
+          {/* 한줄 리뷰 */}
+          {selected > 0 && (
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              placeholder="한줄 리뷰를 남겨주세요 (선택)"
+              placeholderTextColor="#C8C8D8"
+              maxLength={100}
+              multiline={false}
+              style={{
+                width: "100%",
+                height: 42,
+                borderWidth: 1.5,
+                borderColor: "#E5E7EB",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                fontSize: 13,
+                color: "#1B2A4A",
+                marginBottom: 16,
+              }}
+            />
           )}
 
           {/* 버튼 */}
@@ -154,6 +186,7 @@ export default function RatingModal({
           </View>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

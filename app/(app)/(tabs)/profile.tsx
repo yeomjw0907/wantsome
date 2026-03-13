@@ -45,6 +45,11 @@ export default function ProfileTabScreen() {
       title: "활동 내역",
       items: [
         {
+          icon: "heart-outline",
+          label: "즐겨찾기",
+          onPress: () => router.push("/favorites" as any),
+        },
+        {
           icon: "receipt-outline",
           label: "충전 내역",
           onPress: () => router.push("/history/charges"),
@@ -53,6 +58,11 @@ export default function ProfileTabScreen() {
           icon: "call-outline",
           label: "통화 기록",
           onPress: () => router.push("/history/calls"),
+        },
+        {
+          icon: "bag-handle-outline",
+          label: "구매 내역",
+          onPress: () => router.push("/history/purchases"),
         },
       ],
     },
@@ -153,6 +163,38 @@ export default function ProfileTabScreen() {
             <Text className="text-gray-900 text-xs font-semibold">편집</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 첫 충전 이벤트 배너 */}
+        {!user?.is_first_charged && (
+          <TouchableOpacity
+            onPress={() => router.push("/charge")}
+            style={{
+              marginTop: 12,
+              borderRadius: 12,
+              overflow: "hidden",
+              backgroundColor: "#FFF0F5",
+              borderWidth: 1,
+              borderColor: "#FFD6E5",
+              flexDirection: "row",
+              alignItems: "center",
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              gap: 8,
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={{ fontSize: 20 }}>🎁</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, fontWeight: "800", color: "#FF6B9D" }}>
+                첫 충전 이벤트
+              </Text>
+              <Text style={{ fontSize: 11, color: "#FF8FB3", marginTop: 1 }}>
+                지금 충전하면 포인트 50% 추가 증정!
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#FF6B9D" />
+          </TouchableOpacity>
+        )}
 
         {/* 포인트 박스 */}
         <View className="mt-4 bg-navy rounded-2xl px-5 py-4 flex-row items-center justify-between">
