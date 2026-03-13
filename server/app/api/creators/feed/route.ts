@@ -46,9 +46,12 @@ export async function GET(req: NextRequest) {
     )
     .eq(column, true);
 
-  // 카테고리 필터 (PostgreSQL 배열 포함 쿼리)
+  // 카테고리 필터 (콤마 구분 → 배열 변환, OR 조건)
   if (category && category !== "전체") {
-    query = query.contains("categories", [category]);
+    const cats = category.split(",").map((c) => c.trim()).filter(Boolean);
+    if (cats.length > 0) {
+      query = query.overlaps("categories", cats);
+    }
   }
 
   const { data: rows, error } = await query
