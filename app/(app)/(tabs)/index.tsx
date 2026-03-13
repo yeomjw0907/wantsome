@@ -7,7 +7,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  ScrollView,
+  LayoutAnimation,
+  UIManager,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -24,20 +26,45 @@ import { apiCall } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import Toast from "react-native-toast-message";
 
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const PAGE_SIZE = 20;
 
-/** 모드별 카테고리 목록 */
-const BLUE_CATEGORIES = [
-  "전체",
-  "20대", "30대", "40대",
-  "청순", "큐티", "활발", "지적", "섹시", "털털",
-];
-const RED_CATEGORIES = [
-  "전체",
-  "20대", "30대", "40대",
-  "청순", "큐티", "농염", "섹시",
-  "BDSM", "역할극", "리드형", "서브형", "교복", "조교",
-];
+const AGE_CATEGORIES = ["전체", "20대", "30대", "40대"];
+const BLUE_VIBES = ["전체", "청순", "큐티", "활발", "지적", "섹시", "털털"];
+const RED_VIBES = ["전체", "청순", "큐티", "농염", "섹시", "BDSM", "역할극", "리드형", "서브형", "교복", "조교"];
+
+type ChipProps = {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  color: string;
+};
+
+function Chip({ label, active, onPress, color }: ChipProps) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        backgroundColor: active ? color : "#F5F5FA",
+        borderColor: active ? color : "#E5E5F0",
+        marginRight: 6,
+        marginBottom: 6,
+      }}
+      activeOpacity={0.7}
+    >
+      <Text style={{ fontSize: 12, fontWeight: active ? "700" : "500", color: active ? "#fff" : "#666" }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
@@ -59,9 +86,11 @@ export default function FeedScreen() {
   const [mode, setMode] = useState<FeedMode>("blue");
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
-  const [category, setCategory] = useState("전체");
 
-  // 검색 상태
+  const [selectedAge, setSelectedAge] = useState("전체");
+  const [selectedVibes, setSelectedVibes] = useState<string[]>(["전체"]);
+  const [categoryOpen, setCategoryOpen] = useState(true);
+
   const [searchText, setSearchText] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<typeof feedBlue>([]);
@@ -79,26 +108,57 @@ export default function FeedScreen() {
   const canAccessRed = Boolean(user?.is_verified && user?.red_mode);
   const creators = mode === "blue" ? feedBlue : feedRed;
   const hasMore = mode === "blue" ? hasMoreBlue : hasMoreRed;
-  const categories = mode === "blue" ? BLUE_CATEGORIES : RED_CATEGORIES;
+  const vibeOptions = mode === "blue" ? BLUE_VIBES : RED_VIBES;
+  const modeColor = mode === "blue" ? "#4D9FFF" : "#FF5C7A";
 
-  // 모드 또는 카테고리 변경 시 카테고리 초기화 및 피드 재로드
   const handleModeChange = (m: FeedMode) => {
     setMode(m);
-    setCategory("전체");
+    setSelectedAge("전체");
+    setSelectedVibes(["전체"]);
     setSearchText("");
     setIsSearching(false);
   };
 
-  const handleCategoryChange = (cat: string) => {
-    setCategory(cat);
+  const toggleCategoryOpen = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCategoryOpen((prev) => !prev);
+  };
+
+  const handleAgeSelect = (age: string) => {
+    setSelectedAge(age);
     setPage(1);
   };
 
+  const handleVibeToggle = (vibe: string) => {
+    if (vibe === "전체") {
+      setSelectedVibes(["전체"]);
+    } else {
+      setSelectedVibes((prev) => {
+        const without = prev.filter((v) => v !== "전체");
+        if (without.includes(vibe)) {
+          const next = without.filter((v) => v !== vibe);
+          return next.length === 0 ? ["전체"] : next;
+        } else {
+          return [...without, vibe];
+        }
+      });
+    }
+    setPage(1);
+  };
+
+  const buildCategoryParams = useCallback(() => {
+    const parts: string[] = [];
+    if (selectedAge !== "전체") parts.push(selectedAge);
+    if (!selectedVibes.includes("전체")) parts.push(...selectedVibes);
+    return parts.join(",");
+  }, [selectedAge, selectedVibes]);
+
   const loadFeed = useCallback(
-    async (nextPage: number, append: boolean, cat = category) => {
+    async (nextPage: number, append: boolean) => {
       try {
         if (!append) setLoading(true);
-        const catParam = cat !== "전체" ? `&category=${encodeURIComponent(cat)}` : "";
+        const cats = buildCategoryParams();
+        const catParam = cats ? `&category=${encodeURIComponent(cats)}` : "";
         const res = await apiCall<{
           creators: typeof feedBlue;
           hasMore: boolean;
@@ -118,7 +178,7 @@ export default function FeedScreen() {
         setRefreshing(false);
       }
     },
-    [mode, category, setFeed, appendFeed, setLoading]
+    [mode, buildCategoryParams, setFeed, appendFeed, setLoading]
   );
 
   const onRefresh = useCallback(() => {
@@ -134,10 +194,9 @@ export default function FeedScreen() {
 
   useEffect(() => {
     setPage(1);
-    loadFeed(1, false, category);
-  }, [mode, category]);
+    loadFeed(1, false);
+  }, [mode, selectedAge, selectedVibes]);
 
-  // 실시간 온라인 상태 구독
   useEffect(() => {
     const channel = supabase
       .channel("creators-online")
@@ -155,7 +214,6 @@ export default function FeedScreen() {
     return () => { supabase.removeChannel(channel); };
   }, [updateOnlineStatus]);
 
-  // 검색 (디바운스 300ms)
   const handleSearchChange = (text: string) => {
     setSearchText(text);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -219,28 +277,23 @@ export default function FeedScreen() {
 
   const keyExtractor = useCallback((item: { id: string }) => item.id, []);
 
+  const activeVibeCount = selectedVibes.includes("전체") ? 0 : selectedVibes.length;
+  const hasActiveFilter = selectedAge !== "전체" || !selectedVibes.includes("전체");
+
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
-      {/* 상단 바: 로고 | 포인트 | 알림 */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
         <Text className="text-navy text-lg font-bold">wantsome</Text>
         <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => router.push("/charge")}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity onPress={() => router.push("/charge")} activeOpacity={0.8}>
             <PointBadge points={points} />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {}}
-            className="w-9 h-9 items-center justify-center"
-          >
+          <TouchableOpacity className="w-9 h-9 items-center justify-center">
             <Ionicons name="notifications-outline" size={22} color="#1B2A4A" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* 검색바 */}
       <View className="px-4 pt-3 pb-2 bg-white">
         <View className="flex-row items-center bg-gray-100 rounded-2xl px-3 py-2.5 gap-2">
           <Ionicons name="search-outline" size={18} color="#9CA3AF" />
@@ -267,7 +320,6 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* 모드 탭 */}
       <View className="px-4 pb-3 bg-white">
         <ModeTab
           mode={mode}
@@ -276,52 +328,71 @@ export default function FeedScreen() {
         />
       </View>
 
-      {/* 카테고리 필터 (검색 중 아닐 때만 표시) */}
       {!isSearching && (
         <View className="bg-white border-b border-gray-100">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 6 }}
+          <TouchableOpacity
+            onPress={toggleCategoryOpen}
+            className="flex-row items-center justify-between px-4 pt-2 pb-1"
+            activeOpacity={0.7}
           >
-            {categories.map((cat) => {
-              const active = cat === category;
-              const isAge = ["20대", "30대", "40대"].includes(cat);
-              const isAll = cat === "전체";
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => handleCategoryChange(cat)}
+            <View className="flex-row items-center gap-1.5">
+              <Text className="text-xs font-semibold text-gray-500">카테고리</Text>
+              {hasActiveFilter && (
+                <View
                   style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 20,
-                    borderWidth: 1.5,
-                    backgroundColor: active
-                      ? (mode === "blue" ? "#4D9FFF" : "#FF5C7A")
-                      : "#F5F5FA",
-                    borderColor: active
-                      ? (mode === "blue" ? "#4D9FFF" : "#FF5C7A")
-                      : "#E5E5F0",
+                    backgroundColor: modeColor,
+                    borderRadius: 10,
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: active ? "700" : "500",
-                      color: active ? "#fff" : "#666",
-                    }}
-                  >
-                    {isAll ? "# 전체" : isAge ? `🎂 ${cat}` : `# ${cat}`}
+                  <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
+                    {(selectedAge !== "전체" ? 1 : 0) + activeVibeCount}
                   </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                </View>
+              )}
+            </View>
+            <Ionicons
+              name={categoryOpen ? "chevron-up" : "chevron-down"}
+              size={16}
+              color="#9CA3AF"
+            />
+          </TouchableOpacity>
+
+          {categoryOpen && (
+            <View className="px-4 pb-3">
+              <Text className="text-xs text-gray-400 font-medium mb-2">연령대</Text>
+              <View className="flex-row flex-wrap mb-3">
+                {AGE_CATEGORIES.map((age) => (
+                  <Chip
+                    key={age}
+                    label={age === "전체" ? "# 전체" : `🎂 ${age}`}
+                    active={selectedAge === age}
+                    onPress={() => handleAgeSelect(age)}
+                    color={modeColor}
+                  />
+                ))}
+              </View>
+
+              <Text className="text-xs text-gray-400 font-medium mb-2">
+                분위기 <Text style={{ color: "#C8C8D8" }}>(중복 선택 가능)</Text>
+              </Text>
+              <View className="flex-row flex-wrap">
+                {vibeOptions.map((vibe) => (
+                  <Chip
+                    key={vibe}
+                    label={vibe === "전체" ? "# 전체" : `# ${vibe}`}
+                    active={selectedVibes.includes(vibe)}
+                    onPress={() => handleVibeToggle(vibe)}
+                    color={modeColor}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       )}
 
-      {/* 검색 중 안내 */}
       {isSearching && (
         <View className="px-4 py-2 bg-gray-50">
           <Text className="text-gray-400 text-xs">
@@ -330,8 +401,7 @@ export default function FeedScreen() {
         </View>
       )}
 
-      {/* 2컬럼 피드 */}
-      {(isSearching && searchLoading) ? (
+      {isSearching && searchLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#FF6B9D" />
         </View>

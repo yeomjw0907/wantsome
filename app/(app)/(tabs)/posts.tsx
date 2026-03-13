@@ -1,10 +1,8 @@
 /**
  * 피드 탭 — 인스타그램형 포스트 피드
- * - 전체 크리에이터 포스트 최신순
- * - 더블탭 좋아요, 이미지 캐러셀
- * - 크리에이터 전용: 우상단 + 버튼으로 포스트 작성
+ * - 정렬: 최신순 / 좋아요순 / 조회수순
  */
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -23,6 +21,14 @@ import Toast from "react-native-toast-message";
 
 const PAGE_SIZE = 15;
 
+type SortKey = "newest" | "likes" | "views";
+
+const SORT_OPTIONS: { key: SortKey; label: string; icon: string }[] = [
+  { key: "newest", label: "최신순", icon: "time-outline" },
+  { key: "likes", label: "좋아요순", icon: "heart-outline" },
+  { key: "views", label: "조회수순", icon: "eye-outline" },
+];
+
 export default function PostsFeedScreen() {
   const insets  = useSafeAreaInsets();
   const router  = useRouter();
@@ -34,12 +40,13 @@ export default function PostsFeedScreen() {
   const [hasMore,    setHasMore]    = useState(true);
   const [isLoading,  setIsLoading]  = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [sort,       setSort]       = useState<SortKey>("newest");
 
-  const loadPosts = useCallback(async (nextPage: number, append: boolean) => {
+  const loadPosts = useCallback(async (nextPage: number, append: boolean, sortKey: SortKey = sort) => {
     try {
       if (!append) setIsLoading(true);
       const data = await apiCall<{ posts: PostItem[]; hasMore: boolean }>(
-        `/api/posts/feed?page=${nextPage}&limit=${PAGE_SIZE}`
+        `/api/posts/feed?page=${nextPage}&limit=${PAGE_SIZE}&sort=${sortKey}`
       );
       if (append) {
         setPosts((prev) => [...prev, ...(data.posts ?? [])]);
@@ -54,19 +61,22 @@ export default function PostsFeedScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [sort]);
 
-  useEffect(() => { loadPosts(1, false); }, [loadPosts]);
+  useEffect(() => {
+    setPage(1);
+    loadPosts(1, false, sort);
+  }, [sort]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadPosts(1, false);
-  }, [loadPosts]);
+    loadPosts(1, false, sort);
+  }, [loadPosts, sort]);
 
   const onEndReached = useCallback(() => {
     if (isLoading || !hasMore) return;
-    loadPosts(page + 1, true);
-  }, [isLoading, hasMore, page, loadPosts]);
+    loadPosts(page + 1, true, sort);
+  }, [isLoading, hasMore, page, loadPosts, sort]);
 
   const handleLikeToggle = useCallback(
     (postId: string, liked: boolean, newCount: number) => {
@@ -78,6 +88,14 @@ export default function PostsFeedScreen() {
     },
     []
   );
+
+  const handleSortChange = (key: SortKey) => {
+    if (key === sort) return;
+    setSort(key);
+    setPosts([]);
+    setPage(1);
+    setHasMore(true);
+  };
 
   const renderItem = useCallback(
     ({ item }: { item: PostItem }) => (
@@ -102,6 +120,44 @@ export default function PostsFeedScreen() {
             <Ionicons name="add" size={22} color="white" />
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* 정렬 버튼 */}
+      <View className="flex-row bg-white border-b border-gray-100 px-4 py-2 gap-2">
+        {SORT_OPTIONS.map((opt) => {
+          const active = sort === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => handleSortChange(opt.key)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                backgroundColor: active ? "#FF6B9D" : "#F5F5FA",
+                gap: 4,
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={opt.icon as any}
+                size={13}
+                color={active ? "#fff" : "#9CA3AF"}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: active ? "700" : "500",
+                  color: active ? "#fff" : "#666",
+                }}
+              >
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* 피드 목록 */}

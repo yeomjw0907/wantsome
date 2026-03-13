@@ -20,22 +20,31 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const page  = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(30, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10)));
+  const sort  = searchParams.get("sort") ?? "newest"; // newest | likes | views
 
   const admin = createSupabaseAdmin();
 
-  const { data: rows, error } = await admin
+  let query = admin
     .from("posts")
     .select(`
-      id, creator_id, caption, like_count, created_at,
+      id, creator_id, caption, like_count, view_count, created_at,
       post_images(id, image_url, position),
       creators!inner(
         id, display_name, avg_rating,
         users!inner(profile_img, is_verified)
       )
     `)
-    .eq("is_deleted", false)
-    .order("created_at", { ascending: false })
-    .range((page - 1) * limit, page * limit - 1);
+    .eq("is_deleted", false);
+
+  if (sort === "likes") {
+    query = query.order("like_count", { ascending: false }).order("created_at", { ascending: false });
+  } else if (sort === "views") {
+    query = query.order("view_count", { ascending: false }).order("created_at", { ascending: false });
+  } else {
+    query = query.order("created_at", { ascending: false });
+  }
+
+  const { data: rows, error } = await query.range((page - 1) * limit, page * limit - 1);
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
@@ -69,6 +78,7 @@ export async function GET(req: NextRequest) {
       caption:      r.caption ?? "",
       images,
       like_count:   r.like_count ?? 0,
+      view_count:   r.view_count ?? 0,
       is_liked:     likedSet.has(r.id),
       created_at:   r.created_at,
     };

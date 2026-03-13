@@ -11,6 +11,7 @@ export interface User {
   blue_mode: boolean;
   red_mode: boolean;
   suspended_until: string | null;
+  bio?: string | null;
 }
 
 interface AuthStore {

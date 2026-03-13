@@ -49,6 +49,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="shop"
+        options={{
+          title: "쇼핑",
+          tabBarLabel: "쇼핑",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "bag" : "bag-outline"}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="reservations"
         options={{
           title: "예약",

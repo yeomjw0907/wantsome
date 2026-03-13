@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const { data: row, error } = await supabase
     .from("users")
     .select(
-      "id, nickname, profile_img, role, is_verified, blue_mode, red_mode, suspended_until, points, first_charge_deadline, is_first_charged"
+      "id, nickname, profile_img, role, is_verified, blue_mode, red_mode, suspended_until, points, first_charge_deadline, is_first_charged, bio"
     )
     .eq("id", authUser.id)
     .single();
@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
     points: row.points ?? 0,
     first_charge_deadline: row.first_charge_deadline,
     is_first_charged: row.is_first_charged ?? false,
+    bio: row.bio ?? null,
   });
 }
 
@@ -58,17 +59,24 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json() as {
     nickname?: string;
     profile_img?: string;
+    bio?: string;
   };
 
-  const updateData: Record<string, string> = {};
-  if (body.nickname) {
+  const updateData: Record<string, string | null> = {};
+  if (body.nickname !== undefined) {
     if (body.nickname.length < 2 || body.nickname.length > 20) {
       return NextResponse.json({ message: "닉네임은 2~20자 이하여야 합니다." }, { status: 400 });
     }
     updateData.nickname = body.nickname;
   }
-  if (body.profile_img) {
+  if (body.profile_img !== undefined) {
     updateData.profile_img = body.profile_img;
+  }
+  if (body.bio !== undefined) {
+    if (body.bio.length > 200) {
+      return NextResponse.json({ message: "자기소개는 200자 이하여야 합니다." }, { status: 400 });
+    }
+    updateData.bio = body.bio || null;
   }
 
   if (Object.keys(updateData).length === 0) {
