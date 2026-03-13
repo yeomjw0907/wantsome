@@ -91,6 +91,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "필수 항목 누락" }, { status: 400 });
   }
 
+  // 최소 2시간 리드타임 체크
+  const reservedAtCheck = new Date(body.reserved_at);
+  if (reservedAtCheck.getTime() - Date.now() < 2 * 60 * 60 * 1000) {
+    return NextResponse.json(
+      { message: "예약은 2시간 이전에 미리 신청해야 합니다." },
+      { status: 422 }
+    );
+  }
+
   const depositKey = `${body.duration_min}_${body.type ?? "standard"}`;
   const depositPoints = DEPOSIT_MAP[depositKey] ?? 5000;
 

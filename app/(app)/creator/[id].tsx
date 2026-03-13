@@ -648,7 +648,16 @@ export default function CreatorProfileScreen() {
               flexDirection: "row", gap: 6,
               borderWidth: 1.5, borderColor: "#FF6B9D",
             }}
-            onPress={() => router.push("/(app)/(tabs)/messages" as any)}
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/reservation/new" as any,
+                params: {
+                  creatorId: creator.id,
+                  creatorName: creator.display_name,
+                  creatorAvatar: creator.profile_image_url ?? "",
+                },
+              })
+            }
             activeOpacity={0.8}
           >
             <Ionicons name="calendar-outline" size={16} color="#FF6B9D" />

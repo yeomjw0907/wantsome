@@ -158,5 +158,60 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ noshow_processed: noshowProcessed, pending_cancelled: pendingCancelled });
+  // ─── ③ 예약 15분 전 오버런 알림 ─────────────────────────────────────────
+  const remindFrom = now.toISOString();
+  const remindTo = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+
+  const { data: upcoming } = await admin
+    .from("reservations")
+    .select("id, consumer_id, creator_id, reserved_at, reminder_sent_at")
+    .eq("status", "confirmed")
+    .gte("reserved_at", remindFrom)
+    .lte("reserved_at", remindTo)
+    .is("reminder_sent_at", null);
+
+  let remindSent = 0;
+
+  if (upcoming && upcoming.length > 0) {
+    for (const res of upcoming) {
+      // reminder_sent_at 먼저 기록 (중복 방지)
+      await admin
+        .from("reservations")
+        .update({ reminder_sent_at: now.toISOString() } as any)
+        .eq("id", res.id);
+
+      // 크리에이터 is_busy 확인
+      const { data: creator } = await admin
+        .from("creators")
+        .select("is_busy")
+        .eq("id", res.creator_id)
+        .single();
+
+      const isBusy = creator?.is_busy ?? false;
+
+      // 소비자 알림
+      await sendPushToUser(admin, res.consumer_id, {
+        title: "예약 통화 15분 전 안내 📅",
+        body: isBusy
+          ? "크리에이터가 현재 통화 중입니다. 잠시 후 준비완료 버튼을 눌러주세요."
+          : "15분 후 예약 통화가 시작됩니다. 준비완료 버튼을 눌러주세요.",
+      });
+
+      // 크리에이터 알림 (통화 중이면 경고 포함)
+      await sendPushToUser(admin, res.creator_id, {
+        title: isBusy ? "⚠️ 15분 후 예약이 있습니다!" : "예약 통화 15분 전입니다 📅",
+        body: isBusy
+          ? "현재 통화를 마무리하고 예약 통화를 준비해주세요."
+          : "소비자가 연결을 기다리고 있습니다.",
+      });
+
+      remindSent++;
+    }
+  }
+
+  return NextResponse.json({
+    noshow_processed: noshowProcessed,
+    pending_cancelled: pendingCancelled,
+    reminders_sent: remindSent,
+  });
 }

@@ -206,6 +206,43 @@ function ReservItem({
     );
   };
 
+  // 소비자 예약 취소
+  const canCancel = !isCreatorView && (
+    item.status === "pending" ||
+    (item.status === "confirmed" && new Date(item.reserved_at).getTime() - Date.now() > 60 * 60 * 1000)
+  );
+
+  const handleCancel = () => {
+    Alert.alert(
+      "예약 취소",
+      "예약을 취소하시겠습니까?\n예약금이 전액 환불됩니다.",
+      [
+        { text: "닫기", style: "cancel" },
+        {
+          text: "취소하기",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API}/api/reservations/${item.id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (res.ok) {
+                Toast.show({ type: "success", text1: "예약이 취소됐습니다.", text2: "예약금이 환불됩니다." });
+                onRefresh();
+              } else {
+                const d = await res.json();
+                Toast.show({ type: "error", text1: d.message ?? "취소 실패" });
+              }
+            } catch {
+              Toast.show({ type: "error", text1: "오류가 발생했습니다." });
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleReady = async () => {
     try {
       const res = await fetch(`${API}/api/reservations/${item.id}/ready`, {
@@ -259,6 +296,16 @@ function ReservItem({
             <Text style={styles.acceptBtnText}>✓ 수락</Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* 소비자: 취소 버튼 (pending 또는 confirmed 1시간 이상 남음) */}
+      {canCancel && (
+        <TouchableOpacity
+          onPress={handleCancel}
+          style={{ alignSelf: "flex-start", marginTop: 8, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#EF4444" }}
+        >
+          <Text style={{ fontSize: 12, color: "#EF4444", fontWeight: "600" }}>예약 취소</Text>
+        </TouchableOpacity>
       )}
 
       {/* 양측: confirmed → 준비완료 / 지금 통화하기 */}

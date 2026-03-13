@@ -101,10 +101,20 @@ export default function CreatorDashboardScreen() {
   const [scheduleNote, setScheduleNote] = useState("");
   const [scheduleSaving, setScheduleSaving] = useState(false);
 
-  // 통화 가능 시간
+  // 통화 가능 시간 (텍스트)
   const [availableTimes, setAvailableTimes] = useState("");
   const [showTimesModal, setShowTimesModal] = useState(false);
   const [timesSaving, setTimesSaving] = useState(false);
+
+  // 예약 슬롯 설정
+  type DayAvail = { day_of_week: number; start_time: string; end_time: string; slot_duration_min: number; is_active: boolean };
+  const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+  const defaultAvailability: DayAvail[] = Array.from({ length: 7 }, (_, i) => ({
+    day_of_week: i, start_time: "20:00", end_time: "23:00", slot_duration_min: 30, is_active: false,
+  }));
+  const [availabilitySettings, setAvailabilitySettings] = useState<DayAvail[]>(defaultAvailability);
+  const [showAvailModal, setShowAvailModal] = useState(false);
+  const [availSaving, setAvailSaving] = useState(false);
 
   // 내 상품 + 판매 내역
   type MyProduct = { id: string; name: string; price: number; sold_count: number; images: string[] };
@@ -175,11 +185,22 @@ export default function CreatorDashboardScreen() {
       setMyOrders(ordersData.orders ?? []);
       setTotalRevenue(ordersData.total_revenue ?? 0);
       loadSchedules();
-      // 통화 가능 시간 로드
+      // 통화 가능 시간 + 예약 슬롯 로드
       if (creatorId) {
         try {
-          const creator = await apiCall<{ available_times: string | null }>(`/api/creators/${creatorId}`);
-          setAvailableTimes(creator.available_times ?? "");
+          const [creatorData, availData] = await Promise.all([
+            apiCall<{ available_times: string | null }>(`/api/creators/${creatorId}`),
+            apiCall<{ availability: DayAvail[] }>(`/api/creators/${creatorId}/availability`).catch(() => ({ availability: [] })),
+          ]);
+          setAvailableTimes(creatorData.available_times ?? "");
+          if (availData.availability && availData.availability.length > 0) {
+            setAvailabilitySettings((prev) =>
+              prev.map((d) => {
+                const found = availData.availability.find((a: DayAvail) => a.day_of_week === d.day_of_week);
+                return found ? { ...d, ...found } : d;
+              })
+            );
+          }
         } catch { /* 무시 */ }
       }
     } catch {
@@ -568,6 +589,139 @@ export default function CreatorDashboardScreen() {
                 )}
               </TouchableOpacity>
             </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── 예약 슬롯 설정 ── */}
+      <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: "white", borderRadius: 24, padding: 20 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="calendar-outline" size={18} color="#1B2A4A" />
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#1B2A4A" }}>예약 가능 시간 설정</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowAvailModal(true)}
+            style={{ backgroundColor: "#FF6B9D", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 }}
+          >
+            <Text style={{ color: "white", fontSize: 12, fontWeight: "700" }}>수정</Text>
+          </TouchableOpacity>
+        </View>
+        {availabilitySettings.some((d) => d.is_active) ? (
+          <View style={{ gap: 6 }}>
+            {availabilitySettings
+              .filter((d) => d.is_active)
+              .map((d) => (
+                <View key={d.day_of_week} style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFF5F9", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
+                  <Text style={{ fontWeight: "700", color: "#FF6B9D", width: 20 }}>{DAY_LABELS[d.day_of_week]}</Text>
+                  <Text style={{ fontSize: 13, color: "#1B2A4A" }}>{d.start_time} ~ {d.end_time}</Text>
+                  <Text style={{ fontSize: 11, color: "#9CA3AF", marginLeft: "auto" }}>{d.slot_duration_min}분 단위</Text>
+                </View>
+              ))}
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() => setShowAvailModal(true)}
+            style={{ borderWidth: 1.5, borderColor: "#E5E7EB", borderStyle: "dashed", borderRadius: 12, padding: 14, alignItems: "center" }}
+          >
+            <Ionicons name="add-circle-outline" size={22} color="#C8C8D8" />
+            <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>예약 가능 요일/시간을 설정해 보세요</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* 예약 슬롯 설정 모달 */}
+      <Modal visible={showAvailModal} transparent animationType="slide" onRequestClose={() => setShowAvailModal(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }} activeOpacity={1} onPress={() => setShowAvailModal(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <ScrollView style={{ backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: 580 }}>
+              <View style={{ padding: 24, paddingBottom: 40 }}>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: "#1B2A4A", marginBottom: 4 }}>📅 예약 가능 시간 설정</Text>
+                <Text style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>소비자가 예약할 수 있는 요일과 시간대를 설정하세요 (30분 단위 슬롯 자동 생성)</Text>
+
+                {availabilitySettings.map((day, idx) => (
+                  <View key={day.day_of_week} style={{ marginBottom: 14 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: day.is_active ? 8 : 0 }}>
+                      <Switch
+                        value={day.is_active}
+                        onValueChange={(v) => setAvailabilitySettings((prev) =>
+                          prev.map((d, i) => i === idx ? { ...d, is_active: v } : d)
+                        )}
+                        trackColor={{ false: "#C8C8D8", true: "#FF6B9D" }}
+                        thumbColor="white"
+                      />
+                      <Text style={{ marginLeft: 10, fontWeight: "700", color: day.is_active ? "#1B2A4A" : "#9CA3AF", fontSize: 14, width: 36 }}>
+                        {DAY_LABELS[day.day_of_week]}요일
+                      </Text>
+                    </View>
+                    {day.is_active && (
+                      <View style={{ flexDirection: "row", gap: 8, paddingLeft: 52 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>시작 시간</Text>
+                          <TextInput
+                            value={day.start_time}
+                            onChangeText={(t) => setAvailabilitySettings((prev) =>
+                              prev.map((d, i) => i === idx ? { ...d, start_time: t } : d)
+                            )}
+                            placeholder="20:00"
+                            placeholderTextColor="#C8C8D8"
+                            style={{ borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, fontSize: 13, color: "#1B2A4A" }}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>종료 시간</Text>
+                          <TextInput
+                            value={day.end_time}
+                            onChangeText={(t) => setAvailabilitySettings((prev) =>
+                              prev.map((d, i) => i === idx ? { ...d, end_time: t } : d)
+                            )}
+                            placeholder="23:00"
+                            placeholderTextColor="#C8C8D8"
+                            style={{ borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, fontSize: 13, color: "#1B2A4A" }}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>슬롯 단위</Text>
+                          <TouchableOpacity
+                            onPress={() => setAvailabilitySettings((prev) =>
+                              prev.map((d, i) => i === idx ? { ...d, slot_duration_min: d.slot_duration_min === 30 ? 60 : 30 } : d)
+                            )}
+                            style={{ borderWidth: 1.5, borderColor: "#FF6B9D", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, alignItems: "center" }}
+                          >
+                            <Text style={{ fontSize: 13, color: "#FF6B9D", fontWeight: "700" }}>{day.slot_duration_min}분</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                ))}
+
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!creatorId) return;
+                    setAvailSaving(true);
+                    try {
+                      await apiCall(`/api/creators/${creatorId}/availability`, {
+                        method: "PUT",
+                        body: JSON.stringify({ availability: availabilitySettings }),
+                      });
+                      setShowAvailModal(false);
+                      Toast.show({ type: "success", text1: "예약 설정이 저장됐습니다 📅" });
+                    } catch {
+                      Toast.show({ type: "error", text1: "저장에 실패했습니다." });
+                    } finally {
+                      setAvailSaving(false);
+                    }
+                  }}
+                  disabled={availSaving}
+                  style={{ height: 48, borderRadius: 24, backgroundColor: "#FF6B9D", alignItems: "center", justifyContent: "center", marginTop: 8 }}
+                >
+                  {availSaving ? <ActivityIndicator color="white" /> : (
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>저장하기</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

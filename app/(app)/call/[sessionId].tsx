@@ -304,9 +304,9 @@ export default function CallScreen() {
   };
 
   const formatTime = (sec: number) => {
-    const m = Math.floor(sec / 60).toString().padStart(2, "0");
-    const s = (sec % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m > 0 ? `${m}분 ${s}초` : `${s}초`;
   };
 
   return (
