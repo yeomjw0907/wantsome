@@ -31,16 +31,11 @@ export async function POST(
   if (existing) {
     // 좋아요 취소
     await admin.from("post_likes").delete().eq("id", existing.id);
-    await admin.rpc("decrement_post_like", { post_id: postId }).catch(() => {
-      // fallback: 직접 업데이트
-      admin.from("posts")
-        .update({ like_count: admin.from("posts") as any })
-        .eq("id", postId);
-    });
-    // 직접 카운트 업데이트
     const { data: post } = await admin.from("posts").select("like_count").eq("id", postId).single();
     if (post) {
-      await admin.from("posts").update({ like_count: Math.max(0, (post.like_count ?? 1) - 1) }).eq("id", postId);
+      await admin.from("posts")
+        .update({ like_count: Math.max(0, (post.like_count ?? 1) - 1) })
+        .eq("id", postId);
     }
     return NextResponse.json({ liked: false });
   } else {
