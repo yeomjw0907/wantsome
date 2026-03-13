@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -10,6 +11,7 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -31,6 +33,166 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const PAGE_SIZE = 20;
+
+// ─────────────────────────────────────────────
+// 랭킹 섹션
+// ─────────────────────────────────────────────
+type RankedCreator = {
+  rank: number;
+  id: string;
+  display_name: string;
+  profile_image_url: string | null;
+  grade: string;
+  is_online: boolean;
+  is_verified: boolean;
+  total_sec: number;
+};
+
+const MEDAL = ["🥇", "🥈", "🥉"] as const;
+const MEDAL_BG = ["#FFF8E1", "#F5F5F5", "#FBF0E6"] as const;
+const MEDAL_BORDER = ["#FFD700", "#B0B0B0", "#CD7F32"] as const;
+
+function RankingSection({ mode }: { mode: FeedMode }) {
+  const router = useRouter();
+  const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
+  const [ranking, setRanking] = useState<RankedCreator[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiCall<{ ranking: RankedCreator[] }>(
+      `/api/creators/ranking?mode=${mode}&period=${period}&limit=10`
+    )
+      .then((res) => { if (!cancelled) setRanking(res.ranking ?? []); })
+      .catch(() => { if (!cancelled) setRanking([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [mode, period]);
+
+  return (
+    <View style={{ backgroundColor: "#fff", marginBottom: 8 }}>
+      <View style={{
+        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+        paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8,
+      }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={{ fontSize: 16 }}>🔥</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: "#1B2A4A" }}>인기 순위</Text>
+        </View>
+        <View style={{
+          flexDirection: "row", backgroundColor: "#F3F4F6",
+          borderRadius: 20, padding: 3, gap: 2,
+        }}>
+          {(["weekly", "monthly"] as const).map((p) => (
+            <TouchableOpacity
+              key={p}
+              onPress={() => setPeriod(p)}
+              activeOpacity={0.8}
+              style={{
+                paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16,
+                backgroundColor: period === p ? "#FF6B9D" : "transparent",
+              }}
+            >
+              <Text style={{
+                fontSize: 12, fontWeight: "600",
+                color: period === p ? "#fff" : "#9CA3AF",
+              }}>
+                {p === "weekly" ? "주간" : "월간"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={{ height: 120, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color="#FF6B9D" />
+        </View>
+      ) : ranking.length === 0 ? (
+        <View style={{ height: 72, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: "#9CA3AF", fontSize: 13 }}>순위 데이터가 없습니다</Text>
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 14, gap: 10 }}
+        >
+          {ranking.map((creator) => {
+            const isTop3 = creator.rank <= 3;
+            const idx = creator.rank - 1;
+            const sz = isTop3 ? 64 : 52;
+            return (
+              <TouchableOpacity
+                key={creator.id}
+                onPress={() => router.push(`/creator/${creator.id}`)}
+                activeOpacity={0.85}
+                style={{
+                  alignItems: "center",
+                  width: isTop3 ? 80 : 66,
+                  backgroundColor: isTop3 ? MEDAL_BG[idx] : "#F9FAFB",
+                  borderRadius: 16,
+                  borderWidth: isTop3 ? 1.5 : 0,
+                  borderColor: isTop3 ? MEDAL_BORDER[idx] : "transparent",
+                  paddingTop: 10, paddingBottom: 8, paddingHorizontal: 4,
+                }}
+              >
+                {isTop3 ? (
+                  <Text style={{ fontSize: 18, marginBottom: 4 }}>{MEDAL[idx]}</Text>
+                ) : (
+                  <View style={{
+                    width: 20, height: 20, borderRadius: 10,
+                    backgroundColor: "#E5E7EB",
+                    alignItems: "center", justifyContent: "center",
+                    marginBottom: 4,
+                  }}>
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: "#6B7280" }}>
+                      {creator.rank}
+                    </Text>
+                  </View>
+                )}
+                <View style={{
+                  width: sz, height: sz, borderRadius: sz / 2,
+                  overflow: "hidden", backgroundColor: "#D1E4F8",
+                  borderWidth: isTop3 ? 2 : 0,
+                  borderColor: isTop3 ? MEDAL_BORDER[idx] : "transparent",
+                  marginBottom: 6,
+                }}>
+                  {creator.profile_image_url ? (
+                    <Image source={{ uri: creator.profile_image_url }} style={{ width: sz, height: sz }} />
+                  ) : (
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="person" size={sz * 0.5} color="#4D9FFF" />
+                    </View>
+                  )}
+                  {creator.is_online && (
+                    <View style={{
+                      position: "absolute", bottom: 2, right: 2,
+                      width: 10, height: 10, borderRadius: 5,
+                      backgroundColor: "#22C55E", borderWidth: 1.5, borderColor: "#fff",
+                    }} />
+                  )}
+                </View>
+                <Text
+                  style={{ fontSize: isTop3 ? 12 : 11, fontWeight: isTop3 ? "700" : "500", color: "#1B2A4A", textAlign: "center" }}
+                  numberOfLines={1}
+                >
+                  {creator.display_name}
+                </Text>
+                <Text style={{ fontSize: 10, color: "#9CA3AF", marginTop: 2 }}>
+                  {creator.total_sec >= 3600
+                    ? `${Math.floor(creator.total_sec / 3600)}시간`
+                    : `${Math.floor(creator.total_sec / 60)}분`}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
 
 const AGE_CATEGORIES = ["전체", "20대", "30대", "40대"];
 const BLUE_VIBES = ["전체", "청순", "큐티", "활발", "지적", "섹시", "털털"];
@@ -413,6 +575,15 @@ export default function FeedScreen() {
           numColumns={2}
           columnWrapperStyle={{ paddingHorizontal: 12, gap: 0 }}
           contentContainerStyle={{ paddingBottom: 24 }}
+          ListHeaderComponent={!isSearching ? (
+            <View>
+              <RankingSection mode={mode} />
+              <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={{ fontSize: 14 }}>👥</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#1B2A4A" }}>크리에이터</Text>
+              </View>
+            </View>
+          ) : null}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.4}
           refreshControl={
