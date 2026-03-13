@@ -13,6 +13,9 @@ import {
   Coins,
   Settings,
   ShieldCheck,
+  ShoppingBag,
+  LayoutGrid,
+  PackageCheck,
 } from "lucide-react";
 
 const NAV = [
@@ -35,6 +38,14 @@ const NAV = [
       { href: "/admin/reports", label: "신고 관리", icon: AlertTriangle },
       { href: "/admin/users", label: "유저 관리", icon: User },
       { href: "/admin/settlements", label: "정산 관리", icon: CreditCard },
+    ],
+  },
+  {
+    section: "쇼핑",
+    items: [
+      { href: "/admin/products", label: "상품 관리", icon: ShoppingBag },
+      { href: "/admin/posts", label: "포스트 관리", icon: LayoutGrid },
+      { href: "/admin/orders", label: "주문 관리", icon: PackageCheck },
     ],
   },
   {
@@ -62,7 +73,6 @@ interface Props {
 
 export default function Sidebar({ role, pendingCreators = 0, pendingReports = 0 }: Props) {
   const pathname = usePathname();
-
   const isSuperAdmin = role === "superadmin";
 
   return (
@@ -74,7 +84,6 @@ export default function Sidebar({ role, pendingCreators = 0, pendingReports = 0 
 
       <nav className="sidebar-nav">
         {NAV.map((section) => {
-          // superadmin 섹션은 superadmin만 표시
           if (section.section === "superadmin" && !isSuperAdmin) return null;
 
           return (
