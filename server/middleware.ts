@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseClient } from "@/lib/supabase";
+import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 
 const SUPERADMIN_ONLY = ["/admin/points", "/admin/system", "/admin/admins"];
 
@@ -29,8 +29,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
-  // role 확인
-  const { data: userRow } = await supabase
+  // role 확인 — RLS 우회를 위해 admin client 사용
+  const admin = createSupabaseAdmin();
+  const { data: userRow } = await admin
     .from("users")
     .select("role, deleted_at")
     .eq("id", user.id)
