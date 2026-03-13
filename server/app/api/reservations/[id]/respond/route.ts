@@ -45,6 +45,28 @@ export async function POST(
   }
 
   if (body.action === "accept") {
+    // 크리에이터 더블부킹 체크: 기존 confirmed 예약과 ±30분 내 충돌 확인
+    const reservedAt = new Date(reservation.reserved_at);
+    const windowStart = new Date(reservedAt.getTime() - 30 * 60 * 1000).toISOString();
+    const windowEnd   = new Date(reservedAt.getTime() + 30 * 60 * 1000).toISOString();
+
+    const { data: conflicts } = await admin
+      .from("reservations")
+      .select("id")
+      .eq("creator_id", authUser.id)
+      .eq("status", "confirmed")
+      .neq("id", id)
+      .gte("reserved_at", windowStart)
+      .lte("reserved_at", windowEnd)
+      .limit(1);
+
+    if (conflicts && conflicts.length > 0) {
+      return NextResponse.json(
+        { message: "해당 시간에 이미 확정된 예약이 있습니다. 다른 시간대를 선택해주세요." },
+        { status: 409 }
+      );
+    }
+
     await admin
       .from("reservations")
       .update({ status: "confirmed" })

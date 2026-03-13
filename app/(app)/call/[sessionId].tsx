@@ -80,6 +80,7 @@ export default function CallScreen() {
   const engineRef = useRef<IRtcEngine | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isEndingRef = useRef(false);
+  const lowPointsWarnedRef = useRef(false);
 
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -200,6 +201,51 @@ export default function CallScreen() {
       supabase.removeChannel(channel);
     };
   }, [userId]);
+
+  // ─── call_signals Realtime 구독 (low_points, call_cancelled 등) ───
+  useEffect(() => {
+    if (!sessionId) return;
+    const channel = supabase
+      .channel(`call-signals-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "call_signals",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const signal = payload.new as { type: string; to_user_id?: string };
+          switch (signal.type) {
+            case "low_points":
+              if (!lowPointsWarnedRef.current) {
+                lowPointsWarnedRef.current = true;
+                Toast.show({
+                  type: "error",
+                  text1: "⚠️ 포인트 부족 경고",
+                  text2: "2분 이내에 통화가 종료됩니다. 포인트를 충전하세요.",
+                  visibilityTime: 5000,
+                });
+              }
+              break;
+            case "call_cancelled":
+              // tick 크론이 강제종료한 경우
+              if (!isEndingRef.current) {
+                handleEnd();
+              }
+              break;
+            default:
+              break;
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
 
   // ─── 하드웨어 뒤로가기 차단 ───
   useEffect(() => {

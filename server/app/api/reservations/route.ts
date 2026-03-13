@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
       deposit_points,
       status,
       reject_reason,
+      consumer_ready_at,
+      creator_ready_at,
       created_at,
       consumer:consumer_id (nickname, profile_img),
       creator:creator_id (display_name, profile_image_url)
