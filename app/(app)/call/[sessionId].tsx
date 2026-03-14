@@ -29,13 +29,21 @@ import {
   addScreenshotListener,
 } from "expo-screen-capture";
 import Toast from "react-native-toast-message";
-import {
-  createAgoraRtcEngine,
-  IRtcEngine,
-  RtcSurfaceView,
-  ChannelProfileType,
-  ClientRoleType,
-} from "react-native-agora";
+// Agora는 사용 시점에 동적 임포트 (라우트 트리 빌드 시 크래시 방지)
+let createAgoraRtcEngine: any;
+let RtcSurfaceView: any;
+let ChannelProfileType: any;
+let ClientRoleType: any;
+type IRtcEngine = any;
+try {
+  const agora = require("react-native-agora");
+  createAgoraRtcEngine = agora.createAgoraRtcEngine;
+  RtcSurfaceView = agora.RtcSurfaceView;
+  ChannelProfileType = agora.ChannelProfileType;
+  ClientRoleType = agora.ClientRoleType;
+} catch (e) {
+  // Agora 네이티브 모듈 미로드 시 무시 (개발 환경)
+}
 import { supabase } from "@/lib/supabase";
 import { apiCall } from "@/lib/api";
 import { useCallStore } from "@/stores/useCallStore";
