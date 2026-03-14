@@ -18,9 +18,9 @@ export async function GET(req: NextRequest) {
   let query = admin
     .from("creators")
     .select(`
-      id, display_name, profile_image_url, grade, is_online,
+      id, display_name, grade, is_online,
       mode_blue, mode_red, total_calls, total_earnings, created_at,
-      users!inner(nickname, email, role, suspended_until, deleted_at)
+      users!inner(nickname, email, role, profile_img, suspended_until, deleted_at)
     `)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       .map((u: any) => ({
         id: u.id,
         display_name: u.nickname,
-        profile_image_url: null,
+        profile_img: null,
         grade: "NEWBIE",
         is_online: false,
         mode_blue: true,

@@ -5,7 +5,7 @@ import { Sprout, Star, Flame, Trophy, Users, User } from "lucide-react";
 interface Creator {
   id: string;
   display_name: string;
-  profile_image_url: string | null;
+  profile_img: string | null;
   grade: string;
   is_online: boolean;
   mode_blue: boolean;
@@ -14,7 +14,7 @@ interface Creator {
   total_earnings: number;
   created_at: string;
   _pending?: boolean;
-  users: { nickname: string; email: string; suspended_until: string | null; deleted_at: string | null } | null;
+  users: { nickname: string; email: string; profile_img: string | null; suspended_until: string | null; deleted_at: string | null } | null;
 }
 
 const GRADE_ICON: Record<string, React.ElementType> = {
@@ -178,8 +178,8 @@ export default function CreatorsListPage() {
                         <td>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div className="avatar">
-                              {c.profile_image_url
-                                ? <img src={c.profile_image_url} alt="" />
+                              {c.users?.profile_img
+                                ? <img src={c.users.profile_img} alt="" />
                                 : <User size={18} color="#C8C8D8" />}
                             </div>
                             <div>
