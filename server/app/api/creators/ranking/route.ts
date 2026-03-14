@@ -11,13 +11,12 @@ export const dynamic = "force-dynamic";
 const DEFAULT_LIMIT = 10;
 
 export async function GET(req: NextRequest) {
+  // 랭킹은 공개 엔드포인트
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
-  if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const authClient = createSupabaseClient(token);
-  const { data: { user: authUser }, error: authErr } = await authClient.auth.getUser(token);
-  if (authErr || !authUser) {
-    return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+  if (token) {
+    const authClient = createSupabaseClient(token);
+    const { error: authErr } = await authClient.auth.getUser(token);
+    if (authErr) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -71,7 +70,6 @@ export async function GET(req: NextRequest) {
       .from("creators")
       .select(`id, display_name, grade, is_online, mode_blue, mode_red, users!inner(profile_img, is_verified)`)
       .eq(modeColumn, true)
-      .eq("is_approved", true)
       .in("id", topIds);
 
     if (creatorsErr) {
@@ -113,7 +111,6 @@ async function getAlltimeRanking(
     .from("creators")
     .select(`id, display_name, grade, is_online, mode_blue, mode_red, monthly_minutes, users!inner(profile_img, is_verified)`)
     .eq(modeColumn, true)
-    .eq("is_approved", true)
     .order("monthly_minutes", { ascending: false })
     .limit(limit);
 

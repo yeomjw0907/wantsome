@@ -9,19 +9,15 @@ const PAGE_SIZE = 20;
 export type FeedMode = "blue" | "red";
 
 export async function GET(req: NextRequest) {
+  // 피드는 공개 엔드포인트 — 토큰이 있으면 검증, 없어도 목록 반환
   const authHeader = req.headers.get("authorization");
   const token = authHeader?.replace(/^Bearer\s+/i, "") ?? null;
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const authClient = createSupabaseClient(token);
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await authClient.auth.getUser(token);
-  if (authError || !authUser) {
-    return NextResponse.json({ message: "Invalid or expired token" }, { status: 401 });
+  if (token) {
+    const authClient = createSupabaseClient(token);
+    const { error: authError } = await authClient.auth.getUser(token);
+    if (authError) {
+      return NextResponse.json({ message: "Invalid or expired token" }, { status: 401 });
+    }
   }
 
   const { searchParams } = new URL(req.url);
