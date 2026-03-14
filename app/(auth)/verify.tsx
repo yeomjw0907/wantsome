@@ -25,16 +25,19 @@ export default function VerifyScreen() {
     }
     setLoading(true);
     try {
-      // PortOne 본인인증은 Development Build + WebView에서 실행
-      // API 연동: identityVerificationId는 PortOne SDK 완료 후 콜백으로 전달
+      // TODO: PortOne SDK 연동 후 identityVerificationId를 받아 아래 API 호출
+      // const identityVerificationId = await PortOne.requestIdentityVerification(...);
+      // await apiCall("/api/auth/verify-identity", { method: "POST", body: JSON.stringify({ identityVerificationId, userId: user.id }) });
       Toast.show({
         type: "info",
         text1: "본인인증",
-        text2: "실기기 Development Build에서 PortOne 웹뷰가 열립니다.",
+        text2: "사업자 등록 후 PortOne SDK 연동이 필요합니다.",
       });
-      // 테스트용: API 호출 스킵하고 다음 단계로
-      updateUser({ is_verified: true });
-      router.replace("/(auth)/role");
+      if (__DEV__) {
+        // 개발 중: 인증 단계 스킵
+        updateUser({ is_verified: true });
+        router.replace("/(auth)/role");
+      }
     } catch {
       Toast.show({ type: "error", text1: "인증 처리에 실패했습니다." });
     } finally {
@@ -86,12 +89,14 @@ export default function VerifyScreen() {
         isLoading={loading}
       />
 
-      <Text
-        className="text-gray-500 text-center mt-6 text-sm"
-        onPress={handleTestSuccess}
-      >
-        [테스트] 인증 완료 후 다음
-      </Text>
+      {__DEV__ && (
+        <Text
+          className="text-gray-500 text-center mt-6 text-sm"
+          onPress={handleTestSuccess}
+        >
+          [테스트] 인증 완료 후 다음
+        </Text>
+      )}
     </View>
   );
 }

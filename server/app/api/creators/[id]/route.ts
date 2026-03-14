@@ -8,6 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const { searchParams } = new URL(req.url);
+  const mode = searchParams.get("mode") === "red" ? "red" : "blue";
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
   if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
@@ -66,7 +68,7 @@ export async function GET(
     mode_blue:           creator.mode_blue ?? true,
     mode_red:            creator.mode_red ?? false,
     is_verified:         u.is_verified ?? false,
-    rate_per_min:        900,
+    rate_per_min:        mode === "red" ? 1300 : 900,
     total_calls:         totalCalls,
     monthly_minutes:     creator.monthly_minutes ?? 0,
     avg_call_min:        Math.round(avgCallSec / 60),

@@ -172,12 +172,14 @@ export default function LoginScreen() {
         )}
       </TouchableOpacity>
 
-      <Text
-        className="text-gray-500 text-center mt-8 text-sm"
-        onPress={() => router.replace("/(app)/(tabs)")}
-      >
-        [테스트] 로그인 없이 메인으로
-      </Text>
+      {__DEV__ && (
+        <Text
+          className="text-gray-500 text-center mt-8 text-sm"
+          onPress={() => router.replace("/(app)/(tabs)")}
+        >
+          [테스트] 로그인 없이 메인으로
+        </Text>
+      )}
     </View>
   );
 }
