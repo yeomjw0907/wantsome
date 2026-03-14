@@ -10,12 +10,15 @@ export const dynamic = "force-dynamic";
 const PAGE_SIZE = 15;
 
 export async function GET(req: NextRequest) {
+  // 포스트 피드는 공개 엔드포인트 — 토큰이 있으면 좋아요 여부 포함
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
-  if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const authClient = createSupabaseClient(token);
-  const { data: { user: authUser }, error: authErr } = await authClient.auth.getUser(token);
-  if (authErr || !authUser) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+  let authUserId: string | null = null;
+  if (token) {
+    const authClient = createSupabaseClient(token);
+    const { data: { user: authUser }, error: authErr } = await authClient.auth.getUser(token);
+    if (authErr) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+    authUserId = authUser?.id ?? null;
+  }
 
   const { searchParams } = new URL(req.url);
   const page  = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -50,14 +53,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  // 현재 유저가 좋아요한 포스트 목록
+  // 현재 유저가 좋아요한 포스트 목록 (로그인 시에만)
   const postIds = (rows ?? []).map((r: any) => r.id);
   let likedSet = new Set<string>();
-  if (postIds.length > 0) {
+  if (authUserId && postIds.length > 0) {
     const { data: likes } = await admin
       .from("post_likes")
       .select("post_id")
-      .eq("user_id", authUser.id)
+      .eq("user_id", authUserId)
       .in("post_id", postIds);
     likedSet = new Set((likes ?? []).map((l: any) => l.post_id));
   }
