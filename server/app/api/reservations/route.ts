@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
       deposit_points,
       status,
       reject_reason,
+      consumer_ready_at,
+      creator_ready_at,
       created_at,
       consumer:consumer_id (nickname, profile_img),
       creator:creator_id (display_name, profile_image_url)
@@ -87,6 +89,15 @@ export async function POST(req: NextRequest) {
 
   if (!body.creator_id || !body.reserved_at || !body.duration_min || !body.mode) {
     return NextResponse.json({ message: "필수 항목 누락" }, { status: 400 });
+  }
+
+  // 최소 2시간 리드타임 체크
+  const reservedAtCheck = new Date(body.reserved_at);
+  if (reservedAtCheck.getTime() - Date.now() < 2 * 60 * 60 * 1000) {
+    return NextResponse.json(
+      { message: "예약은 2시간 이전에 미리 신청해야 합니다." },
+      { status: 422 }
+    );
   }
 
   const depositKey = `${body.duration_min}_${body.type ?? "standard"}`;
@@ -150,7 +161,7 @@ export async function POST(req: NextRequest) {
     p_user_id: authUser.id,
     p_amount: depositPoints,
     p_reason: `reservation_deposit:${reservation.id}`,
-  }).catch(() => null);
+  }).then(null, () => null);
 
   // 크리에이터에게 푸시 알림
   await sendPushToUser(admin, body.creator_id, {

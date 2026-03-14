@@ -41,10 +41,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "포인트가 부족합니다" }, { status: 400 });
   }
 
-  // 크리에이터 온라인 확인
+  // 크리에이터 온라인/통화중 확인
   const { data: creator } = await admin
     .from("creators")
-    .select("is_online, is_approved, display_name, profile_img")
+    .select("is_online, is_busy, is_approved, display_name, profile_img")
     .eq("id", creator_id)
     .single();
   if (!creator || !creator.is_approved) {
@@ -52,6 +52,9 @@ export async function POST(req: NextRequest) {
   }
   if (!creator.is_online) {
     return NextResponse.json({ message: "크리에이터가 오프라인 상태입니다" }, { status: 400 });
+  }
+  if (creator.is_busy) {
+    return NextResponse.json({ message: "크리에이터가 현재 통화 중입니다. DM 또는 예약을 이용해 주세요." }, { status: 400 });
   }
 
   // 소비자 정보 (signal payload 용)

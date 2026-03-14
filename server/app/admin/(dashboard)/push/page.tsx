@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Bell, Send } from "lucide-react";
 
 const TARGET_OPTIONS = [
   { value: "all", label: "전체 유저" },
@@ -106,8 +107,8 @@ export default function PushPage() {
               }}>
                 <div style={{ fontSize: "11px", color: "#9CA3AF", marginBottom: "8px" }}>미리보기</div>
                 <div style={{ background: "white", borderRadius: "10px", padding: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#1B2A4A", marginBottom: "4px" }}>
-                    🔔 {title || "(제목)"}
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#1B2A4A", marginBottom: "4px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Bell size={14} /> {title || "(제목)"}
                   </div>
                   <div style={{ fontSize: "12px", color: "#6B7280" }}>{body || "(내용)"}</div>
                 </div>
@@ -120,7 +121,7 @@ export default function PushPage() {
               onClick={handleSend}
               disabled={isSending}
             >
-              {isSending ? "발송 중..." : "🔔 즉시 발송"}
+              {isSending ? "발송 중..." : <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Send size={15} /> 즉시 발송</span>}
             </button>
           </div>
         </div>

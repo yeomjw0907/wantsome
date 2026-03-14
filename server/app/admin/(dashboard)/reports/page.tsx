@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 
 interface Report {
   id: string;
@@ -110,7 +111,7 @@ export default function ReportsPage() {
             <div className="loading-center"><div className="spinner" /></div>
           ) : reports.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">✅</div>
+              <div className="icon"><CheckCircle2 size={32} color="#22C55E" /></div>
               <p>처리할 신고가 없습니다.</p>
             </div>
           ) : (
@@ -197,8 +198,8 @@ export default function ReportsPage() {
 
               {selected.auto_suspended && (
                 <div style={{ background: "#FEE2E2", borderRadius: "10px", padding: "12px", marginBottom: "16px" }}>
-                  <p style={{ fontSize: "13px", color: "#DC2626", fontWeight: 600 }}>
-                    🚨 자동 정지 처리됨 (긴급 카테고리)
+                  <p style={{ fontSize: "13px", color: "#DC2626", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                    <AlertTriangle size={14} /> 자동 정지 처리됨 (긴급 카테고리)
                   </p>
                 </div>
               )}

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 interface CreatorPending {
   id: string;
@@ -102,7 +103,7 @@ export default function PendingCreatorsPage() {
             <div className="loading-center"><div className="spinner" /></div>
           ) : creators.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">✅</div>
+              <div className="icon"><CheckCircle2 size={32} color="#22C55E" /></div>
               <p>처리할 심사 항목이 없습니다.</p>
             </div>
           ) : (
@@ -202,7 +203,11 @@ export default function PendingCreatorsPage() {
               <div style={{ background: "#F0FDF4", borderRadius: "10px", padding: "12px", marginBottom: "16px" }}>
                 <div style={{ fontSize: "11px", color: "#15803D", marginBottom: "4px" }}>신분증</div>
                 <div style={{ fontWeight: 600, color: "#15803D" }}>
-                  {selected.id_card_path ? "✅ 제출됨" : "❌ 미제출"}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    {selected.id_card_path
+                      ? <><CheckCircle2 size={14} /> 제출됨</>
+                      : <><XCircle size={14} color="#DC2626" /> 미제출</>}
+                  </span>
                 </div>
               </div>
 

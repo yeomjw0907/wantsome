@@ -59,7 +59,7 @@ export async function POST(
     target_id: id,
     detail: { creator_id: settlement.creator_id, net_amount: settlement.net_amount },
     ip: req.headers.get("x-forwarded-for") ?? "unknown",
-  }).catch(() => null);
+  }).then(null, () => null);
 
   return NextResponse.json({ success: true });
 }
