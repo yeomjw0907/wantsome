@@ -2,6 +2,7 @@ import "../global.css";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/CustomToast";
 
 export default function RootLayout() {
   return (
@@ -12,7 +13,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: "#FFFFFF" },
         }}
       />
-      <Toast />
+      <Toast config={toastConfig} position="bottom" bottomOffset={100} />
       <StatusBar style="auto" />
     </>
   );

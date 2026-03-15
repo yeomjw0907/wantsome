@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   Platform,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -42,6 +43,7 @@ export default function ChargeScreen() {
 
   const [countdown, setCountdown] = useState("");
   const [chargingProductId, setChargingProductId] = useState<ProductId | null>(null);
+  const [pendingProductId, setPendingProductId] = useState<ProductId | null>(null);
   const showFirstChargeBanner =
     !isFirstCharged &&
     firstChargeDeadline &&
@@ -59,19 +61,29 @@ export default function ChargeScreen() {
   }, [showFirstChargeBanner, firstChargeDeadline]);
 
   const onProductPress = useCallback(
-    async (productId: ProductId) => {
+    (productId: ProductId) => {
       if (Platform.OS === "web") {
         Toast.show({ type: "info", text1: "앱에서만 충전할 수 있습니다." });
         return;
       }
-      const userId = user?.id;
-      if (!userId) {
+      if (!user?.id) {
         Toast.show({ type: "error", text1: "로그인이 필요합니다." });
         return;
       }
+      // 구매 동의 확인 모달 표시
+      setPendingProductId(productId);
+    },
+    [user?.id]
+  );
+
+  const executePurchase = useCallback(
+    async (productId: ProductId) => {
+      const userId = user?.id;
+      if (!userId) return;
 
       const idempotencyKey = `${userId}_${productId}_${Date.now()}`;
       const platform = Platform.OS as "ios" | "android";
+      setPendingProductId(null);
       setChargingProductId(productId);
 
       try {
@@ -219,6 +231,78 @@ export default function ChargeScreen() {
           })}
         </View>
       </ScrollView>
+
+      {/* 구매 동의 확인 모달 (앱스토어 심사 필수 — 한국 2025년 법 개정) */}
+      {pendingProductId && (() => {
+        const product = PRODUCTS.find((p) => p.id === pendingProductId);
+        if (!product) return null;
+        const displayPoints = showFirstChargeBanner ? product.points * 2 : product.points;
+        return (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            onRequestClose={() => setPendingProductId(null)}
+          >
+            <View
+              style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
+            >
+              <View style={{ backgroundColor: "white", borderRadius: 24, padding: 24, width: "100%" }}>
+                {/* 타이틀 */}
+                <Text style={{ fontSize: 18, fontWeight: "700", color: "#1B2A4A", marginBottom: 4 }}>
+                  구매 확인
+                </Text>
+                <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 20, lineHeight: 20 }}>
+                  아래 내용을 확인하고 구매에 동의해주세요.
+                </Text>
+
+                {/* 상품 정보 */}
+                <View style={{ backgroundColor: "#F9FAFB", borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+                    <Text style={{ color: "#6B7280", fontSize: 13 }}>상품</Text>
+                    <Text style={{ color: "#1B2A4A", fontWeight: "600", fontSize: 13 }}>{product.name}</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+                    <Text style={{ color: "#6B7280", fontSize: 13 }}>지급 포인트</Text>
+                    <Text style={{ color: "#F43F5E", fontWeight: "700", fontSize: 13 }}>{displayPoints.toLocaleString()}P</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ color: "#6B7280", fontSize: 13 }}>결제 금액</Text>
+                    <Text style={{ color: "#1B2A4A", fontWeight: "600", fontSize: 13 }}>{product.price.toLocaleString()}원</Text>
+                  </View>
+                </View>
+
+                {/* 환불 안내 */}
+                <View style={{ backgroundColor: "#FFF5F7", borderRadius: 12, padding: 12, marginBottom: 24 }}>
+                  <Text style={{ color: "#BE123C", fontSize: 12, lineHeight: 18 }}>
+                    ⚠️ 구매한 포인트는 관계 법령에 따라 환불되지 않습니다.{"\n"}
+                    결제 전 상품 정보를 충분히 확인해주세요.
+                  </Text>
+                </View>
+
+                {/* 버튼 */}
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => setPendingProductId(null)}
+                    style={{ flex: 1, height: 50, borderRadius: 25, borderWidth: 1.5, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center" }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ color: "#6B7280", fontWeight: "600", fontSize: 15 }}>취소</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => executePurchase(pendingProductId)}
+                    style={{ flex: 1, height: 50, borderRadius: 25, backgroundColor: "#F43F5E", alignItems: "center", justifyContent: "center" }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>동의하고 구매</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        );
+      })()}
     </View>
   );
 }

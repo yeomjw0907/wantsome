@@ -48,6 +48,7 @@ export type AppInitStatus =
   | "maintenance"
   | "update-required"
   | "onboarding"
+  | "age-check"
   | "login"
   | "suspended"
   | "ready";
@@ -99,6 +100,13 @@ export function useAppInit() {
         const onboarded = await AsyncStorage.getItem("onboarding_completed");
         if (!onboarded) {
           if (!cancelled) setStatus("onboarding");
+          return;
+        }
+
+        // [3.5] 연령 인증 여부 (18세 미만 차단 — 앱스토어 심사 필수)
+        const ageVerified = await AsyncStorage.getItem("age_verified");
+        if (!ageVerified) {
+          if (!cancelled) setStatus("age-check");
           return;
         }
 
@@ -167,6 +175,9 @@ export function useAppInit() {
         break;
       case "onboarding":
         router.replace("/(auth)/splash");
+        break;
+      case "age-check":
+        router.replace("/(auth)/age-check");
         break;
       case "login":
         router.replace("/(auth)/login");
