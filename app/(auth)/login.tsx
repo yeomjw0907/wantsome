@@ -22,6 +22,9 @@ interface SocialLoginResponse {
     suspended_until: string | null;
   };
   is_new: boolean;
+  points: number;
+  first_charge_deadline: string | null;
+  is_first_charged: boolean;
   access_token: string;
 }
 
@@ -41,7 +44,7 @@ function parseSessionFromUrl(url: string): { access_token?: string; refresh_toke
 export default function LoginScreen() {
   const router = useRouter();
   const setUser = useAuthStore((s) => s.setUser);
-  const setFirstChargeInfo = usePointStore((s) => s.setFirstChargeInfo);
+  const { setPoints, setFirstChargeInfo } = usePointStore();
   const [loading, setLoading] = useState<SocialProvider | null>(null);
 
   const handleSocialLogin = async (provider: SocialProvider) => {
@@ -95,6 +98,8 @@ export default function LoginScreen() {
           }),
         });
         setUser(apiRes.user);
+        setPoints(apiRes.points ?? 0);
+        setFirstChargeInfo(apiRes.first_charge_deadline, apiRes.is_first_charged);
         if (apiRes.is_new) {
           const deadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
           setFirstChargeInfo(deadline, false);
@@ -170,6 +175,24 @@ export default function LoginScreen() {
         ) : (
           <Text className="text-gray-900 font-semibold">카카오로 계속하기</Text>
         )}
+      </TouchableOpacity>
+
+      {/* 구분선 */}
+      <View className="flex-row items-center my-5">
+        <View className="flex-1 h-px bg-gray-200" />
+        <Text className="text-gray-400 text-sm mx-3">또는</Text>
+        <View className="flex-1 h-px bg-gray-200" />
+      </View>
+
+      {/* 전화번호 로그인 */}
+      <TouchableOpacity
+        onPress={() => router.push("/(auth)/phone-login")}
+        disabled={!!loading}
+        className="border border-gray-200 h-[52px] rounded-full items-center justify-center flex-row gap-2"
+        style={{ opacity: loading ? 0.6 : 1 }}
+      >
+        <Text className="text-gray-600">📱</Text>
+        <Text className="text-gray-700 font-semibold">전화번호로 계속하기</Text>
       </TouchableOpacity>
 
       {__DEV__ && (

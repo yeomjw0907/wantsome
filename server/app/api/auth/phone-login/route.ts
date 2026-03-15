@@ -3,22 +3,18 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-type Provider = "google" | "apple" | "kakao";
-
 interface Body {
-  provider: Provider;
   token: string;
+  phone: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Body;
-    const { provider, token } = body;
-    if (!provider || !token) {
-      return NextResponse.json({ message: "provider and token required" }, { status: 400 });
-    }
-    if (!["google", "apple", "kakao"].includes(provider)) {
-      return NextResponse.json({ message: "Invalid provider" }, { status: 400 });
+    const { token, phone } = body;
+
+    if (!token || !phone) {
+      return NextResponse.json({ message: "token and phone required" }, { status: 400 });
     }
 
     const supabase = createSupabaseAdmin();
@@ -29,21 +25,19 @@ export async function POST(req: NextRequest) {
     }
 
     const id = authUser.id;
-    const email = authUser.email ?? "";
-    const nickname =
-      authUser.user_metadata?.name ??
-      authUser.user_metadata?.full_name ??
-      authUser.user_metadata?.user_name ??
-      email.split("@")[0] ??
-      "유저";
-    const profile_img =
-      authUser.user_metadata?.avatar_url ??
-      authUser.user_metadata?.picture ??
-      null;
+    // 전화번호 기반 닉네임: 010-****-1234 형태로 마스킹
+    const digits = phone.replace("+82", "0").replace(/\D/g, "");
+    const maskedNickname = digits.length >= 4
+      ? `유저${digits.slice(-4)}`
+      : "유저";
 
-    const { data: existing } = await supabase.from("users").select("id, created_at").eq("id", id).single();
+    const { data: existing } = await supabase
+      .from("users")
+      .select("id, created_at")
+      .eq("id", id)
+      .single();
+
     const is_new = !existing;
-
     const first_charge_deadline = is_new
       ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
       : null;
@@ -51,8 +45,8 @@ export async function POST(req: NextRequest) {
     const { error: upsertError } = await supabase.from("users").upsert(
       {
         id,
-        nickname,
-        profile_img: profile_img ?? null,
+        nickname: maskedNickname,
+        profile_img: null,
         ...(is_new && {
           first_charge_deadline,
           is_first_charged: false,
@@ -94,7 +88,7 @@ export async function POST(req: NextRequest) {
       is_first_charged: userRow.is_first_charged ?? false,
       access_token: token,
     });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
