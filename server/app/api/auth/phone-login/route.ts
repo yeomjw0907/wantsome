@@ -14,22 +14,29 @@ export async function POST(req: NextRequest) {
     const { token, phone } = body;
 
     if (!token || !phone) {
-      return NextResponse.json({ message: "token and phone required" }, { status: 400 });
+      return NextResponse.json(
+        { message: "token and phone required" },
+        { status: 400 }
+      );
     }
 
     const supabase = createSupabaseAdmin();
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser(token);
 
     if (authError || !authUser) {
-      return NextResponse.json({ message: "Invalid or expired token" }, { status: 401 });
+      return NextResponse.json(
+        { message: "Invalid or expired token" },
+        { status: 401 }
+      );
     }
 
     const id = authUser.id;
-    // 전화번호 기반 닉네임: 010-****-1234 형태로 마스킹
+    // 닉네임: 끝 4자리 기반 (예: 유저1234)
     const digits = phone.replace("+82", "0").replace(/\D/g, "");
-    const maskedNickname = digits.length >= 4
-      ? `유저${digits.slice(-4)}`
-      : "유저";
+    const maskedNickname = digits.length >= 4 ? `유저${digits.slice(-4)}` : "유저";
 
     const { data: existing } = await supabase
       .from("users")
@@ -47,6 +54,7 @@ export async function POST(req: NextRequest) {
         id,
         nickname: maskedNickname,
         profile_img: null,
+        phone,
         ...(is_new && {
           first_charge_deadline,
           is_first_charged: false,
@@ -56,7 +64,10 @@ export async function POST(req: NextRequest) {
     );
 
     if (upsertError) {
-      return NextResponse.json({ message: upsertError.message }, { status: 500 });
+      return NextResponse.json(
+        { message: upsertError.message },
+        { status: 500 }
+      );
     }
 
     const { data: userRow } = await supabase
@@ -68,7 +79,10 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (!userRow) {
-      return NextResponse.json({ message: "User not found after upsert" }, { status: 500 });
+      return NextResponse.json(
+        { message: "User not found after upsert" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

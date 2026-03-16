@@ -463,6 +463,68 @@ eas build:view <BUILD_ID>
 
 ---
 
+## 9. Twilio SMS 설정 (Supabase Phone Auth)
+
+### 9.1 Twilio 계정 설정
+
+1. [twilio.com](https://www.twilio.com) 회원가입
+2. Console → **Account SID** + **Auth Token** 확인
+3. Messaging → Services → **Create Messaging Service** → Service SID 확인
+4. 한국(+82) 발신을 위해 Sender Pool에 번호 또는 Alphanumeric ID 추가
+
+### 9.2 Supabase Phone Auth 활성화
+
+```
+Supabase Dashboard → Authentication → Providers → Phone
+
+Enable Phone provider: ON
+SMS provider: Twilio
+Account SID: ACxxxxxxxxxxxxxxxx
+Auth Token: xxxxxxxxxxxxxxxx
+Message Service SID: MGxxxxxxxxxxxxxxxx
+```
+
+### 9.3 비용 (한국 +82 기준)
+
+| 건수 | 단가 | 월 비용 |
+|------|------|---------|
+| 1건 | $0.045 (약 62원) | — |
+| 월 1,000건 | 62원/건 | 약 62,000원 |
+| 월 10,000건 | 62원/건 | 약 620,000원 |
+
+### 9.4 사업자 등록 후 NHN Cloud Toast로 전환 (권장)
+
+사업자 등록 완료 후 **NHN Cloud (Toast)** 사용 시 8원/건 → **약 7.7배 절감**
+
+```bash
+# Supabase Custom SMS Provider 설정 (Edge Function 프록시)
+# 1. supabase/functions/sms-provider/index.ts 생성
+# 2. NHN Cloud API 키 + 발신번호 세팅
+# 3. Supabase Dashboard → Authentication → Providers → Phone
+#    SMS provider: Custom → Edge Function URL 입력
+```
+
+### 9.5 PortOne PASS 본인인증 설정 (사업자 등록 후)
+
+사업자 등록 완료 후 [PortOne 콘솔](https://console.portone.io)에서 설정:
+
+```
+1. 상점 생성 → Store ID 확인
+2. 채널 연동 → NICE/KMC PASS 채널 추가 → Channel Key 확인
+3. API 시크릿 발급
+
+Vercel 환경 변수 추가:
+PORTONE_API_SECRET=your-portone-secret
+PORTONE_STORE_ID=store-xxxxx
+PORTONE_CHANNEL_KEY=channel-key-xxxxx
+```
+
+**설정 후 동작:**
+- `verify.tsx`가 자동으로 fallback 생년월일 입력 → PASS 본인인증 모드로 전환
+- 코드 변경 불필요 — 환경 변수만 추가하면 됨
+
+---
+
 ## 배포 커맨드 요약
 
 ```bash

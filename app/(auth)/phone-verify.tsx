@@ -102,7 +102,16 @@ export default function PhoneVerifyScreen() {
           const deadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
           setFirstChargeInfo(deadline, false);
         }
-      } catch {
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "";
+        if (errMsg.includes("이미 가입")) {
+          Toast.show({
+            type: "error",
+            text1: "이미 가입된 전화번호",
+            text2: errMsg,
+          });
+          return;
+        }
         // API 서버 미준비 시 세션만으로 진행
         setUser({
           id: data.session.user.id,
