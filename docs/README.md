@@ -8,6 +8,7 @@
 
 | 경로 | 설명 |
 |------|------|
+| [**setup/**](setup/) | **운영자 셋업 가이드 — 외부 서비스 연동 순서대로** |
 | [context/](context/) | 프로젝트 개요, 비즈니스 규칙, 스토어, 앱 초기화, 배포 등 |
 | [api/](api/) | 인증, 통화, 결제, 크리에이터, 예약 API 스펙 |
 | [screens/](screens/) | 화면별 스펙 (온보딩, 피드, 통화, 충전, 프로필 등) |
@@ -15,8 +16,23 @@
 | [design/](design/) | 디자인 시스템 (컬러, 타이포, 컴포넌트) |
 | [legal/](legal/) | 약관, 크리에이터 계약 |
 | [admin/](admin/) | 관리자 페이지·기능 |
+| [distribution-guide.md](distribution-guide.md) | APK/TestFlight 빌드·배포 전체 가이드 |
 | [GUIDE_*.md](.) | 가이드 (API 서버, 소셜 로그인, Android 에뮬레이터 등) |
 | [todo.md](todo.md) | 내일/단기 할 일 정리 |
+
+### setup/ 폴더 상세
+
+| 파일 | 내용 | 선행 조건 |
+|------|------|-----------|
+| [setup/README.md](setup/README.md) | 전체 체크리스트 + 진행 순서 | — |
+| [setup/01_business.md](setup/01_business.md) | 사업자 등록 (홈택스) | — |
+| [setup/02_twilio-sms.md](setup/02_twilio-sms.md) | Twilio SMS OTP 설정 | — |
+| [setup/03_social-login.md](setup/03_social-login.md) | Google/Apple/카카오 로그인 | — |
+| [setup/04_portone-pass.md](setup/04_portone-pass.md) | PortOne PASS 본인인증 | 사업자 등록 |
+| [setup/05_iap.md](setup/05_iap.md) | 인앱결제 (App Store/Google Play) | 사업자 등록 |
+| [setup/06_store-submission.md](setup/06_store-submission.md) | 앱스토어 제출 체크리스트 | IAP 연동 |
+| [setup/07_push.md](setup/07_push.md) | 푸시 알림 (FCM/APNs) | — |
+| [setup/08_nhn-sms.md](setup/08_nhn-sms.md) | NHN Cloud SMS 전환 (8원/건) | 사업자 등록 |
 
 ---
 
