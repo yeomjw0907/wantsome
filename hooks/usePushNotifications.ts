@@ -46,9 +46,15 @@ export function usePushNotifications() {
         const tokenData = await Notifications.getExpoPushTokenAsync();
         const pushToken = tokenData.data;
 
-        // 서버에 토큰 등록
+        // push_tokens 테이블에 등록 (다중 기기 지원)
         await apiCall("/api/push/register", {
           method: "POST",
+          body: JSON.stringify({ push_token: pushToken }),
+        }).catch(() => null);
+
+        // users.push_token 컬럼도 동기화 (어드민 일괄 발송용)
+        await apiCall("/api/users/push-token", {
+          method: "PATCH",
           body: JSON.stringify({ push_token: pushToken }),
         }).catch(() => null);
       } catch {

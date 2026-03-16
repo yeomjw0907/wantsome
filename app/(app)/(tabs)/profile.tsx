@@ -64,6 +64,11 @@ export default function ProfileTabScreen() {
           label: "구매 내역",
           onPress: () => router.push("/history/purchases"),
         },
+        {
+          icon: "gift-outline",
+          label: "선물 내역",
+          onPress: () => router.push("/history/gifts"),
+        },
       ],
     },
     {

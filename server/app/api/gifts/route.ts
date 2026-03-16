@@ -107,18 +107,35 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("session_id");
+  const isSent = searchParams.get("sent") === "1"; // 내가 보낸 선물 조회 (소비자용)
 
   const admin = createSupabaseAdmin();
-  let query = admin
-    .from("gifts")
-    .select("id, amount, message, created_at, from_user_id, users!from_user_id(nickname, profile_img)")
-    .order("created_at", { ascending: false })
-    .limit(50);
 
-  if (sessionId) {
-    query = query.eq("call_session_id", sessionId);
+  let query;
+  if (isSent) {
+    // 소비자: 내가 보낸 선물 + 받은 크리에이터 정보
+    query = admin
+      .from("gifts")
+      .select("id, amount, message, created_at, to_creator_id, creators!to_creator_id(display_name, profile_image_url)")
+      .eq("from_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+  } else if (sessionId) {
+    // 특정 통화 세션의 선물 목록
+    query = admin
+      .from("gifts")
+      .select("id, amount, message, created_at, from_user_id, users!from_user_id(nickname, profile_img)")
+      .eq("call_session_id", sessionId)
+      .order("created_at", { ascending: false })
+      .limit(50);
   } else {
-    query = query.eq("to_creator_id", user.id);
+    // 크리에이터: 내가 받은 선물 + 보낸 유저 정보
+    query = admin
+      .from("gifts")
+      .select("id, amount, message, created_at, from_user_id, users!from_user_id(nickname, profile_img)")
+      .eq("to_creator_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
   }
 
   const { data, error } = await query;
