@@ -49,24 +49,22 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
       : null;
 
-    // 동일 전화번호가 다른 계정(소셜 로그인 등)에 이미 등록된 경우 감지
-    if (is_new) {
-      const { data: phoneOwner } = await supabase
-        .from("users")
-        .select("id")
-        .eq("phone", phone)
-        .neq("id", id)
-        .maybeSingle();
+    const DUPLICATE_PHONE = {
+      error: "DUPLICATE_PHONE",
+      message: "이미 가입된 전화번호입니다. 소셜 로그인을 이용해주세요.",
+    } as const;
 
-      if (phoneOwner) {
-        return NextResponse.json(
-          {
-            error: "DUPLICATE_PHONE",
-            message: "이미 가입된 전화번호입니다. 소셜 로그인을 이용해주세요.",
-          },
-          { status: 409 }
-        );
-      }
+    // 동일 전화번호가 다른 계정(소셜 로그인 등)에 이미 등록된 경우 감지
+    // is_new 여부와 무관하게 체크 (기존 유저가 타인 번호로 변경하는 경우도 포함)
+    const { data: phoneOwner } = await supabase
+      .from("users")
+      .select("id")
+      .eq("phone", phone)
+      .neq("id", id)
+      .maybeSingle();
+
+    if (phoneOwner) {
+      return NextResponse.json(DUPLICATE_PHONE, { status: 409 });
     }
 
     const { error: upsertError } = await supabase.from("users").upsert(
@@ -84,15 +82,9 @@ export async function POST(req: NextRequest) {
     );
 
     if (upsertError) {
-      // Postgres UNIQUE 제약 위반 (phone 컬럼) 감지
+      // Postgres UNIQUE 제약 위반 (phone 컬럼) — 경쟁 조건 방어
       if (upsertError.code === "23505" && upsertError.message.includes("phone")) {
-        return NextResponse.json(
-          {
-            error: "DUPLICATE_PHONE",
-            message: "이미 가입된 전화번호입니다. 소셜 로그인을 이용해주세요.",
-          },
-          { status: 409 }
-        );
+        return NextResponse.json(DUPLICATE_PHONE, { status: 409 });
       }
       return NextResponse.json(
         { message: upsertError.message },
