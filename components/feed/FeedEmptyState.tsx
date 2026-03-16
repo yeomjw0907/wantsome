@@ -10,9 +10,9 @@ export function FeedEmptyState({ mode }: FeedEmptyStateProps) {
     <View className="flex-1 min-h-[280px] justify-center items-center px-8 pt-8 pb-12">
       <View
         className="w-20 h-20 rounded-full items-center justify-center mb-4"
-        style={{ backgroundColor: isBlue ? "#D1E4F8" : "#FFEEF1" }}
+        style={{ backgroundColor: isBlue ? "#D1E4F8" : "#FFFBEB" }}
       >
-        <Text className="text-4xl">{isBlue ? "🔵" : "🔴"}</Text>
+        <Text className="text-4xl">{isBlue ? "🔵" : "⭐"}</Text>
       </View>
       <Text className="text-navy text-lg font-semibold text-center mb-1">
         {isBlue ? "파란불" : "빨간불"} 크리에이터를 기다리는 중

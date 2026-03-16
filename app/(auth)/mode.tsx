@@ -47,10 +47,10 @@ export default function ModeScreen() {
       <TouchableOpacity
         onPress={() => setRed(!red)}
         className={`flex-row items-center p-4 rounded-2xl mb-8 border-2 ${
-          red ? "border-red bg-red-light" : "border-gray-200 bg-gray-50"
+          red ? "border-gold bg-gold-light" : "border-gray-200 bg-gray-50"
         }`}
       >
-        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${red ? "bg-red border-red" : "border-gray-300"}`} />
+        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${red ? "bg-gold border-gold" : "border-gray-300"}`} />
         <View>
           <Text className="text-gray-900 font-semibold">빨간불 (프리미엄)</Text>
           <Text className="text-gray-500 text-sm">1,300P/분 · 프리미엄 콘텐츠 (만 19세+)</Text>

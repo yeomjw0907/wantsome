@@ -84,11 +84,11 @@ export function CreatorCard({ creator, mode, onCallPress }: CreatorCardProps) {
 
         {/* 모드 뱃지 */}
         <View
-          style={[styles.modeBadge, { backgroundColor: isBlue ? "#D1E4F8" : "#FFEEF1" }]}
+          style={[styles.modeBadge, { backgroundColor: isBlue ? "#D1E4F8" : "#FFFBEB" }]}
           pointerEvents="none"
         >
-          <Text style={[styles.modeBadgeText, { color: isBlue ? "#4D9FFF" : "#FF5C7A" }]}>
-            {isBlue ? "🔵" : "🔴"}
+          <Text style={[styles.modeBadgeText, { color: isBlue ? "#4D9FFF" : "#F59E0B" }]}>
+            {isBlue ? "🔵" : "⭐"}
           </Text>
         </View>
 

@@ -431,7 +431,7 @@ export default function FeedScreen() {
   const creators = mode === "blue" ? feedBlue : feedRed;
   const hasMore = mode === "blue" ? hasMoreBlue : hasMoreRed;
   const vibeOptions = mode === "blue" ? BLUE_VIBES : RED_VIBES;
-  const modeColor = mode === "blue" ? "#4D9FFF" : "#FF5C7A";
+  const modeColor = mode === "blue" ? "#4D9FFF" : "#F59E0B";
 
   const handleModeChange = (m: FeedMode) => {
     setMode(m);

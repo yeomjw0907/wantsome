@@ -34,7 +34,7 @@ export function ModeTab({ mode, onModeChange, canAccessRed }: ModeTabProps) {
         className="flex-1 py-2.5 rounded-full items-center justify-center"
         style={
           mode === "red"
-            ? { backgroundColor: "#FFEEF1", borderBottomWidth: 2, borderBottomColor: "#FF5C7A" }
+            ? { backgroundColor: "#FFFBEB", borderBottomWidth: 2, borderBottomColor: "#F59E0B" }
             : undefined
         }
       >
@@ -42,7 +42,7 @@ export function ModeTab({ mode, onModeChange, canAccessRed }: ModeTabProps) {
           className="text-sm font-semibold"
           style={
             mode === "red"
-              ? { color: "#FF5C7A" }
+              ? { color: "#F59E0B" }
               : canAccessRed
                 ? { color: "#8E8EA0" }
                 : { color: "#C8C8D8" }
