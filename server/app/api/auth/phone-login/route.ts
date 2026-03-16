@@ -49,6 +49,26 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
       : null;
 
+    // 동일 전화번호가 다른 계정(소셜 로그인 등)에 이미 등록된 경우 감지
+    if (is_new) {
+      const { data: phoneOwner } = await supabase
+        .from("users")
+        .select("id")
+        .eq("phone", phone)
+        .neq("id", id)
+        .maybeSingle();
+
+      if (phoneOwner) {
+        return NextResponse.json(
+          {
+            error: "DUPLICATE_PHONE",
+            message: "이미 가입된 전화번호입니다. 소셜 로그인을 이용해주세요.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const { error: upsertError } = await supabase.from("users").upsert(
       {
         id,
@@ -64,6 +84,16 @@ export async function POST(req: NextRequest) {
     );
 
     if (upsertError) {
+      // Postgres UNIQUE 제약 위반 (phone 컬럼) 감지
+      if (upsertError.code === "23505" && upsertError.message.includes("phone")) {
+        return NextResponse.json(
+          {
+            error: "DUPLICATE_PHONE",
+            message: "이미 가입된 전화번호입니다. 소셜 로그인을 이용해주세요.",
+          },
+          { status: 409 }
+        );
+      }
       return NextResponse.json(
         { message: upsertError.message },
         { status: 500 }
