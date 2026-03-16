@@ -356,7 +356,7 @@ function RankingSection({ mode }: { mode: FeedMode }) {
 
 const AGE_CATEGORIES = ["전체", "20대", "30대", "40대"];
 const BLUE_VIBES = ["전체", "청순", "큐티", "활발", "지적", "섹시", "털털"];
-const RED_VIBES = ["전체", "청순", "큐티", "농염", "섹시", "BDSM", "역할극", "리드형", "서브형", "교복", "조교"];
+const RED_VIBES = ["전체", "청순", "큐티", "섹시", "댄서", "연기", "리더", "큐레이터", "교복룩", "티처"];
 
 type ChipProps = {
   label: string;

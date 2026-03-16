@@ -160,7 +160,7 @@ export default function VerifyScreen() {
     <>
       <Text className="text-center text-5xl mb-4">🔒</Text>
       <Text className="text-navy text-2xl font-bold text-center mb-3">
-        성인 인증
+        연령 확인
       </Text>
       <View className="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-8">
         <Text className="text-rose-600 text-sm text-center leading-6">

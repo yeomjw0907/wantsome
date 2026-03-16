@@ -29,7 +29,7 @@ export default function ModeScreen() {
   return (
     <View className="flex-1 bg-white px-6 pt-10">
       <Text className="text-navy text-2xl font-bold mb-2">이용 모드를 선택해 주세요</Text>
-      <Text className="text-gray-500 mb-8">파란불(일반) / 빨간불(성인) 중 이용할 모드를 선택할 수 있어요</Text>
+      <Text className="text-gray-500 mb-8">파란불(일반) / 빨간불(프리미엄) 중 이용할 모드를 선택할 수 있어요</Text>
 
       <TouchableOpacity
         onPress={() => setBlue(!blue)}
@@ -52,8 +52,8 @@ export default function ModeScreen() {
       >
         <View className={`w-5 h-5 rounded-full border-2 mr-3 ${red ? "bg-red border-red" : "border-gray-300"}`} />
         <View>
-          <Text className="text-gray-900 font-semibold">빨간불 (성인)</Text>
-          <Text className="text-gray-500 text-sm">1,300P/분 · 성인 콘텐츠 (만 19세+)</Text>
+          <Text className="text-gray-900 font-semibold">빨간불 (프리미엄)</Text>
+          <Text className="text-gray-500 text-sm">1,300P/분 · 프리미엄 콘텐츠 (만 19세+)</Text>
         </View>
       </TouchableOpacity>
 
@@ -62,9 +62,9 @@ export default function ModeScreen() {
       {showRedAgree && (
         <View className="absolute inset-0 bg-navy/80 justify-center px-6">
           <View className="bg-white rounded-2xl p-6">
-            <Text className="text-navy text-lg font-bold mb-2">성인 서비스 이용약관</Text>
+            <Text className="text-navy text-lg font-bold mb-2">프리미엄 서비스 이용 확인</Text>
             <Text className="text-gray-600 text-sm mb-4">
-              만 19세 이상 성인만 이용 가능합니다. 성인 콘텐츠 이용에 자발적으로 동의합니다.
+              빨간불 모드는 만 19세 이상만 이용할 수 있는 프리미엄 서비스입니다. 이용에 동의하시겠습니까?
             </Text>
             <View className="flex-row gap-3">
               <TouchableOpacity

@@ -28,7 +28,7 @@ export default function UnderageScreen() {
         이용하실 수 없습니다
       </Text>
       <Text className="text-white/70 text-center text-sm mb-8">
-        wantsome은 만 18세 이상 성인만{"\n"}이용 가능한 서비스입니다.{"\n\n"}
+        wantsome은 만 19세 이상만{"\n"}이용 가능한 서비스입니다.{"\n\n"}
         본인인증 결과 미성년자로 확인되어{"\n"}서비스 이용이 제한됩니다.
       </Text>
       {Platform.OS === "android" && (

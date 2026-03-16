@@ -63,7 +63,7 @@ export default function TermsPage() {
             </tr>
             <tr>
               <td style={tdStyle}>영상통화 (레드 모드)</td>
-              <td style={tdStyle}>크리에이터와의 성인 화상통화 서비스. 분당 포인트 차감. 만 19세 이상 전용.</td>
+              <td style={tdStyle}>크리에이터와의 프리미엄 화상통화 서비스. 분당 포인트 차감. 만 19세 이상 전용.</td>
             </tr>
             <tr>
               <td style={tdStyle}>크리에이터 예약</td>
@@ -158,7 +158,19 @@ export default function TermsPage() {
       </section>
 
       <section style={secStyle}>
-        <h2 style={h2Style}>제8조 (신고 및 제재)</h2>
+        <h2 style={h2Style}>제8조 (크리에이터 콘텐츠 가이드라인)</h2>
+        <p>크리에이터는 서비스 이용 시 다음 콘텐츠 기준을 준수해야 합니다.</p>
+        <ul style={ulStyle}>
+          <li style={liStyle}><strong>허용:</strong> 대화, 상담, 취미 공유, 팬과의 소통, 퍼포먼스 등 창작 활동</li>
+          <li style={liStyle}><strong>금지:</strong> 만 19세 미만 이용자와의 프리미엄 서비스, 불법 촬영·유포, 성매매 알선, 타인 명예훼손</li>
+          <li style={liStyle}>회사는 신고 접수 시 콘텐츠를 검토하고 기준에 위반되는 경우 즉시 조치합니다.</li>
+          <li style={liStyle}>크리에이터 프로필, 소개글, 게시물에 직접적인 성적 묘사 표현은 허용되지 않습니다.</li>
+          <li style={liStyle}>모든 영상통화는 저장·녹화되지 않으며, 앱 내 화면 캡처는 기술적으로 차단됩니다.</li>
+        </ul>
+      </section>
+
+      <section style={secStyle}>
+        <h2 style={h2Style}>제9조 (신고 및 제재)</h2>
         <ul style={ulStyle}>
           <li style={liStyle}>이용자는 앱 내 신고 기능을 통해 불법·유해 행위를 신고할 수 있습니다.</li>
           <li style={liStyle}>미성년자 이용, 불법 촬영, 성매매 알선 신고는 즉시 해당 계정을 정지하고 수사 기관에 신고합니다.</li>
@@ -168,7 +180,7 @@ export default function TermsPage() {
       </section>
 
       <section style={secStyle}>
-        <h2 style={h2Style}>제9조 (서비스 변경 및 중단)</h2>
+        <h2 style={h2Style}>제10조 (서비스 변경 및 중단)</h2>
         <ul style={ulStyle}>
           <li style={liStyle}>회사는 서비스의 일부 또는 전체를 변경·중단할 수 있습니다. 이 경우 최소 7일 전에 공지합니다.</li>
           <li style={liStyle}>긴급한 시스템 점검이나 불가피한 사유 발생 시 사전 공지 없이 서비스가 일시 중단될 수 있습니다.</li>
@@ -177,7 +189,7 @@ export default function TermsPage() {
       </section>
 
       <section style={secStyle}>
-        <h2 style={h2Style}>제10조 (면책 조항)</h2>
+        <h2 style={h2Style}>제11조 (면책 조항)</h2>
         <ul style={ulStyle}>
           <li style={liStyle}>회사는 크리에이터와 이용자 간 거래에서 발생하는 분쟁에 대해 중개자 역할만 합니다.</li>
           <li style={liStyle}>크리에이터가 제공하는 서비스 내용에 대한 책임은 해당 크리에이터에게 있습니다.</li>
@@ -187,17 +199,17 @@ export default function TermsPage() {
       </section>
 
       <section style={secStyle}>
-        <h2 style={h2Style}>제11조 (개인정보 보호)</h2>
+        <h2 style={h2Style}>제12조 (개인정보 보호)</h2>
         <p>이용자의 개인정보 처리에 관한 사항은 <a href="/privacy" style={{ color: "#F43F5E" }}>개인정보처리방침</a>에서 확인할 수 있습니다.</p>
       </section>
 
       <section style={secStyle}>
-        <h2 style={h2Style}>제12조 (약관 변경)</h2>
+        <h2 style={h2Style}>제13조 (약관 변경)</h2>
         <p>회사는 약관을 변경할 경우 시행 7일 전에 앱 및 웹사이트를 통해 공지합니다. 중요한 변경 사항은 30일 전에 공지하며, 변경 후 계속 서비스를 이용하는 경우 변경된 약관에 동의한 것으로 간주합니다.</p>
       </section>
 
       <section style={secStyle}>
-        <h2 style={h2Style}>제13조 (준거법 및 관할법원)</h2>
+        <h2 style={h2Style}>제14조 (준거법 및 관할법원)</h2>
         <p>본 약관에서 발생하는 분쟁은 대한민국 법률을 준거법으로 하며, 소송이 제기될 경우 회사 소재지를 관할하는 법원을 전속 관할 법원으로 합니다.</p>
       </section>
 

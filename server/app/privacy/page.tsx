@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       <p style={{ color: "#888", marginBottom: 24, fontSize: 14 }}>시행일: 2025년 3월 15일 | 최종 수정일: 2025년 3월 15일</p>
 
       <div style={{ background: "#FFF5F7", border: "1px solid #FECDD3", borderRadius: 8, padding: "12px 16px", marginBottom: 32, fontSize: 14, color: "#BE123C" }}>
-        ⚠️ wantsome 서비스는 <strong>만 19세 이상 성인만</strong> 이용할 수 있습니다. 본 방침은 성인 영상통화 서비스의 특성을 반영합니다.
+        ⚠️ wantsome 서비스는 <strong>만 19세 이상만</strong> 이용할 수 있습니다. 본 방침은 크리에이터 영상통화 서비스 운영에 관한 개인정보 처리 방침입니다.
       </div>
 
       <section style={secStyle}>

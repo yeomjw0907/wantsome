@@ -26,7 +26,7 @@ const CATEGORIES = [
   { key: "all",     label: "전체",   icon: "apps-outline" },
   { key: "general", label: "일반",   icon: "gift-outline" },
   { key: "digital", label: "디지털", icon: "download-outline" },
-  { key: "adult",   label: "성인",   icon: "flame-outline" },
+  { key: "adult",   label: "프리미엄", icon: "flame-outline" },
 ];
 
 const SELLER_FILTERS = [

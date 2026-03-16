@@ -6,7 +6,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 const TERMS_ITEMS = [
   { key: "terms", required: true, label: "서비스 이용약관 동의" },
   { key: "privacy", required: true, label: "개인정보처리방침 동의" },
-  { key: "age18", required: true, label: "만 18세 이상임을 확인합니다" },
+  { key: "age18", required: true, label: "만 19세 이상임을 확인합니다" },
   { key: "marketing", required: false, label: "마케팅 정보 수신 동의" },
 ] as const;
 
@@ -102,11 +102,11 @@ export default function TermsScreen() {
             <ScrollView>
               <Text className="text-gray-600 text-sm">
                 {showDetail === "terms" &&
-                  "서비스 이용약관 전문 (제1조~제7조). 원썸 컴퍼니 wantsome 서비스 이용조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정합니다. 만 18세 이상 성인만 이용 가능합니다."}
+                  "서비스 이용약관 전문 (제1조~제7조). 원썸 컴퍼니 wantsome 서비스 이용조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정합니다. 만 19세 이상만 이용 가능합니다."}
                 {showDetail === "privacy" &&
                   "개인정보처리방침. 수집 항목: 이름, 생년월일, 휴대폰번호(본인인증 시), 소셜 로그인 정보, 닉네임, 프로필 사진. 보유 기간: 탈퇴 시 삭제, CI 90일 보관."}
                 {showDetail === "age18" &&
-                  "본인은 만 18세 이상 성인임을 확인하며, 본인인증을 통해 연령 확인 후 서비스를 이용합니다."}
+                  "본인은 만 19세 이상임을 확인하며, 연령 확인 후 서비스를 이용합니다."}
                 {showDetail === "marketing" &&
                   "이벤트, 맞춤 혜택 등 마케팅 정보를 이메일/앱 푸시로 수신하는 것에 동의합니다. (선택)"}
               </Text>
