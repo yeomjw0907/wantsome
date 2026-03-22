@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -9,17 +9,7 @@ const PAGE_SIZE = 20;
 export type FeedMode = "blue" | "red";
 
 export async function GET(req: NextRequest) {
-  // 피드는 공개 엔드포인트 — 토큰이 있으면 검증, 없어도 목록 반환
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace(/^Bearer\s+/i, "") ?? null;
-  if (token) {
-    const authClient = createSupabaseClient(token);
-    const { error: authError } = await authClient.auth.getUser(token);
-    if (authError) {
-      return NextResponse.json({ message: "Invalid or expired token" }, { status: 401 });
-    }
-  }
-
+  // 완전 공개 피드 — 클라이언트가 만료·불일치 JWT를내도 목록은 반환 (앱이 항상 Authorization 붙임)
   const { searchParams } = new URL(req.url);
   const mode     = (searchParams.get("mode") ?? "blue") as FeedMode;
   const page     = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));

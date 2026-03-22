@@ -10,8 +10,8 @@ export default function AppLayout() {
   const { load, isLoaded } = useFavoriteStore();
 
   useEffect(() => {
-    if (!isLoaded) load();
-  }, []);
+    if (!isLoaded) void load().catch(() => {});
+  }, [isLoaded, load]);
   return (
     <Stack
       screenOptions={{

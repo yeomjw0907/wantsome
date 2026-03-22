@@ -4,21 +4,13 @@
  * 통화 시간 기반 크리에이터 순위
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 const DEFAULT_LIMIT = 10;
 
 export async function GET(req: NextRequest) {
-  // 랭킹은 공개 엔드포인트
-  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
-  if (token) {
-    const authClient = createSupabaseClient(token);
-    const { error: authErr } = await authClient.auth.getUser(token);
-    if (authErr) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
-  }
-
   const { searchParams } = new URL(req.url);
   const mode = (searchParams.get("mode") ?? "blue") as "blue" | "red";
   const period = (searchParams.get("period") ?? "weekly") as "weekly" | "monthly" | "all";
