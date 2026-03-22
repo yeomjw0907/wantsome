@@ -2,24 +2,19 @@
  * GET /api/creators/[id]/reviews — 크리에이터 리뷰 목록
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
+/** 공개 리뷰 목록 */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
-  if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const authClient = createSupabaseClient(token);
-  const { data: { user }, error: authErr } = await authClient.auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
-
   const { searchParams } = new URL(req.url);
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const rawPage = parseInt(searchParams.get("page") ?? "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
   const limit = 20;
   const offset = (page - 1) * limit;
 

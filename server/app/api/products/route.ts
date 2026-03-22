@@ -10,8 +10,10 @@ const PAGE_SIZE = 20;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const page       = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const limit      = Math.min(40, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10));
+  const rawPage = parseInt(searchParams.get("page") ?? "1", 10);
+  const rawLimit = parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+  const limit = Math.min(40, Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : PAGE_SIZE);
   const category   = searchParams.get("category") ?? "all";
   const q          = searchParams.get("q") ?? "";
   const owner_type = searchParams.get("owner_type") ?? "all"; // "company" | "creator" | "all"
