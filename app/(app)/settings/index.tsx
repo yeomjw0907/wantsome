@@ -61,6 +61,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const isCreator = user?.role === "creator" || user?.role === "both";
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -129,7 +130,7 @@ export default function SettingsScreen() {
             onPress={() => router.push("/(app)/settings/profile" as never)}
           />
           <View className="h-px bg-gray-100 ml-16" />
-          {user?.role === "CREATOR" && (
+          {isCreator && (
             <>
               <MenuItem
                 icon="speedometer-outline"

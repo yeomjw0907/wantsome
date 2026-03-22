@@ -13,6 +13,10 @@ import { supabase } from "@/lib/supabase";
 
 function resolveBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
+  const expoConfig = Constants.expoConfig as { hostUri?: string } | null;
+  const legacyManifest = (Constants as unknown as {
+    manifest?: { debuggerHost?: string };
+  }).manifest;
 
   // 프로덕션 빌드: env 값 그대로
   if (!__DEV__) return envUrl;
@@ -24,8 +28,8 @@ function resolveBaseUrl(): string {
   // - Expo SDK 50+: Constants.expoConfig.hostUri
   // - 구버전: Constants.manifest.debuggerHost
   const hostUri: string =
-    (Constants.expoConfig as Record<string, unknown>)?.hostUri as string ??
-    (Constants as Record<string, unknown>).manifest?.debuggerHost as string ??
+    expoConfig?.hostUri ??
+    legacyManifest?.debuggerHost ??
     "";
 
   const ip = hostUri.split(":")[0];

@@ -8,5 +8,5 @@
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
-  "exclude": ["server/**"]
+  "exclude": ["server/**", ".claude/**", ".claire/**", "wantsome/**"]
 }

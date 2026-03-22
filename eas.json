@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 7.0.0"
+    "version": ">= 7.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -14,18 +15,32 @@
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000",
-        "EXPO_PUBLIC_SUPABASE_URL": "",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
-        "EXPO_PUBLIC_AGORA_APP_ID": "",
-        "EXPO_PUBLIC_PORTONE_STORE_ID": "",
-        "EXPO_PUBLIC_PORTONE_CHANNEL_KEY": ""
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.wantsome.kr",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
       }
     },
     "staging": {
       "distribution": "internal",
       "channel": "staging",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api-staging.wantsome.kr"
+        "EXPO_PUBLIC_API_BASE_URL": "https://api-staging.wantsome.kr",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
       }
     },
     "production": {
@@ -35,17 +50,15 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.wantsome.kr"
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.wantsome.kr",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
       }
     }
   },
   "submit": {
     "production": {
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
-      },
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",
         "track": "internal"

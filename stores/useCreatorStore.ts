@@ -30,6 +30,7 @@ interface CreatorStore {
   setMyProfile: (profile: Creator | null) => void;
   setIsOnline: (v: boolean) => void;
   setLoading: (v: boolean) => void;
+  reset: () => void;
 }
 
 export const useCreatorStore = create<CreatorStore>((set) => ({
@@ -64,4 +65,14 @@ export const useCreatorStore = create<CreatorStore>((set) => ({
   setMyProfile: (profile) => set({ myProfile: profile }),
   setIsOnline: (v) => set({ isOnline: v }),
   setLoading: (v) => set({ isLoading: v }),
+  reset: () =>
+    set({
+      feedBlue: [],
+      feedRed: [],
+      isLoading: false,
+      hasMoreBlue: true,
+      hasMoreRed: true,
+      myProfile: null,
+      isOnline: false,
+    }),
 }));

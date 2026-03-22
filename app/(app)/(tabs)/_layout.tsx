@@ -49,11 +49,11 @@ function BadgeIcon({
 }
 
 export default function TabsLayout() {
-  const { token, user } = useAuthStore();
+  const { user } = useAuthStore();
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
-    if (!token || !user?.id) return;
+    if (!user?.id) return;
     const load = async () => {
       try {
         const res = await apiCall<{ conversations: Array<{
@@ -72,7 +72,7 @@ export default function TabsLayout() {
     // 30초마다 갱신
     const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
-  }, [token, user?.id]);
+  }, [user?.id]);
 
   return (
     <Tabs

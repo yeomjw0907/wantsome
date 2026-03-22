@@ -8,6 +8,7 @@ interface PointStore {
   addPoints: (amount: number) => void;
   deductPoints: (amount: number) => void;
   setFirstChargeInfo: (deadline: string | null, isCharged: boolean) => void;
+  reset: () => void;
 }
 
 export const usePointStore = create<PointStore>((set) => ({
@@ -19,4 +20,10 @@ export const usePointStore = create<PointStore>((set) => ({
   deductPoints: (amount) => set((s) => ({ points: Math.max(0, s.points - amount) })),
   setFirstChargeInfo: (deadline, isCharged) =>
     set({ firstChargeDeadline: deadline, isFirstCharged: isCharged }),
+  reset: () =>
+    set({
+      points: 0,
+      firstChargeDeadline: null,
+      isFirstCharged: false,
+    }),
 }));

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wantsome 크리에이터 모집</title>
+  <style>
+    :root{--navy:#1b2a4a;--navy2:#20365f;--pink:#ff6b9d;--pink2:#f43f5e;--blue:#4d9fff;--bluebell:#d1e4f8;--gold:#f59e0b;--green:#22c55e;--g0:#fff;--g50:#f8f8fa;--g100:#f0f0f5;--g200:#e6e7ef;--g300:#c8c8d8;--g500:#8e8ea0;--g700:#4b5563;--g900:#1a1a2e;--shadow:0 26px 80px rgba(21,31,58,.15);--card:0 12px 28px rgba(21,31,58,.08);--font:"Pretendard Variable","Pretendard","SUIT Variable","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+    *{box-sizing:border-box}html,body{margin:0;padding:0;font-family:var(--font);background:radial-gradient(circle at top left,rgba(77,159,255,.18),transparent 20%),radial-gradient(circle at top right,rgba(255,107,157,.16),transparent 22%),linear-gradient(180deg,#f5f8fc 0%,#f7f4fb 100%);color:var(--g900)}
+    body{min-width:1664px;padding:28px 0 56px}.deck{display:grid;gap:28px;justify-content:center}
+    .slide{width:1600px;min-height:900px;border-radius:40px;background:rgba(255,255,255,.94);box-shadow:var(--shadow);overflow:hidden;position:relative;page-break-after:always}
+    .slide:last-child{page-break-after:auto}.slide:before,.slide:after{content:"";position:absolute;border-radius:999px;pointer-events:none}.slide:before{width:420px;height:420px;top:-170px;right:-110px;background:radial-gradient(circle,rgba(255,107,157,.18),transparent 66%)}.slide:after{width:360px;height:360px;left:-140px;bottom:-150px;background:radial-gradient(circle,rgba(77,159,255,.16),transparent 66%)}
+    .in{padding:54px 58px 46px;min-height:900px;display:flex;flex-direction:column}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+    .eyebrow{display:inline-flex;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;background:rgba(27,42,74,.06);font-size:16px;font-weight:800;color:var(--navy)}.eyebrow b{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--blue));box-shadow:0 0 0 6px rgba(255,107,157,.12)}
+    .page{font-size:17px;font-weight:800;color:rgba(27,42,74,.45)}h1,h2,h3,p{margin:0}h1{font-size:66px;line-height:1.02;letter-spacing:-.055em;color:var(--navy)}h2{font-size:44px;line-height:1.08;letter-spacing:-.045em;color:var(--navy)}h3{font-size:22px;line-height:1.2;letter-spacing:-.03em;color:var(--navy)}
+    .lead{font-size:22px;line-height:1.6;letter-spacing:-.02em;color:var(--g700)}.body{font-size:18px;line-height:1.6;color:var(--g700)}.muted{color:var(--g500)}.brand{color:var(--pink2)}.blue{color:var(--blue)}.gold{color:#ba7700}
+    .g2{display:grid;grid-template-columns:1.08fr .92fr;gap:26px;flex:1;align-items:stretch}.g2b{display:grid;grid-template-columns:.96fr 1.04fr;gap:22px;flex:1;align-items:stretch}.stack{display:flex;flex-direction:column;gap:18px}
+    .panel{border-radius:32px;background:rgba(255,255,255,.9);border:1px solid rgba(27,42,74,.08);box-shadow:0 18px 50px rgba(21,31,58,.1)}.soft{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(246,248,252,.9))}.dark{background:radial-gradient(circle at top right,rgba(255,107,157,.24),transparent 28%),linear-gradient(180deg,#182743 0%,#101b34 100%);color:#fff;border:none}.pad{padding:28px}
+    .title-grad{background:linear-gradient(135deg,#ff6b9d 0%,#ff8ea5 42%,#4d9fff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .chips,.badges,.pills,.phones,.actions,.times{display:flex;flex-wrap:wrap;gap:12px}.tag{display:inline-flex;align-items:center;justify-content:center;padding:11px 16px;border-radius:999px;border:1px solid rgba(27,42,74,.08);background:#fff;font-size:15px;font-weight:800;box-shadow:0 8px 20px rgba(21,31,58,.05)}.pink{background:rgba(255,107,157,.12);border-color:rgba(255,107,157,.18);color:var(--pink2);box-shadow:none}.sky{background:rgba(77,159,255,.12);border-color:rgba(77,159,255,.18);color:var(--blue);box-shadow:none}.amber{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.18);color:#ba7700;box-shadow:none}
+    .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.metric{padding:20px;border-radius:24px;background:rgba(255,255,255,.9);border:1px solid rgba(27,42,74,.08);box-shadow:var(--card)}.metric strong{display:block;font-size:30px;line-height:1.05;letter-spacing:-.04em;color:var(--navy);margin-bottom:8px}.metric span{display:block;font-size:15px;line-height:1.45;color:var(--g500)}
+    .list,.steps,.trust-list,.close-list,.feed-grid,.dash-list{display:grid;gap:12px}.item,.step,.trust-line,.close-line{padding:18px;border-radius:22px;background:rgba(27,42,74,.04)}.item{display:grid;grid-template-columns:52px 1fr;gap:14px}.icon,.num,.mark{width:52px;height:52px;border-radius:18px;display:grid;place-items:center;color:#fff;font-size:22px;font-weight:900;background:linear-gradient(135deg,var(--pink),var(--blue));box-shadow:0 10px 20px rgba(21,31,58,.08)}.item p,.step p,.trust-line,.close-line p,.tiny{font-size:14px;line-height:1.5;color:var(--g500)}
+    .step{display:grid;grid-template-columns:72px 1fr;gap:14px;background:#fff;border:1px solid rgba(27,42,74,.06);box-shadow:0 8px 20px rgba(21,31,58,.05)}.num{width:72px;height:72px;border-radius:24px;color:var(--navy);font-size:24px;background:linear-gradient(135deg,rgba(255,107,157,.16),rgba(77,159,255,.16));box-shadow:none}
+    .phone{width:274px;height:560px;padding:14px;border-radius:38px;background:linear-gradient(180deg,#20283f 0%,#0f162b 100%);box-shadow:0 22px 42px rgba(15,22,43,.22)}.phone.big{width:296px;height:598px}.left{transform:rotate(-4deg) translateY(10px)}.right{transform:rotate(4deg) translateY(18px)}.screen{width:100%;height:100%;overflow:hidden;border-radius:28px;background:var(--g50)}.screen.white{background:#fff}.screen.navy{background:radial-gradient(circle at top center,rgba(255,107,157,.16),transparent 30%),linear-gradient(180deg,#1b2a4a 0%,#111c35 100%);color:#fff}
+    .status{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 8px;font-size:11px;font-weight:800;letter-spacing:.04em;color:rgba(27,42,74,.75)}.screen.navy .status{color:rgba(255,255,255,.84)}.screen-body{padding:10px 16px 18px}.screen-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.st{font-size:18px;font-weight:900;letter-spacing:-.03em;color:var(--navy)}.ss{font-size:12px;color:var(--g500);margin-top:4px}
+    .search{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:18px;background:var(--g100);font-size:12px;color:var(--g500)}.pill{padding:9px 14px;border-radius:999px;background:rgba(27,42,74,.05);font-size:12px;font-weight:800;color:var(--g500)}.pill.blue{background:var(--bluebell);color:var(--blue)}.pill.pink{background:rgba(255,107,157,.12);color:var(--pink2)}.pill.gold{background:rgba(245,158,11,.14);color:#ba7700}
+    .banner{margin-top:12px;height:88px;border-radius:22px;padding:16px;color:#fff;background:radial-gradient(circle at top right,rgba(255,255,255,.32),transparent 30%),linear-gradient(135deg,#1b2a4a 0%,#314c82 46%,#ff6b9d 100%)}.banner strong{display:block;font-size:16px;line-height:1.2;margin-bottom:4px}.banner span{font-size:12px;opacity:.84}
+    .chip{display:inline-flex;align-items:center;justify-content:center;padding:8px 11px;border-radius:999px;border:1px solid rgba(27,42,74,.08);background:#fff;font-size:11px;font-weight:800;color:var(--g700)}
+    .feed-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:14px}.tile{position:relative;height:154px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,rgba(209,228,248,.22) 0%,rgba(27,42,74,.88) 100%),linear-gradient(135deg,#b9d7f5 0%,#6caef6 45%,#2f4770 100%);box-shadow:inset 0 -50px 80px rgba(0,0,0,.3)}.tile.alt{background:linear-gradient(180deg,rgba(255,238,241,.22) 0%,rgba(27,42,74,.88) 100%),linear-gradient(135deg,#ffd0dd 0%,#ff9cb9 40%,#24375f 100%)}.online,.mode,.heart{position:absolute;top:10px;font-size:10px;font-weight:900}.online{left:10px;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.36);color:#8ff0ad}.mode{right:44px;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.86);color:var(--blue)}.tile.alt .mode{color:#ba7700}.heart{right:10px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.32);color:#fff}
+    .meta{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:flex-end;justify-content:space-between;color:#fff}.meta strong{display:block;font-size:14px;margin-bottom:4px}.meta span{font-size:11px;opacity:.82}.call{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--pink);font-size:14px}
+    .hero-shot{position:relative;height:270px;border-radius:0 0 28px 28px;overflow:hidden;background:linear-gradient(180deg,rgba(209,228,248,.14) 0%,rgba(0,0,0,.44) 100%),linear-gradient(135deg,#d8ebff 0%,#97c5fb 38%,#27406a 100%)}.hero-shot:after{content:"";position:absolute;inset:auto 0 0 0;height:110px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.62) 100%)}.hero-meta{position:absolute;left:16px;right:16px;bottom:18px;z-index:1;color:#fff}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.stat{padding:14px 10px;border-radius:18px;background:rgba(27,42,74,.04);text-align:center}.stat strong{display:block;font-size:21px;color:var(--navy);margin-bottom:4px}.stat span{font-size:11px;color:var(--g500)}
+    .card,.box,.row,.money,.trust,.close-card{border-radius:24px;background:#fff;border:1px solid rgba(27,42,74,.06);box-shadow:0 8px 20px rgba(21,31,58,.04)}.card,.box,.money,.trust,.close-card{padding:20px}.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:10px}.day{display:grid;place-items:center;aspect-ratio:1/1;border-radius:16px;font-size:11px;color:var(--g500)}.day.on{background:rgba(255,107,157,.12);color:var(--pink2);font-weight:900}.day.sel{background:var(--pink);color:#fff;font-weight:900}.day.off{color:#d1d5db}
+    .time{padding:10px 14px;border-radius:14px;border:1.5px solid var(--g200);background:#fff;font-size:12px;font-weight:800;color:var(--g700)}.time.on{border-color:rgba(255,107,157,.32);background:rgba(255,107,157,.1);color:var(--pink2)}.bar{margin-top:12px;height:10px;border-radius:999px;background:var(--g100);overflow:hidden}.bar span{display:block;height:100%;width:68%;background:linear-gradient(90deg,var(--blue),var(--pink))}
+    .toggle{display:flex;align-items:center;justify-content:space-between;padding:18px 20px}.switch{position:relative;width:58px;height:32px;border-radius:999px;background:var(--pink)}.switch:after{content:"";position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:#fff}
+    .earn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.earn .row{padding:18px 12px;text-align:center}.earn strong{display:block;font-size:22px;color:var(--navy);margin-bottom:4px}.earn span{font-size:11px;color:var(--g500)}
+    .buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.btn,.btn2,.cta,.cta2,.cta3{display:flex;align-items:center;justify-content:center;border-radius:14px;font-size:12px;font-weight:800}.btn{height:40px;background:#fff;border:1px solid rgba(27,42,74,.08);color:var(--g700)}.btn2{height:40px;background:var(--pink);color:#fff}.cta,.cta2,.cta3{height:48px;border-radius:999px;font-size:14px}.cta{background:var(--pink);color:#fff}.cta2{background:#fff;border:1.5px solid rgba(255,107,157,.22);color:var(--pink2)}.cta3{background:#fff;border:1.5px solid rgba(77,159,255,.24);color:var(--blue)}
+    .money{padding:24px;color:#fff;border:none;background:radial-gradient(circle at top right,rgba(255,255,255,.22),transparent 28%),linear-gradient(135deg,#182743 0%,#243e70 42%,#ff6b9d 100%);box-shadow:0 18px 40px rgba(21,31,58,.18)}.money strong{display:block;font-size:42px;line-height:1.05;letter-spacing:-.05em;margin:14px 0 8px}.money p{font-size:16px;line-height:1.55;color:rgba(255,255,255,.84)}.flow{display:grid;gap:12px;margin-top:22px}.arrow{width:2px;height:22px;margin:0 auto;background:linear-gradient(180deg,rgba(77,159,255,.4),rgba(255,107,157,.55))}
+    .trust-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;flex:1}.trust .icon{width:56px;height:56px;border-radius:20px;margin-bottom:16px;font-size:24px}.close{display:grid;grid-template-columns:1.04fr .96fr;gap:24px;flex:1}.quote{display:flex;flex-direction:column;justify-content:space-between;gap:24px;height:100%;padding:34px;border-radius:34px;color:#fff;background:radial-gradient(circle at top right,rgba(255,255,255,.2),transparent 28%),linear-gradient(135deg,#15233d 0%,#203965 48%,#ff6b9d 100%);box-shadow:0 24px 54px rgba(21,31,58,.24)}.quote blockquote{margin:0;font-size:38px;line-height:1.26;letter-spacing:-.04em;font-weight:900}.quote p{font-size:18px;line-height:1.65;color:rgba(255,255,255,.82)}
+    .footer{margin-top:auto;padding-top:18px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:800;color:rgba(27,42,74,.48)}.dark .footer{color:rgba(255,255,255,.56)}
+    @media print{@page{size:1600px 900px;margin:0}body{padding:0;background:#fff}.deck{gap:0}.slide{margin:0;border-radius:0;box-shadow:none}}
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Creator Recruitment Deck</div>
+          <div class="page">01</div>
+        </div>
+        <div class="g2">
+          <div class="stack" style="justify-content:center; gap:22px; padding-right:10px;">
+            <div class="stack">
+              <h1><span class="title-grad">wantsome</span><br />크리에이터 모집</h1>
+              <p class="lead"><span class="brand">원하는 시간에 접속하고</span>, 나를 찾는 팬과 바로 연결되고, 예약과 DM으로 관계를 이어가며, 활동과 수익을 한곳에서 관리할 수 있는 크리에이터 중심 플랫폼입니다.</p>
+            </div>
+            <div class="badges">
+              <div class="tag pink">초기 크리에이터 모집용</div>
+              <div class="tag sky">파란불 / 빨간불 이중 모드</div>
+              <div class="tag amber">예약 · DM · 정산까지 한곳 관리</div>
+            </div>
+            <div class="metrics">
+              <div class="metric"><strong>900P</strong><span>파란불 기본 분당 단가</span></div>
+              <div class="metric"><strong>1,300P</strong><span>빨간불 프리미엄 분당 단가</span></div>
+              <div class="metric"><strong>75%</strong><span>론칭 기준 크리에이터 정산율</span></div>
+              <div class="metric"><strong>24h</strong><span>심사 결과 안내 목표 시간</span></div>
+            </div>
+          </div>
+          <div class="panel dark pad">
+            <div class="phones" style="justify-content:flex-end; gap:12px; margin-top:4px;">
+              <div class="phone left">
+                <div class="screen navy">
+                  <div class="status"><span>9:41</span><span>wantsome</span><span>5G</span></div>
+                  <div class="screen-body" style="padding-top:24px;">
+                    <div style="width:132px;height:132px;margin:16px auto 18px;border-radius:50%;border:3px solid rgba(255,255,255,.72);background:linear-gradient(135deg,#6caef6 0%,#ff8eb3 100%);"></div>
+                    <div style="text-align:center;margin-bottom:26px;">
+                      <div style="font-size:26px;font-weight:900;letter-spacing:-.04em;">수아 님</div>
+                      <div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.74);">통화 요청이 왔습니다</div>
+                      <div class="chips" style="justify-content:center;margin-top:14px;">
+                        <span class="chip sky">🔵 파란불</span>
+                        <span class="chip pink">900P / 분</span>
+                      </div>
+                    </div>
+                    <div style="width:128px;height:128px;margin:0 auto 22px;border-radius:50%;border:8px solid rgba(255,255,255,.12);box-shadow:inset 0 0 0 6px rgba(255,255,255,.18);"></div>
+                    <div style="display:flex;justify-content:center;gap:24px;"><div style="width:64px;height:64px;border-radius:50%;background:#ef4444;"></div><div style="width:64px;height:64px;border-radius:50%;background:#22c55e;"></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="phone big">
+                <div class="screen white">
+                  <div class="status"><span>9:41</span><span>피드</span><span>100%</span></div>
+                  <div class="screen-body">
+                    <div class="screen-head"><div><div class="st">wantsome</div><div class="ss">지금 연결 가능한 크리에이터</div></div><span class="chip pink">42,500P</span></div>
+                    <div class="search">🔎 크리에이터 닉네임 검색...</div>
+                    <div class="pills" style="margin-top:12px;"><span class="pill blue">파란불</span><span class="pill">빨간불</span></div>
+                    <div class="banner"><strong>첫충전 100% 보너스</strong><span>72시간 안에 충전하면 2배 포인트 지급</span></div>
+                    <div class="chips" style="margin-top:12px;"><span class="chip sky"># 전체</span><span class="chip">🎂 20대</span><span class="chip"># 청순</span><span class="chip"># 활발</span></div>
+                    <div class="feed-grid">
+                      <div class="tile"><div class="online">● ON</div><div class="mode">🔵</div><div class="heart">♡</div><div class="meta"><div><strong>유나 ✅</strong><span>900P / 분</span></div><div class="call">📹</div></div></div>
+                      <div class="tile alt"><div class="online">● ON</div><div class="mode">⭐</div><div class="heart">♡</div><div class="meta"><div><strong>세아</strong><span>1,300P / 분</span></div><div class="call">📹</div></div></div>
+                      <div class="tile alt"><div class="mode">⭐</div><div class="heart">♡</div><div class="meta"><div><strong>다온 ✅</strong><span>1,300P / 분</span></div><div class="call" style="background:#9ca3af;">📹</div></div></div>
+                      <div class="tile"><div class="online">● ON</div><div class="mode">🔵</div><div class="heart">♡</div><div class="meta"><div><strong>해린</strong><span>900P / 분</span></div><div class="call">📹</div></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="footer"><span>서비스 첫 인상</span><span>탐색 → 연결 → 예약 → 재방문</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Service Positioning</div>
+          <div class="page">02</div>
+        </div>
+        <div class="g2">
+          <div class="panel soft pad">
+            <h2>들어오면 어떤 기회가 열리나</h2>
+            <p class="lead" style="margin-top:14px;">wantsome은 <span class="brand">성인 인증 기반 1:1 영상통화 플랫폼</span>으로, 팬이 당신을 발견하고 바로 연결되고, 통화가 끝난 뒤에도 예약과 DM으로 다시 돌아오게 만드는 구조를 갖고 있습니다.</p>
+            <div class="list" style="margin-top:20px;">
+              <div class="item">
+                <div class="icon">🔎</div>
+                <div><h3>발견이 빠릅니다</h3><p>메인 피드, 인기 순위, 카테고리 필터, 검색으로 원하는 분위기의 크리에이터를 빠르게 찾습니다.</p></div>
+              </div>
+              <div class="item">
+                <div class="icon">📹</div>
+                <div><h3>연결이 바로 일어납니다</h3><p>온라인 상태가 실시간 반영되고, 즉시 통화 버튼으로 연결됩니다. 부재 시 예약과 DM으로 이어집니다.</p></div>
+              </div>
+              <div class="item">
+                <div class="icon">📅</div>
+                <div><h3>관계가 쌓이는 구조입니다</h3><p>예정 방송, 예약 슬롯, 포스트, 리뷰, 재예약 유도가 한 흐름으로 설계되어 재방문 동선을 만듭니다.</p></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px;">
+              <div class="card"><span class="tag sky">🔵 파란불</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">900P / 분</strong><p class="tiny" style="margin-top:8px;">기본 통화 모드. 첫 진입과 반복 통화에 유리합니다.</p></div>
+              <div class="card"><span class="tag pink">🔴 빨간불</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">1,300P / 분</strong><p class="tiny" style="margin-top:8px;">인증 기반 프리미엄 모드. 전환 가치가 높은 상품입니다.</p></div>
+              <div class="card"><span class="tag amber">DM + 포스트</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">관계 유지 장치</strong><p class="tiny" style="margin-top:8px;">통화 외 접점을 만들어 재방문과 재결제를 돕습니다.</p></div>
+              <div class="card"><span class="tag">예약금 구조</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">5,000P ~</strong><p class="tiny" style="margin-top:8px;">예약 확정과 노쇼 방지에 필요한 안전장치를 내장했습니다.</p></div>
+            </div>
+          </div>
+          <div class="panel pad">
+            <h3>활동 흐름은 이렇게 이어집니다</h3>
+            <div class="steps" style="margin-top:18px;">
+              <div class="step"><div class="num">01</div><div><h3>노출</h3><p>피드 카드, 순위 섹션, 인증 뱃지, 예약 가능 시간으로 발견 가능성을 높입니다.</p></div></div>
+              <div class="step"><div class="num">02</div><div><h3>전환</h3><p>즉시 통화, DM, 예약 CTA가 상세 페이지 하단에 고정되어 소비자 행동을 끊지 않습니다.</p></div></div>
+              <div class="step"><div class="num">03</div><div><h3>운영</h3><p>온라인 토글, 예정 방송, 예약 수락/거절, 정산 확인까지 앱 안에서 처리합니다.</p></div></div>
+              <div class="step"><div class="num">04</div><div><h3>신뢰</h3><p>본인 인증, 신고/차단, 암호화 저장, 관리자 심사 플로우로 운영 안정성을 확보합니다.</p></div></div>
+            </div>
+            <div class="footer"><span>핵심 메시지</span><span>발견되는 구조와 운영되는 구조를 같이 제시</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Consumer Experience</div>
+          <div class="page">03</div>
+        </div>
+        <div class="stack" style="gap:24px;flex:1;">
+          <div style="max-width:920px;">
+            <h2>팬은 이런 흐름으로 당신을 만나게 됩니다</h2>
+            <p class="lead" style="margin-top:14px;"><span class="blue">피드에서 발견</span>하고, <span class="brand">프로필에서 신뢰를 확인</span>하고, <span class="gold">즉시 통화 또는 예약</span>으로 이어집니다. 한 번의 접속이 끝나지 않고 반복 방문으로 이어지게 설계된 구조입니다.</p>
+          </div>
+          <div class="phones">
+            <div class="phone">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Feed</span><span>LTE</span></div>
+                <div class="screen-body">
+                  <div class="screen-head"><div><div class="st">wantsome</div><div class="ss">실시간 추천 피드</div></div><span class="chip pink">42,500P</span></div>
+                  <div class="search">🔎 크리에이터 닉네임 검색...</div>
+                  <div class="pills" style="margin-top:12px;"><span class="pill blue">파란불</span><span class="pill">빨간불</span></div>
+                  <div class="banner"><strong>인기 순위 & 첫충전 이벤트</strong><span>랭킹 카드와 체크인 배너가 함께 노출</span></div>
+                  <div class="chips" style="margin-top:12px;"><span class="chip sky"># 전체</span><span class="chip"># 청순</span><span class="chip"># 큐티</span><span class="chip"># 활발</span><span class="chip"># 지적</span></div>
+                  <div class="feed-grid">
+                    <div class="tile"><div class="online">● ON</div><div class="mode">🔵</div><div class="heart">♡</div><div class="meta"><div><strong>유나 ✅</strong><span>900P / 분</span></div><div class="call">📹</div></div></div>
+                    <div class="tile alt"><div class="online">● ON</div><div class="mode">⭐</div><div class="heart">♡</div><div class="meta"><div><strong>세아</strong><span>1,300P / 분</span></div><div class="call">📹</div></div></div>
+                    <div class="tile"><div class="mode">🔵</div><div class="heart">♡</div><div class="meta"><div><strong>해린</strong><span>900P / 분</span></div><div class="call">📹</div></div></div>
+                    <div class="tile alt"><div class="online">● ON</div><div class="mode">⭐</div><div class="heart">♡</div><div class="meta"><div><strong>다온 ✅</strong><span>1,300P / 분</span></div><div class="call">📹</div></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="phone big">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Creator</span><span>100%</span></div>
+                <div class="hero-shot">
+                  <div class="hero-meta">
+                    <div class="chips" style="margin-bottom:8px;"><span class="chip" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.18);color:#fff;">지금 통화 가능</span></div>
+                    <div style="font-size:26px;font-weight:900;letter-spacing:-.04em;">유나 ✅</div>
+                    <div class="chips"><span class="chip" style="background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.18);color:#fff;">⭐ 일반</span><span class="chip" style="background:rgba(77,159,255,.22);border-color:rgba(77,159,255,.18);color:#fff;">파란불</span><span class="chip" style="background:rgba(255,92,122,.22);border-color:rgba(255,92,122,.18);color:#fff;">빨간불</span></div>
+                  </div>
+                </div>
+                <div class="screen-body" style="padding-top:18px;">
+                  <p class="ss" style="font-size:13px;line-height:1.55;">“자주 들어오는 시간은 평일 밤 8시 이후예요. 예약이나 DM 남겨주시면 더 빠르게 볼 수 있어요.”</p>
+                  <div class="stats">
+                    <div class="stat"><strong>324</strong><span>총 통화</span></div>
+                    <div class="stat"><strong>18분</strong><span>평균 통화</span></div>
+                    <div class="stat"><strong>4.9</strong><span>리뷰 평점</span></div>
+                  </div>
+                  <div class="chips" style="margin-top:12px;"><span class="chip"># 청순</span><span class="chip"># 활발</span><span class="chip"># 예약 가능</span><span class="chip"># DM 가능</span></div>
+                  <div class="box" style="margin-top:12px;"><div class="ss" style="margin:0 0 6px 0;">통화 가능 시간</div><strong style="font-size:13px;color:var(--navy);">평일 오후 8시~11시 / 주말 오후 2시~자정</strong></div>
+                  <div class="stack" style="gap:10px;margin-top:14px;">
+                    <div class="cta">즉시 통화하기</div>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;"><div class="cta3">DM 보내기</div><div class="cta2">예약 통화</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="phone">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Reservation</span><span>5G</span></div>
+                <div class="screen-body">
+                  <div class="screen-head"><div><div class="st">유나 예약 통화</div><div class="ss">네이버 예약 스타일 플로우</div></div></div>
+                  <div class="box">
+                    <div style="display:flex;align-items:center;justify-content:space-between;"><strong style="font-size:13px;color:var(--navy);">2026년 3월</strong><span class="chip pink">예약 가능일 표시</span></div>
+                    <div class="calendar"><div class="day off">1</div><div class="day off">2</div><div class="day">3</div><div class="day on">4</div><div class="day on">5</div><div class="day on">6</div><div class="day">7</div><div class="day">8</div><div class="day sel">9</div><div class="day on">10</div><div class="day">11</div><div class="day on">12</div><div class="day">13</div><div class="day">14</div></div>
+                  </div>
+                  <div class="times" style="margin-top:12px;"><span class="time on">20:00</span><span class="time">20:30</span><span class="time">21:00</span><span class="time">21:30</span></div>
+                  <div class="pills" style="margin-top:14px;"><span class="pill pink" style="flex:1;">30분 · 5,000P</span><span class="pill" style="flex:1;">60분 · 10,000P</span></div>
+                  <div class="pills" style="margin-top:10px;"><span class="pill blue" style="flex:1;">🔵 파란불</span><span class="pill" style="flex:1;">🔴 빨간불</span></div>
+                  <div class="box" style="margin-top:14px;">
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--g500);margin-bottom:8px;"><span>예약 일시</span><strong style="color:var(--navy);">3/9 20:00</strong></div>
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--g500);margin-bottom:8px;"><span>통화 시간</span><strong style="color:var(--navy);">30분</strong></div>
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--g500);"><span>예약금</span><strong style="color:var(--pink2);">5,000P</strong></div>
+                  </div>
+                  <div class="cta" style="margin-top:14px;">예약하기 · 5,000P</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="footer"><span>핵심 흐름</span><span>발견 → 신뢰 확인 → 즉시 통화 → 예약 재방문</span></div>
+        </div>
+      </div>
+    </section>
+<section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Creator Onboarding</div>
+          <div class="page">04</div>
+        </div>
+        <div class="g2">
+          <div class="panel soft pad">
+            <h2>크리에이터 등록 플로우</h2>
+            <p class="lead" style="margin-top:14px;">계약, 인증, 계좌 등록을 단계적으로 진행해 진입 장벽은 낮추고, 심사 이후 운영까지 자연스럽게 연결되도록 설계했습니다.</p>
+            <div class="steps" style="margin-top:20px;">
+              <div class="step"><div class="num">1/3</div><div><h3>용역계약서 전자 동의</h3><p>전문을 끝까지 읽으면 서명이 활성화되고, 동의 후 다음 단계로 이동합니다.</p></div></div>
+              <div class="step"><div class="num">2/3</div><div><h3>크리에이터 인증 뱃지 신청</h3><p>신분증 업로드를 통해 인증 뱃지, 검색 상단 노출, 빨간불 모드 활성화 혜택을 안내합니다.</p></div></div>
+              <div class="step"><div class="num">3/3</div><div><h3>정산 계좌 등록</h3><p>실명 확인 후 등록을 마치면 관리자 검토 상태로 전환되고 24시간 내 결과를 안내합니다.</p></div></div>
+            </div>
+            <div class="list" style="margin-top:18px;">
+              <div class="item"><div class="icon">✓</div><div><h3>이탈을 줄이는 UX</h3><p>모든 단계가 카드형 UI와 하단 고정 CTA로 구성되어 한 손 사용 흐름이 좋습니다.</p></div></div>
+              <div class="item"><div class="icon">✓</div><div><h3>혜택 중심 문구</h3><p>“신분증 제출”보다 “인증 뱃지 획득”으로 표현해 거부감을 낮춥니다.</p></div></div>
+            </div>
+          </div>
+          <div class="phones" style="justify-content:flex-end;">
+            <div class="phone left">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Contract</span><span>LTE</span></div>
+                <div class="screen-body">
+                  <div class="screen-head"><div><div class="st">용역계약서</div><div class="ss">크리에이터 등록 1/3</div></div></div>
+                  <div class="bar" style="margin-top:0;"><span style="width:33%;background:var(--pink);"></span></div>
+                  <div class="box" style="margin-top:14px;background:rgba(77,159,255,.12);"><div class="ss" style="margin:0;color:var(--blue);font-weight:800;">계약서를 끝까지 읽으면 서명이 활성화됩니다.</div></div>
+                  <div class="box" style="margin-top:12px;height:286px;overflow:hidden;"><div style="font-size:13px;line-height:1.7;color:var(--g700);">용역계약서<br /><br />제1조 목적<br />본 계약은 wantsome 플랫폼을 통해 크리에이터가 영상통화 서비스를 제공함에 있어 필요한 권리와 의무를 정함을 목적으로 합니다.<br /><br />제2조 계약의 성격<br />크리에이터는 독립적인 용역 제공자입니다.<br /><br />제3조 수수료 및 정산<br />기본 정산율, 정산일, 원천징수 조건을 명시합니다.</div></div>
+                  <div class="cta" style="margin-top:14px;">동의하고 서명하기</div>
+                </div>
+              </div>
+            </div>
+            <div class="phone">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Verify</span><span>100%</span></div>
+                <div class="screen-body">
+                  <div class="screen-head"><div><div class="st">크리에이터 인증</div><div class="ss">크리에이터 등록 2/3</div></div><span class="ss">건너뛰기</span></div>
+                  <div class="bar" style="margin-top:0;"><span style="width:66%;background:var(--pink);"></span></div>
+                  <div style="margin-top:16px;"><div class="st" style="font-size:20px;">✅ 인증 뱃지 획득</div><div class="ss">성인 인증 완료 시 추가 혜택 제공</div></div>
+                  <div class="dash-list" style="margin-top:14px;">
+                    <div class="item"><div class="icon" style="background:var(--blue);">🔎</div><div><h3 style="font-size:15px;">피드 상단 노출 우선순위</h3><p>검색과 피드에서 더 먼저 발견되는 구조</p></div></div>
+                    <div class="item"><div class="icon" style="background:var(--gold);">⭐</div><div><h3 style="font-size:15px;">인증 뱃지 표시</h3><p>소비자 신뢰와 클릭률을 동시에 높이는 장치</p></div></div>
+                    <div class="item"><div class="icon" style="background:var(--pink);">🔴</div><div><h3 style="font-size:15px;">빨간불 모드 활성화</h3><p>인증 완료 후 프리미엄 모드 사용 가능</p></div></div>
+                  </div>
+                  <div class="box" style="margin-top:14px;height:124px;border-style:dashed;display:grid;place-items:center;text-align:center;"><div><div style="width:56px;height:56px;margin:0 auto 10px;display:grid;place-items:center;border-radius:20px;background:var(--bluebell);color:var(--blue);font-size:28px;">🪪</div><strong style="font-size:14px;color:var(--navy);">신분증 사진 첨부</strong><div class="ss">주민등록증 또는 운전면허증</div></div></div>
+                  <div class="cta" style="margin-top:14px;">제출하고 다음 단계</div>
+                </div>
+              </div>
+            </div>
+            <div class="phone right">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Account</span><span>5G</span></div>
+                <div class="screen-body">
+                  <div class="screen-head"><div><div class="st">계좌 등록</div><div class="ss">크리에이터 등록 3/3</div></div></div>
+                  <div class="bar" style="margin-top:0;"><span style="width:100%;background:var(--pink);"></span></div>
+                  <div class="box" style="margin-top:16px;"><div class="ss" style="margin:0 0 8px 0;">은행 선택</div><strong style="font-size:14px;color:var(--navy);">카카오뱅크</strong></div>
+                  <div class="box" style="margin-top:10px;"><div class="ss" style="margin:0 0 8px 0;">계좌번호</div><strong style="font-size:14px;color:var(--navy);">3333-12-4455667</strong></div>
+                  <div class="box" style="margin-top:12px;background:rgba(34,197,94,.1);"><strong style="font-size:13px;color:#15803d;">실명 확인 완료</strong><div class="tiny" style="margin-top:4px;color:#16a34a;">예금주: 김유나</div></div>
+                  <div class="box" style="margin-top:12px;background:rgba(27,42,74,.03);"><div class="tiny">• 정산은 매월 15일 자동 진행<br />• 계좌번호 AES-256 암호화 저장<br />• 정산액의 3.3% 원천징수</div></div>
+                  <div class="cta" style="margin-top:14px;">등록 완료 → 심사 대기</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Creator Dashboard</div>
+          <div class="page">05</div>
+        </div>
+        <div class="g2">
+          <div class="panel dark pad">
+            <h2 style="color:#fff;">등록 이후가 더 중요합니다</h2>
+            <p class="lead" style="margin-top:14px;color:rgba(255,255,255,.78);">크리에이터가 머무르려면 수익 확인, 예약 관리, 방송 일정, 온라인 전환이 한 화면 안에서 빠르게 해결되어야 합니다.</p>
+            <div class="list" style="margin-top:20px;">
+              <div class="item" style="background:rgba(255,255,255,.08);"><div class="icon">🟢</div><div><h3 style="color:#fff;">온라인 토글</h3><p style="color:rgba(255,255,255,.7);">실시간으로 피드 노출 상태가 반영됩니다. 연결 가능 여부가 소비자 경험에 바로 연결됩니다.</p></div></div>
+              <div class="item" style="background:rgba(255,255,255,.08);"><div class="icon">💸</div><div><h3 style="color:#fff;">오늘 / 이번달 / 누적 수익</h3><p style="color:rgba(255,255,255,.7);">지표를 숨기지 않고 첫 화면에서 확인하게 해 운영 감각을 높입니다.</p></div></div>
+              <div class="item" style="background:rgba(255,255,255,.08);"><div class="icon">📅</div><div><h3 style="color:#fff;">예약·예정 방송 관리</h3><p style="color:rgba(255,255,255,.7);">수락/거절, 방송 시간 등록, 통화 가능 시간 편집까지 같은 화면에서 처리합니다.</p></div></div>
+            </div>
+            <div class="footer"><span>운영 메시지</span><span>“들어오면 관리가 쉬운 앱”으로 인식시키기</span></div>
+          </div>
+          <div class="phones" style="justify-content:flex-end;">
+            <div class="phone big">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Dashboard</span><span>100%</span></div>
+                <div class="screen-body">
+                  <div class="screen-head"><div><div class="st">크리에이터 대시보드</div><div class="ss">실시간 운영 관리</div></div><span class="chip pink">설정</span></div>
+                  <div class="toggle"><div><strong style="display:block;font-size:16px;color:var(--navy);">온라인</strong><span class="ss">소비자에게 노출 중</span></div><div class="switch"></div></div>
+                  <div class="earn" style="margin-top:12px;">
+                    <div class="row"><strong>₩128,000</strong><span>오늘 수익</span></div>
+                    <div class="row"><strong>₩2.4M</strong><span>이번달</span></div>
+                    <div class="row"><strong>₩12.8M</strong><span>누적 수익</span></div>
+                  </div>
+                  <div class="box" style="margin-top:12px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div><strong style="display:block;font-size:15px;color:var(--navy);">등급 현황</strong><span class="ss">인기 등급까지 320분 남음</span></div><span class="chip amber">⭐ 일반</span></div><div class="bar"><span></span></div></div>
+                  <div class="dash-list" style="margin-top:12px;">
+                    <div class="box">
+                      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><strong style="font-size:14px;color:var(--navy);">민지 님 예약 요청</strong><span class="chip sky">파란불</span></div>
+                      <div class="tiny">3/24 21:00 · 30분 · 예약금 5,000P</div>
+                      <div class="buttons"><div class="btn">거절</div><div class="btn2">수락</div></div>
+                    </div>
+                    <div class="box"><strong style="font-size:14px;color:var(--navy);">예정 방송</strong><div class="tiny" style="margin-top:6px;">3/25 20:30 · 퇴근 후 라이브 콜 타임</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="phone">
+              <div class="screen white">
+                <div class="status"><span>9:41</span><span>Settlement</span><span>LTE</span></div>
+                <div class="screen-body">
+                  <div class="screen-head"><div><div class="st">정산 & 판매</div><div class="ss">월별 현황</div></div></div>
+                  <div class="box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:14px;color:var(--navy);">2026-03</strong><span class="chip pink">대기</span></div>
+                    <div style="display:grid;gap:8px;margin-top:12px;">
+                      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--g500);"><span>총 통화 포인트</span><strong style="color:var(--navy);">240,000P</strong></div>
+                      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--g500);"><span>정산 예정 금액</span><strong style="color:var(--pink2);">₩174,600</strong></div>
+                      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--g500);"><span>원천징수 3.3%</span><strong style="color:var(--navy);">자동 반영</strong></div>
+                    </div>
+                  </div>
+                  <div class="box" style="margin-top:12px;">
+                    <div class="st" style="font-size:14px;">상품 & 판매</div>
+                    <div class="item" style="margin-top:10px;"><div class="icon" style="background:var(--pink);">🛍</div><div><h3 style="font-size:15px;">포토세트 판매</h3><p>판매 12건 · 총 수익 48,000P</p></div></div>
+                    <div class="item" style="margin-top:8px;"><div class="icon" style="background:var(--blue);">📦</div><div><h3 style="font-size:15px;">굿나잇 영상 패키지</h3><p>판매 7건 · 총 수익 35,000P</p></div></div>
+                  </div>
+                  <div class="cta3" style="margin-top:12px;">계좌 정보 수정</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Earnings & Trust</div>
+          <div class="page">06</div>
+        </div>
+        <div class="g2b">
+          <div class="stack">
+            <div class="money">
+              <span style="font-size:16px;font-weight:800;opacity:.82;">크리에이터 관점에서 가장 먼저 보여줄 숫자</span>
+              <strong>론칭 기준 정산율 75%</strong>
+              <p>업계에서 가장 민감한 건 “얼마를 벌 수 있느냐”와 “얼마나 명확하게 정산되느냐”입니다. wantsome은 분당 단가와 정산 흐름을 직관적으로 설명할 수 있는 구조를 갖고 있습니다.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
+              <div class="card"><span class="tag sky">🔵 파란불</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">900P / 분</strong><p class="tiny" style="margin-top:8px;">기본 통화 모드. 첫 진입과 반복 통화에 유리합니다.</p></div>
+              <div class="card"><span class="tag pink">🔴 빨간불</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">1,300P / 분</strong><p class="tiny" style="margin-top:8px;">인증 기반 프리미엄 모드. 전환 가치가 높은 상품입니다.</p></div>
+              <div class="card"><span class="tag amber">📅 예약금</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">5,000P ~</strong><p class="tiny" style="margin-top:8px;">30분 예약 5,000P, 60분 예약 10,000P로 노쇼 리스크를 줄입니다.</p></div>
+              <div class="card"><span class="tag">💳 정산일</span><strong style="display:block;font-size:28px;color:var(--navy);margin-top:8px;">매월 15일</strong><p class="tiny" style="margin-top:8px;">원천징수 3.3% 공제 후 지급. 계좌 정보는 암호화 저장.</p></div>
+            </div>
+          </div>
+          <div class="panel pad">
+            <h2>벌 수 있는 구조가 명확합니다</h2>
+            <p class="body" style="margin-top:14px;">중요한 건 복잡한 숫자가 아니라 <span class="brand">내가 얼마를 벌 수 있는지 바로 이해되는 구조</span>입니다. wantsome은 분당 단가, 예약금, 정산일, 실지급 흐름을 직관적으로 설명할 수 있습니다.</p>
+            <div class="flow">
+              <div class="box"><strong style="display:block;font-size:18px;color:var(--navy);margin-bottom:6px;">유저 결제 100원</strong><div class="tiny">포인트는 1P = 1원 기준으로 운영됩니다.</div></div>
+              <div class="arrow"></div>
+              <div class="box"><strong style="display:block;font-size:18px;color:var(--navy);margin-bottom:6px;">앱스토어 수수료 차감 후 플랫폼 실수령</strong><div class="tiny">인앱 결제 검증은 서버사이드에서 처리됩니다.</div></div>
+              <div class="arrow"></div>
+              <div class="box"><strong style="display:block;font-size:18px;color:var(--navy);margin-bottom:6px;">크리에이터 75 / 플랫폼 25</strong><div class="tiny">론칭 기준 정산율. 이후 성장 등급제 도입 시 추가 보상 체계를 붙일 수 있습니다.</div></div>
+              <div class="arrow"></div>
+              <div class="box"><strong style="display:block;font-size:18px;color:var(--navy);margin-bottom:6px;">매월 자동 정산</strong><div class="tiny">월별 포인트, 세금, 실지급액이 대시보드와 정산 내역에 누적됩니다.</div></div>
+            </div>
+            <div class="box" style="margin-top:18px;background:rgba(255,107,157,.08);border-color:rgba(255,107,157,.16);">
+              <strong style="display:block;font-size:18px;color:var(--pink2);margin-bottom:8px;">예시 시뮬레이션</strong>
+              <div style="display:grid;gap:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:var(--g700);"><span>30분 × 900P</span><strong style="color:var(--navy);">27,000P</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:var(--g700);"><span>정산율 75%</span><strong style="color:var(--pink2);">20,250P</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:var(--g700);"><span>원천징수 3.3% 후</span><strong style="color:var(--navy);">실지급 기준 반영</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Trust & Closing</div>
+          <div class="page">07</div>
+        </div>
+        <div class="stack" style="gap:24px;">
+          <div style="max-width:980px;">
+            <h2>운영 안정성과 신뢰 장치도 같이 보여줘야 합니다</h2>
+            <p class="lead" style="margin-top:14px;">크리에이터 모집 자료에서 “수익”만 강조하면 불안해 보일 수 있습니다. wantsome은 인증, 신고, 암호화, 관리자 심사 등 운영 장치를 함께 설명할 수 있습니다.</p>
+          </div>
+          <div class="trust-grid">
+            <div class="trust"><div class="icon">🛡️</div><h3>입장 전 신뢰 확보</h3><div class="trust-list"><div class="trust-line">PortOne PASS 기반 본인 인증과 연령 확인 플로우</div><div class="trust-line">크리에이터 인증 뱃지 신청과 관리자 검토 프로세스</div><div class="trust-line">정산 계좌 실명 확인 및 AES-256 암호화 저장</div></div></div>
+            <div class="trust"><div class="icon">🚨</div><h3>운영 중 사고 대응</h3><div class="trust-list"><div class="trust-line">신고 / 차단 / 모더레이션 플로우를 앱과 관리자 페이지에 연결</div><div class="trust-line">통화 중 신고 기능과 예약 노쇼 처리 규칙 내장</div><div class="trust-line">수상한 활동이나 정책 위반 시 계정 제재·차단 가능</div></div></div>
+            <div class="trust"><div class="icon">🔐</div><h3>기술적 보안 장치</h3><div class="trust-list"><div class="trust-line">과금 로직과 영수증 검증은 서버사이드에서만 처리</div><div class="trust-line">Supabase RLS, private storage, 실시간 상태 동기화</div><div class="trust-line">계좌·신분증 등 민감 정보는 제한된 경로에서만 접근</div></div></div>
+            <div class="trust"><div class="icon">📱</div><h3>유저 경험 보호</h3><div class="trust-list"><div class="trust-line">전화번호 로그인, 소셜 로그인, 온보딩 분기 설계</div><div class="trust-line">통화 가능 시간, 예약 슬롯, 방송 일정으로 기대치 조절</div><div class="trust-line">스크린 캡처 방지, 푸시 알림, 리뷰와 재예약 유도까지 연결</div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+<section class="slide">
+      <div class="in">
+        <div class="top">
+          <div class="eyebrow"><b></b> Closing</div>
+          <div class="page">08</div>
+        </div>
+        <div class="close">
+          <div class="close-card">
+            <h2>정리하면, wantsome은</h2>
+            <p class="lead" style="margin-top:14px;">크리에이터가 “들어오고 싶다”고 느끼게 할 세 가지를 이미 갖추고 있습니다.</p>
+            <div class="close-list" style="margin-top:22px;">
+              <div class="close-line" style="display:grid;grid-template-columns:42px 1fr;gap:14px;"><div class="mark" style="width:42px;height:42px;border-radius:16px;font-size:18px;">1</div><div><h3>발견되는 구조</h3><p>피드, 랭킹, 인증 뱃지, 예약 가능 시간, 포스트로 소비자 접점이 분산되어 있습니다.</p></div></div>
+              <div class="close-line" style="display:grid;grid-template-columns:42px 1fr;gap:14px;"><div class="mark" style="width:42px;height:42px;border-radius:16px;font-size:18px;">2</div><div><h3>수익이 보이는 구조</h3><p>분당 과금, 예약금, 정산일, 실지급 흐름을 한 장으로 설명할 수 있습니다.</p></div></div>
+              <div class="close-line" style="display:grid;grid-template-columns:42px 1fr;gap:14px;"><div class="mark" style="width:42px;height:42px;border-radius:16px;font-size:18px;">3</div><div><h3>운영이 가능한 구조</h3><p>온라인 전환, 예약 수락, 일정 등록, 정산 확인까지 앱 내부에서 관리할 수 있습니다.</p></div></div>
+            </div>
+            <div class="box" style="margin-top:20px;background:rgba(255,107,157,.08);border-color:rgba(255,107,157,.16);">
+              <strong style="display:block;font-size:18px;color:var(--pink2);margin-bottom:8px;">함께할 분을 찾고 있습니다</strong>
+              <p class="body" style="font-size:17px;">지금 wantsome에 먼저 합류하는 크리에이터에게는 초기 노출 기회와 빠른 운영 피드백, 그리고 성장에 맞춘 활동 구조를 함께 제공합니다.</p>
+            </div>
+          </div>
+          <div class="quote">
+            <div class="stack" style="gap:24px;">
+              <span class="tag pink" style="width:fit-content;">Creator First</span>
+              <blockquote>발견되고,<br />연결되고,<br />다시 찾게 만드는<br />크리에이터 플랫폼</blockquote>
+              <p>지금 먼저 들어오는 크리에이터가 더 빠르게 발견되고, 더 선명한 팬층을 만들고, 더 안정적으로 활동을 쌓아갈 수 있는 구조를 준비하고 있습니다.</p>
+            </div>
+            <div class="stack" style="gap:12px;">
+              <div class="tag" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.14);color:#fff;box-shadow:none;">탐색 · 즉시통화 · 예약 · 정산</div>
+              <div class="tag" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.14);color:#fff;box-shadow:none;">온보딩 · 인증 · 운영 · 모더레이션</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

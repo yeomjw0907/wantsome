@@ -107,7 +107,7 @@ export default function GiftsHistoryScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const isCreator = user?.role === "creator" || user?.role === "CREATOR" || user?.role === "both";
+  const isCreator = user?.role === "creator" || user?.role === "both";
   const isSent = !isCreator; // 소비자는 보낸 선물, 크리에이터는 받은 선물
 
   const [gifts, setGifts] = useState<GiftItem[]>([]);

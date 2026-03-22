@@ -288,7 +288,7 @@ export default function CallScreen() {
       engine.enableVideo();
       engine.startPreview();
 
-      engine.addListener("onUserJoined", (_connection, uid) => {
+      engine.addListener("onUserJoined", (_connection: unknown, uid: number) => {
         setRemoteUid(uid);
       });
       engine.addListener("onUserOffline", () => {

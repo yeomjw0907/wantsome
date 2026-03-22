@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
+import { useCreatorStore } from "@/stores/useCreatorStore";
+import { usePointStore } from "@/stores/usePointStore";
 
 export interface User {
   id: string;
@@ -22,7 +25,7 @@ interface AuthStore {
   isOnboarded: boolean;
   setUser: (user: User) => void;
   updateUser: (partial: Partial<User>) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   setOnboarded: (v: boolean) => void;
 }
 
@@ -41,7 +44,12 @@ export const useAuthStore = create<AuthStore>()(
       setUser: (user) => set({ user, isLoggedIn: true }),
       updateUser: (partial) =>
         set((s) => ({ user: s.user ? { ...s.user, ...partial } : null })),
-      logout: () => set({ user: null, isLoggedIn: false }),
+      logout: async () => {
+        await supabase.auth.signOut().catch(() => null);
+        usePointStore.getState().reset();
+        useCreatorStore.getState().reset();
+        set({ user: null, isLoggedIn: false });
+      },
       setOnboarded: (v) => set({ isOnboarded: v }),
     }),
     {

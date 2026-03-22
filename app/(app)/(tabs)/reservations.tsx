@@ -146,7 +146,7 @@ export default function ReservationsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuthStore();
-  const isCreator = user?.role === "CREATOR";
+  const isCreator = user?.role === "creator";
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
