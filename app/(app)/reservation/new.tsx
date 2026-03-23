@@ -1,19 +1,11 @@
-/**
- * 예약 통화 생성 화면 (네이버 예약 스타일)
- *
- * 1. 달력 — 예약 가능한 날 하이라이트
- * 2. 날짜 선택 → 해당 날 시간 슬롯 표시
- * 3. 슬롯 + 통화시간(30/60분) + 모드(blue/red) 선택
- * 4. 예약금 확인 → [예약하기]
- */
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,18 +17,12 @@ type Slot = { datetime: string; available: boolean };
 
 const PER_MIN_RATE: Record<string, number> = { blue: 900, red: 1300 };
 const DURATION_PRESETS = [10, 15, 20, 30, 45, 60] as const;
+const MONTH_NAMES = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
 function calcDeposit(durationMin: number, mode: string): number {
   const rate = PER_MIN_RATE[mode] ?? 900;
   return Math.round(durationMin * rate * 0.1);
-}
-
-const MONTH_NAMES = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
-const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-
-function isoToLocalDate(iso: string) {
-  // "2026-03-18T20:00:00.000Z" → local Date
-  return new Date(iso);
 }
 
 function formatDate(d: Date) {
@@ -59,36 +45,34 @@ export default function ReservationNewScreen() {
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(true);
-
-  // 달력 상태
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-indexed
-
-  // 선택 상태
+  const [durationMin, setDurationMin] = useState<number>(10);
+  const [mode, setMode] = useState<"blue" | "red">("blue");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [durationMin, setDurationMin] = useState<number>(30);
-  const [mode, setMode] = useState<"blue" | "red">("blue");
   const [submitting, setSubmitting] = useState(false);
+
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
 
   const depositPoints = calcDeposit(durationMin, mode);
 
-  // 슬롯 로드 (현재달 + 다음달)
   const loadSlots = useCallback(async () => {
     if (!creatorId) return;
     setSlotsLoading(true);
     try {
       const from = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-01`;
-      // 다음달 말일까지
       const nextMonth = viewMonth === 11 ? 0 : viewMonth + 1;
       const nextYear = viewMonth === 11 ? viewYear + 1 : viewYear;
       const lastDay = new Date(nextYear, nextMonth + 1, 0).getDate();
       const to = `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
       const res = await apiCall<{ slots: Slot[] }>(
-        `/api/creators/${creatorId}/slots?from=${from}&to=${to}`
+        `/api/creators/${creatorId}/slots?from=${from}&to=${to}&duration_min=${durationMin}`
       );
       setSlots(res.slots ?? []);
     } catch {
@@ -96,42 +80,57 @@ export default function ReservationNewScreen() {
     } finally {
       setSlotsLoading(false);
     }
-  }, [creatorId, viewYear, viewMonth]);
+  }, [creatorId, durationMin, viewMonth, viewYear]);
 
   useEffect(() => {
     loadSlots();
   }, [loadSlots]);
 
-  // 날짜별 사용가능 슬롯 맵
+  useEffect(() => {
+    setSelectedSlot(null);
+  }, [durationMin, mode]);
+
   const slotsByDate = useMemo(() => {
     const map: Record<string, Slot[]> = {};
-    for (const s of slots) {
-      if (!s.available) continue;
-      const d = formatDate(new Date(s.datetime));
-      if (!map[d]) map[d] = [];
-      map[d].push(s);
+    for (const slot of slots) {
+      if (!slot.available) continue;
+      const dateKey = formatDate(new Date(slot.datetime));
+      if (!map[dateKey]) map[dateKey] = [];
+      map[dateKey].push(slot);
     }
     return map;
   }, [slots]);
 
-  // 해당 달 달력 생성
   const calendarDays = useMemo(() => {
     const firstDay = new Date(viewYear, viewMonth, 1).getDay();
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const days: (number | null)[] = Array(firstDay).fill(null);
-    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+    for (let i = 1; i <= daysInMonth; i += 1) days.push(i);
     return days;
-  }, [viewYear, viewMonth]);
+  }, [viewMonth, viewYear]);
+
+  const selectedDaySlots = selectedDate ? slotsByDate[selectedDate] ?? [] : [];
 
   const goMonthPrev = () => {
-    if (viewMonth === 0) { setViewYear((y) => y - 1); setViewMonth(11); }
-    else setViewMonth((m) => m - 1);
-    setSelectedDate(null); setSelectedSlot(null);
+    if (viewMonth === 0) {
+      setViewYear((year) => year - 1);
+      setViewMonth(11);
+    } else {
+      setViewMonth((month) => month - 1);
+    }
+    setSelectedDate(null);
+    setSelectedSlot(null);
   };
+
   const goMonthNext = () => {
-    if (viewMonth === 11) { setViewYear((y) => y + 1); setViewMonth(0); }
-    else setViewMonth((m) => m + 1);
-    setSelectedDate(null); setSelectedSlot(null);
+    if (viewMonth === 11) {
+      setViewYear((year) => year + 1);
+      setViewMonth(0);
+    } else {
+      setViewMonth((month) => month + 1);
+    }
+    setSelectedDate(null);
+    setSelectedSlot(null);
   };
 
   const handleDayPress = (day: number) => {
@@ -157,25 +156,22 @@ export default function ReservationNewScreen() {
       });
       Toast.show({
         type: "success",
-        text1: "예약 요청이 전송됐습니다 📅",
+        text1: "예약 요청을 보냈어요",
         text2: "크리에이터가 수락하면 확정됩니다.",
       });
       router.back();
     } catch (e) {
       Toast.show({
         type: "error",
-        text1: e instanceof Error ? e.message : "예약 실패",
+        text1: e instanceof Error ? e.message : "예약에 실패했어요.",
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const selectedDaySlots = selectedDate ? (slotsByDate[selectedDate] ?? []) : [];
-
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F9FF" }}>
-      {/* 헤더 */}
       <View
         style={{
           paddingTop: insets.top + 8,
@@ -193,12 +189,18 @@ export default function ReservationNewScreen() {
           <Ionicons name="chevron-back" size={24} color="#1B2A4A" />
         </TouchableOpacity>
         {creatorAvatar ? (
-          <Image
-            source={{ uri: creatorAvatar }}
-            style={{ width: 34, height: 34, borderRadius: 17 }}
-          />
+          <Image source={{ uri: creatorAvatar }} style={{ width: 34, height: 34, borderRadius: 17 }} />
         ) : (
-          <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "#FF6B9D", alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: "#FF6B9D",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>
               {(creatorName ?? "?")[0]}
             </Text>
@@ -210,10 +212,15 @@ export default function ReservationNewScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* 달력 */}
         <View style={{ margin: 16, backgroundColor: "white", borderRadius: 20, padding: 18 }}>
-          {/* 월 이동 */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
             <TouchableOpacity onPress={goMonthPrev} style={{ padding: 6 }}>
               <Ionicons name="chevron-back" size={20} color="#1B2A4A" />
             </TouchableOpacity>
@@ -225,28 +232,31 @@ export default function ReservationNewScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 요일 헤더 */}
           <View style={{ flexDirection: "row", marginBottom: 8 }}>
-            {DAY_LABELS.map((l, i) => (
+            {DAY_LABELS.map((label, i) => (
               <Text
-                key={l}
+                key={label}
                 style={{
-                  flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600",
+                  flex: 1,
+                  textAlign: "center",
+                  fontSize: 12,
+                  fontWeight: "600",
                   color: i === 0 ? "#EF4444" : i === 6 ? "#3B82F6" : "#9CA3AF",
                 }}
               >
-                {l}
+                {label}
               </Text>
             ))}
           </View>
 
-          {/* 날짜 그리드 */}
           {slotsLoading ? (
             <ActivityIndicator color="#FF6B9D" style={{ paddingVertical: 24 }} />
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
               {calendarDays.map((day, idx) => {
-                if (!day) return <View key={`empty-${idx}`} style={{ width: "14.28%", aspectRatio: 1 }} />;
+                if (!day) {
+                  return <View key={`empty-${idx}`} style={{ width: "14.28%", aspectRatio: 1 }} />;
+                }
                 const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                 const dayDate = new Date(viewYear, viewMonth, day);
                 const isPast = dayDate < today;
@@ -261,24 +271,46 @@ export default function ReservationNewScreen() {
                     disabled={isPast || !hasSlots}
                     style={{ width: "14.28%", aspectRatio: 1, alignItems: "center", justifyContent: "center" }}
                   >
-                    <View style={{
-                      width: 34, height: 34, borderRadius: 17,
-                      alignItems: "center", justifyContent: "center",
-                      backgroundColor: isSelected ? "#FF6B9D" : hasSlots && !isPast ? "#FFF0F5" : "transparent",
-                    }}>
-                      <Text style={{
-                        fontSize: 13,
-                        fontWeight: hasSlots && !isPast ? "700" : "400",
-                        color: isSelected ? "white"
-                          : isPast ? "#D1D5DB"
-                          : hasSlots ? "#FF6B9D"
-                          : dow === 0 ? "#EF4444" : dow === 6 ? "#3B82F6" : "#6B7280",
-                      }}>
+                    <View
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 17,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: isSelected ? "#FF6B9D" : hasSlots && !isPast ? "#FFF0F5" : "transparent",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: hasSlots && !isPast ? "700" : "400",
+                          color: isSelected
+                            ? "white"
+                            : isPast
+                              ? "#D1D5DB"
+                              : hasSlots
+                                ? "#FF6B9D"
+                                : dow === 0
+                                  ? "#EF4444"
+                                  : dow === 6
+                                    ? "#3B82F6"
+                                    : "#6B7280",
+                        }}
+                      >
                         {day}
                       </Text>
                     </View>
                     {hasSlots && !isPast && !isSelected && (
-                      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#FF6B9D", marginTop: 1 }} />
+                      <View
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor: "#FF6B9D",
+                          marginTop: 1,
+                        }}
+                      />
                     )}
                   </TouchableOpacity>
                 );
@@ -287,39 +319,122 @@ export default function ReservationNewScreen() {
           )}
         </View>
 
-        {/* 시간 슬롯 */}
+        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "white", borderRadius: 20, padding: 18, gap: 16 }}>
+          <View>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#6B7280", marginBottom: 10 }}>통화 시간</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {DURATION_PRESETS.map((min) => {
+                const pts = calcDeposit(min, mode);
+                const isChosen = durationMin === min;
+                return (
+                  <TouchableOpacity
+                    key={min}
+                    onPress={() => setDurationMin(min)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: isChosen ? "#FF6B9D" : "#E5E7EB",
+                      backgroundColor: isChosen ? "#FFF0F5" : "white",
+                      alignItems: "center",
+                      minWidth: 72,
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: isChosen ? "#FF6B9D" : "#374151" }}>
+                      {min}분
+                    </Text>
+                    <Text style={{ fontSize: 11, color: isChosen ? "#FF6B9D" : "#9CA3AF", marginTop: 2 }}>
+                      예약금 {pts.toLocaleString()}P
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#6B7280", marginBottom: 10 }}>통화 모드</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setMode("blue")}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  borderWidth: 2,
+                  borderColor: mode === "blue" ? "#3B82F6" : "#E5E7EB",
+                  backgroundColor: mode === "blue" ? "#EFF6FF" : "white",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: "700", color: mode === "blue" ? "#3B82F6" : "#374151" }}>
+                  블루 모드
+                </Text>
+                <Text style={{ fontSize: 11, color: mode === "blue" ? "#3B82F6" : "#9CA3AF", marginTop: 2 }}>
+                  일반 통화
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMode("red")}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  borderWidth: 2,
+                  borderColor: mode === "red" ? "#EF4444" : "#E5E7EB",
+                  backgroundColor: mode === "red" ? "#FEF2F2" : "white",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: "700", color: mode === "red" ? "#EF4444" : "#374151" }}>
+                  레드 모드
+                </Text>
+                <Text style={{ fontSize: 11, color: mode === "red" ? "#EF4444" : "#9CA3AF", marginTop: 2 }}>
+                  프리미엄
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {selectedDate && (
           <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "white", borderRadius: 20, padding: 18 }}>
             <Text style={{ fontSize: 14, fontWeight: "700", color: "#1B2A4A", marginBottom: 12 }}>
-              {viewMonth + 1}월 {parseInt(selectedDate.split("-")[2])}일 예약 가능 시간
+              {viewMonth + 1}월 {parseInt(selectedDate.split("-")[2], 10)}일 예약 가능한 시작 시간
+            </Text>
+            <Text style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 12 }}>
+              {durationMin}분 통화를 기준으로 실제 예약 가능한 시간만 보여줍니다.
             </Text>
             {selectedDaySlots.length === 0 ? (
               <Text style={{ color: "#9CA3AF", fontSize: 13, textAlign: "center", paddingVertical: 12 }}>
-                이 날은 예약 가능한 시간이 없습니다.
+                이 날짜에는 예약 가능한 시간이 없습니다.
               </Text>
             ) : (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {selectedDaySlots.map((slot) => {
-                  const timeLabel = formatTimeHHMM(slot.datetime);
                   const isChosen = selectedSlot === slot.datetime;
                   return (
                     <TouchableOpacity
                       key={slot.datetime}
                       onPress={() => setSelectedSlot(slot.datetime)}
                       style={{
-                        paddingHorizontal: 16, paddingVertical: 9,
+                        paddingHorizontal: 16,
+                        paddingVertical: 9,
                         borderRadius: 12,
                         borderWidth: 1.5,
                         borderColor: isChosen ? "#FF6B9D" : "#E5E7EB",
                         backgroundColor: isChosen ? "#FFF0F5" : "white",
                       }}
                     >
-                      <Text style={{
-                        fontSize: 14,
-                        fontWeight: isChosen ? "700" : "400",
-                        color: isChosen ? "#FF6B9D" : "#374151",
-                      }}>
-                        {timeLabel}
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: isChosen ? "700" : "400",
+                          color: isChosen ? "#FF6B9D" : "#374151",
+                        }}
+                      >
+                        {formatTimeHHMM(slot.datetime)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -329,76 +444,6 @@ export default function ReservationNewScreen() {
           </View>
         )}
 
-        {/* 옵션 선택 */}
-        {selectedSlot && (
-          <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "white", borderRadius: 20, padding: 18, gap: 16 }}>
-            {/* 통화 시간 */}
-            <View>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#6B7280", marginBottom: 10 }}>통화 시간</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {DURATION_PRESETS.map((min) => {
-                  const pts = calcDeposit(min, mode);
-                  const isChosen = durationMin === min;
-                  return (
-                    <TouchableOpacity
-                      key={min}
-                      onPress={() => setDurationMin(min)}
-                      style={{
-                        paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
-                        borderWidth: 1.5,
-                        borderColor: isChosen ? "#FF6B9D" : "#E5E7EB",
-                        backgroundColor: isChosen ? "#FFF0F5" : "white",
-                        alignItems: "center", minWidth: 72,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: isChosen ? "#FF6B9D" : "#374151" }}>
-                        {min}분
-                      </Text>
-                      <Text style={{ fontSize: 11, color: isChosen ? "#FF6B9D" : "#9CA3AF", marginTop: 2 }}>
-                        예약금 {pts.toLocaleString()}P
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* 모드 선택 */}
-            <View>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#6B7280", marginBottom: 10 }}>통화 모드</Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <TouchableOpacity
-                  onPress={() => setMode("blue")}
-                  style={{
-                    flex: 1, paddingVertical: 12, borderRadius: 14,
-                    borderWidth: 2,
-                    borderColor: mode === "blue" ? "#3B82F6" : "#E5E7EB",
-                    backgroundColor: mode === "blue" ? "#EFF6FF" : "white",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: mode === "blue" ? "#3B82F6" : "#374151" }}>🔵 파란불</Text>
-                  <Text style={{ fontSize: 11, color: mode === "blue" ? "#3B82F6" : "#9CA3AF", marginTop: 2 }}>일반 통화</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setMode("red")}
-                  style={{
-                    flex: 1, paddingVertical: 12, borderRadius: 14,
-                    borderWidth: 2,
-                    borderColor: mode === "red" ? "#EF4444" : "#E5E7EB",
-                    backgroundColor: mode === "red" ? "#FEF2F2" : "white",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: mode === "red" ? "#EF4444" : "#374151" }}>🔴 빨간불</Text>
-                  <Text style={{ fontSize: 11, color: mode === "red" ? "#EF4444" : "#9CA3AF", marginTop: 2 }}>프리미엄</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* 예약 요약 + 버튼 */}
         {selectedSlot && (
           <View style={{ marginHorizontal: 16, marginBottom: 24, backgroundColor: "white", borderRadius: 20, padding: 18 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
@@ -424,14 +469,17 @@ export default function ReservationNewScreen() {
               </Text>
             </View>
             <Text style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 14 }}>
-              ※ 크리에이터 수락 후 예약이 확정됩니다. 예약금은 지금 즉시 차감됩니다.
+              크리에이터가 수락해야 예약이 확정됩니다. 예약금은 지금 즉시 차감됩니다.
             </Text>
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={submitting}
               style={{
-                height: 52, borderRadius: 26, backgroundColor: "#FF6B9D",
-                alignItems: "center", justifyContent: "center",
+                height: 52,
+                borderRadius: 26,
+                backgroundColor: "#FF6B9D",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               {submitting ? (
@@ -445,12 +493,11 @@ export default function ReservationNewScreen() {
           </View>
         )}
 
-        {/* 가용시간 미설정 안내 */}
         {!slotsLoading && slots.length === 0 && (
           <View style={{ margin: 16, alignItems: "center", paddingVertical: 32 }}>
             <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
             <Text style={{ fontSize: 14, color: "#9CA3AF", marginTop: 12, textAlign: "center" }}>
-              크리에이터가 아직 예약 가능한 시간을{"\n"}설정하지 않았습니다.
+              크리에이터가 아직 예약 가능한 시간을 등록하지 않았습니다.
             </Text>
           </View>
         )}

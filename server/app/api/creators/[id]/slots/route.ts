@@ -1,14 +1,10 @@
 /**
- * GET /api/creators/[id]/slots?from=YYYY-MM-DD&to=YYYY-MM-DD
+ * GET /api/creators/[id]/slots?from=YYYY-MM-DD&to=YYYY-MM-DD&duration_min=10
  *
- * 크리에이터의 예약 가능 시간 슬롯 목록 반환 (공개 API)
- *
- * 알고리즘:
- * 1. creator_availability (요일별 가용시간) 조회
- * 2. from~to 날짜 순회 → 요일별로 10분 단위 시작시간 슬롯 생성
- * 3. 해당 기간 pending/confirmed 예약 조회
- * 4. 기존 예약과 실제 겹치는 시작시간 제거 (duration 기반)
- * 5. 현재 시간 기준 2시간 이후 슬롯만 노출
+ * 크리에이터 운영 시간대 안에서, 선택된 duration으로 실제 예약 가능한 시작 시각만 반환한다.
+ * - 시작 시간 간격: 10분 단위
+ * - 예약 시간: 10~60분, 5분 단위
+ * - 최소 2시간 이후 슬롯만 노출
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
@@ -16,7 +12,7 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 
 type Slot = {
-  datetime: string; // ISO 8601, KST 기준 local datetime (e.g. "2026-03-18T20:00:00")
+  datetime: string;
   available: boolean;
 };
 
@@ -26,19 +22,27 @@ export async function GET(
 ) {
   const { id } = await params;
   const { searchParams } = new URL(req.url);
-  const fromStr = searchParams.get("from"); // YYYY-MM-DD
-  const toStr = searchParams.get("to");     // YYYY-MM-DD
+  const fromStr = searchParams.get("from");
+  const toStr = searchParams.get("to");
+  const durationMin = Number(searchParams.get("duration_min"));
 
-  if (!fromStr || !toStr) {
-    return NextResponse.json({ message: "from, to 파라미터가 필요합니다." }, { status: 400 });
+  if (!fromStr || !toStr || !Number.isFinite(durationMin)) {
+    return NextResponse.json(
+      { message: "from, to, duration_min 파라미터가 필요합니다" },
+      { status: 400 }
+    );
+  }
+  if (durationMin < 10 || durationMin > 60 || durationMin % 5 !== 0) {
+    return NextResponse.json(
+      { message: "duration_min은 10~60분 사이 5분 단위여야 합니다" },
+      { status: 400 }
+    );
   }
 
   const admin = createSupabaseAdmin();
-
-  // 1. 가용시간 조회
   const { data: availability } = await admin
     .from("creator_availability")
-    .select("day_of_week, start_time, end_time, slot_duration_min, is_active")
+    .select("day_of_week, start_time, end_time, is_active")
     .eq("creator_id", id)
     .eq("is_active", true);
 
@@ -46,40 +50,39 @@ export async function GET(
     return NextResponse.json({ slots: [] });
   }
 
-  // 요일별 가용시간 맵 (slot_duration_min 무시, 10분 단위 고정)
   const availMap = new Map<number, { start_time: string; end_time: string }>();
-  for (const a of availability) {
-    availMap.set(a.day_of_week, {
-      start_time: a.start_time,
-      end_time: a.end_time,
+  for (const row of availability) {
+    availMap.set(row.day_of_week, {
+      start_time: row.start_time,
+      end_time: row.end_time,
     });
   }
 
-  // 2. 기간 내 날짜 순회 → 10분 단위 시작시간 슬롯 생성
   const slots: Slot[] = [];
-  const fromDate = new Date(fromStr + "T00:00:00");
-  const toDate = new Date(toStr + "T23:59:59");
+  const fromDate = new Date(`${fromStr}T00:00:00`);
+  const toDate = new Date(`${toStr}T23:59:59`);
   const now = new Date();
-  const minBookingMs = 2 * 60 * 60 * 1000; // 2시간 후부터 예약 가능
-  const SLOT_STEP_MS = 10 * 60 * 1000; // 10분 단위
+  const minBookingMs = 2 * 60 * 60 * 1000;
+  const stepMs = 10 * 60 * 1000;
+  const durationMs = durationMin * 60_000;
 
   const cur = new Date(fromDate);
   while (cur <= toDate) {
-    const dow = cur.getDay(); // 0=일~6=토
-    const avail = availMap.get(dow);
+    const avail = availMap.get(cur.getDay());
     if (avail) {
       const [startH, startM] = avail.start_time.split(":").map(Number);
       const [endH, endM] = avail.end_time.split(":").map(Number);
 
-      const slotStart = new Date(cur);
-      slotStart.setHours(startH, startM, 0, 0);
-      const slotEnd = new Date(cur);
-      slotEnd.setHours(endH, endM, 0, 0);
+      const windowStart = new Date(cur);
+      windowStart.setHours(startH, startM, 0, 0);
 
-      let t = new Date(slotStart);
-      while (t < slotEnd) {
+      const windowEnd = new Date(cur);
+      windowEnd.setHours(endH, endM, 0, 0);
+
+      let t = new Date(windowStart);
+      while (t.getTime() + durationMs <= windowEnd.getTime()) {
         slots.push({ datetime: t.toISOString(), available: true });
-        t = new Date(t.getTime() + SLOT_STEP_MS);
+        t = new Date(t.getTime() + stepMs);
       }
     }
     cur.setDate(cur.getDate() + 1);
@@ -89,32 +92,26 @@ export async function GET(
     return NextResponse.json({ slots: [] });
   }
 
-  // 3. 해당 기간 예약 조회 (pending/confirmed)
   const { data: reservations } = await admin
     .from("reservations")
     .select("reserved_at, duration_min")
     .eq("creator_id", id)
     .in("status", ["pending", "confirmed"])
-    .gte("reserved_at", fromDate.toISOString())
+    .gte("reserved_at", new Date(fromDate.getTime() - 60 * 60_000).toISOString())
     .lte("reserved_at", toDate.toISOString());
 
-  // 4. 겹침 체크 + 2시간 리드타임 필터
-  // 슬롯 시작시간이 기존 예약의 [reserved_at, reserved_at+duration_min) 구간과 겹치면 불가
   const result = slots.map((slot) => {
-    const slotMs = new Date(slot.datetime).getTime();
+    const slotStart = new Date(slot.datetime).getTime();
+    const slotEnd = slotStart + durationMs;
 
-    // 2시간 이내 슬롯 불가
-    if (slotMs - now.getTime() < minBookingMs) {
+    if (slotStart - now.getTime() < minBookingMs) {
       return { ...slot, available: false };
     }
 
-    // 기존 예약과 겹침 확인 (duration 기반)
-    // 해당 시작시간에서 최소 10분짜리 예약을 해도 겹치는지 체크
     const overlaps = (reservations ?? []).some((res) => {
       const resStart = new Date(res.reserved_at).getTime();
       const resEnd = resStart + (res.duration_min ?? 30) * 60_000;
-      // 이 슬롯 시작시간이 기존 예약 구간 안에 있으면 불가
-      return slotMs >= resStart && slotMs < resEnd;
+      return slotStart < resEnd && slotEnd > resStart;
     });
 
     return { ...slot, available: !overlaps };

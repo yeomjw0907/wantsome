@@ -223,11 +223,11 @@ export default function CreatorProfileScreen() {
           text: "확인",
           onPress: async () => {
             try {
-              const res = await apiCall<{ id: string }>("/api/conversations", {
+              const res = await apiCall<{ conversation_id: string }>("/api/conversations", {
                 method: "POST",
                 body: JSON.stringify({ creator_id: creator.id, message: "안녕하세요! 👋" }),
               });
-              router.push(`/messages/${res.id}` as any);
+              router.push(`/messages/${res.conversation_id}` as any);
             } catch (e) {
               const msg = e instanceof Error ? e.message : "DM 개설에 실패했습니다.";
               Toast.show({ type: "error", text1: msg });
