@@ -29,16 +29,10 @@ export async function POST(req: NextRequest) {
 
   for (const participant of pendingAcks ?? []) {
     if ((participant.paid_points ?? 0) > 0) {
-      const { data: userRow } = await admin
-        .from("users")
-        .select("points")
-        .eq("id", participant.user_id)
-        .single();
-
-      await admin
-        .from("users")
-        .update({ points: (userRow?.points ?? 0) + participant.paid_points })
-        .eq("id", participant.user_id);
+      await admin.rpc("increment_user_points", {
+        p_user_id: participant.user_id,
+        p_amount: participant.paid_points,
+      });
     }
 
     await admin

@@ -74,15 +74,19 @@ export async function POST(
     return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
   }
 
+  let remainingPoints = currentPoints;
   if (chargePoints > 0) {
-    const { error: deductError } = await admin
-      .from("users")
-      .update({ points: currentPoints - chargePoints })
-      .eq("id", user.id);
+    const { data: deductResult, error: deductError } = await admin
+      .rpc("live_join_deduct_points", { p_user_id: user.id, p_amount: chargePoints })
+      .single();
 
     if (deductError) {
       return NextResponse.json({ message: deductError.message }, { status: 500 });
     }
+    if (!(deductResult as any)?.success) {
+      return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
+    }
+    remainingPoints = (deductResult as any).remaining_points;
   }
 
   const now = new Date().toISOString();
@@ -106,7 +110,7 @@ export async function POST(
     room_id: id,
     role,
     charged_points: chargePoints,
-    remaining_points: chargePoints > 0 ? currentPoints - chargePoints : currentPoints,
+    remaining_points: remainingPoints,
     agora_channel: room.agora_channel,
     agora_token: agoraToken,
     agora_app_id: AGORA_APP_ID,
