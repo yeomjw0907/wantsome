@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AGORA_APP_ID, generateAgoraToken } from "@/lib/agora";
+import { AGORA_APP_ID, generateAgoraToken, isAgoraConfigured } from "@/lib/agora";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, makeLiveChannelName } from "@/lib/live";
 
@@ -36,10 +36,17 @@ export async function POST(
   if (!["ready", "live"].includes(room.status)) {
     return NextResponse.json({ message: "시작할 수 없는 상태입니다." }, { status: 400 });
   }
+  if (!AGORA_APP_ID || !isAgoraConfigured()) {
+    return NextResponse.json({ message: "Agora 설정이 완료되지 않았습니다." }, { status: 500 });
+  }
 
   const channelName = room.agora_channel || makeLiveChannelName(id);
   const uid = Math.floor(Math.random() * 100000) + 1;
   const agoraToken = await generateAgoraToken(channelName, uid, "publisher");
+  if (!agoraToken) {
+    return NextResponse.json({ message: "Agora 토큰 생성에 실패했습니다." }, { status: 500 });
+  }
+
   const now = new Date().toISOString();
 
   if (room.status === "ready") {

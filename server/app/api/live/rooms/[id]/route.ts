@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
-import { getAuthenticatedUser, isAdminRole, isMuteActive } from "@/lib/live";
+import { getAuthenticatedUser, getLiveHostProfile, isAdminRole, isMuteActive } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +24,7 @@ export async function GET(
     .from("live_rooms")
     .select(`
       id, host_id, title, thumbnail_url, entry_fee_points, viewer_limit, planned_duration_min,
-      scheduled_end_at, status, started_at, ended_at, extension_count, chat_locked,
-      users!live_rooms_host_id_fkey (
-        nickname, profile_img
-      ),
-      creators!inner (
-        display_name
-      )
+      scheduled_end_at, status, started_at, ended_at, extension_count, chat_locked
     `)
     .eq("id", id)
     .single();
@@ -39,9 +33,7 @@ export async function GET(
     return NextResponse.json({ message: "라이브를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  const roomRecord = room as any;
-  const creatorProfile = Array.isArray(roomRecord.creators) ? roomRecord.creators[0] : roomRecord.creators;
-  const hostUser = Array.isArray(roomRecord.users) ? roomRecord.users[0] : roomRecord.users;
+  const hostProfile = await getLiveHostProfile(admin, room.host_id);
 
   const [viewerCountRes, participantRes] = await Promise.all([
     admin
@@ -63,26 +55,26 @@ export async function GET(
   const isJoined = participant?.status === "joined";
 
   return NextResponse.json({
-    id: roomRecord.id,
+    id: room.id,
     host: {
-      id: roomRecord.host_id,
-      name: creatorProfile?.display_name ?? hostUser?.nickname ?? "크리에이터",
-      avatar_url: hostUser?.profile_img ?? null,
+      id: room.host_id,
+      name: hostProfile.display_name ?? hostProfile.nickname ?? "크리에이터",
+      avatar_url: hostProfile.avatar_url ?? null,
     },
-    title: roomRecord.title,
-    thumbnail_url: roomRecord.thumbnail_url ?? hostUser?.profile_img ?? null,
-    entry_fee_points: roomRecord.entry_fee_points,
-    viewer_limit: roomRecord.viewer_limit,
+    title: room.title,
+    thumbnail_url: room.thumbnail_url ?? hostProfile.thumbnail_fallback_url ?? null,
+    entry_fee_points: room.entry_fee_points,
+    viewer_limit: room.viewer_limit,
     viewer_count: viewerCountRes.count ?? 0,
-    planned_duration_min: roomRecord.planned_duration_min,
-    scheduled_end_at: roomRecord.scheduled_end_at,
-    status: roomRecord.status,
-    extension_count: roomRecord.extension_count ?? 0,
-    can_join: roomRecord.status === "live" && !isKicked,
+    planned_duration_min: room.planned_duration_min,
+    scheduled_end_at: room.scheduled_end_at,
+    status: room.status,
+    extension_count: room.extension_count ?? 0,
+    can_join: room.status === "live" && !isKicked,
     is_kicked: Boolean(isKicked),
     is_joined: Boolean(isJoined),
-    role: isAdminRole(user.role) ? "admin" : participant?.role ?? null,
-    chat_locked: roomRecord.chat_locked ?? false,
+    role: room.host_id === user.id ? "host" : isAdminRole(user.role) ? "admin" : participant?.role ?? null,
+    chat_locked: room.chat_locked ?? false,
     is_muted: isMuteActive(participant?.chat_muted_until),
   });
 }

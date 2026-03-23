@@ -6,11 +6,21 @@ import {
   buildScheduledEndAt,
   getAuthenticatedUser,
   getLiveConfig,
+  getLiveHostProfiles,
 } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
-async function buildRoomSummary(admin: ReturnType<typeof createSupabaseAdmin>, room: any) {
+async function buildRoomSummary(
+  admin: ReturnType<typeof createSupabaseAdmin>,
+  room: any,
+  hostProfile: {
+    display_name: string | null;
+    nickname: string | null;
+    avatar_url: string | null;
+    thumbnail_fallback_url: string | null;
+  },
+) {
   const [viewerCountRes, adminCountRes] = await Promise.all([
     admin
       .from("live_room_participants")
@@ -29,10 +39,10 @@ async function buildRoomSummary(admin: ReturnType<typeof createSupabaseAdmin>, r
   return {
     id: room.id,
     host_id: room.host_id,
-    host_name: room.host_display_name ?? room.host_nickname ?? "크리에이터",
-    host_avatar_url: room.host_profile_img ?? null,
+    host_name: hostProfile.display_name ?? hostProfile.nickname ?? "크리에이터",
+    host_avatar_url: hostProfile.avatar_url ?? null,
     title: room.title,
-    thumbnail_url: room.thumbnail_url ?? room.host_profile_img ?? null,
+    thumbnail_url: room.thumbnail_url ?? hostProfile.thumbnail_fallback_url ?? null,
     entry_fee_points: room.entry_fee_points,
     viewer_limit: room.viewer_limit,
     viewer_count: viewerCountRes.count ?? 0,
@@ -57,13 +67,7 @@ export async function GET(req: NextRequest) {
     .from("live_rooms")
     .select(`
       id, host_id, title, thumbnail_url, entry_fee_points, viewer_limit,
-      planned_duration_min, scheduled_end_at, status, started_at, extension_count,
-      users!live_rooms_host_id_fkey (
-        nickname, profile_img
-      ),
-      creators!inner (
-        display_name
-      )
+      planned_duration_min, scheduled_end_at, status, started_at, extension_count
     `)
     .eq("status", "live")
     .order("started_at", { ascending: false })
@@ -71,15 +75,24 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
+  const hostProfiles = await getLiveHostProfiles(
+    admin,
+    (rooms ?? []).map((room: any) => room.host_id),
+  );
+
   const summaries = await Promise.all(
     (rooms ?? []).map((room: any) =>
-      buildRoomSummary(admin, {
-        ...room,
-        host_display_name: room.creators?.display_name,
-        host_nickname: room.users?.nickname,
-        host_profile_img: room.users?.profile_img,
-      })
-    )
+      buildRoomSummary(
+        admin,
+        room,
+        hostProfiles.get(room.host_id) ?? {
+          display_name: null,
+          nickname: null,
+          avatar_url: null,
+          thumbnail_fallback_url: null,
+        },
+      ),
+    ),
   );
 
   return NextResponse.json({ rooms: summaries });
@@ -92,7 +105,7 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser(token);
   if (!user) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
 
-  const body = await req.json() as {
+  const body = (await req.json()) as {
     title?: string;
     planned_duration_min?: number;
     thumbnail_url?: string | null;
@@ -161,11 +174,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: error?.message ?? "라이브 방 생성에 실패했습니다." }, { status: 500 });
   }
 
-  return NextResponse.json({
-    room_id: room.id,
-    entry_fee_points: room.entry_fee_points,
-    viewer_limit: room.viewer_limit,
-    status: room.status,
-    scheduled_end_at: room.scheduled_end_at,
-  }, { status: 201 });
+  return NextResponse.json(
+    {
+      room_id: room.id,
+      entry_fee_points: room.entry_fee_points,
+      viewer_limit: room.viewer_limit,
+      status: room.status,
+      scheduled_end_at: room.scheduled_end_at,
+    },
+    { status: 201 },
+  );
 }

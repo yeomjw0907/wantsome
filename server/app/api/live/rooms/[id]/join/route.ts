@@ -1,17 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AGORA_APP_ID, generateAgoraToken } from "@/lib/agora";
+import { AGORA_APP_ID, generateAgoraToken, isAgoraConfigured } from "@/lib/agora";
 import { createSupabaseAdmin } from "@/lib/supabase";
-import {
-  getAuthenticatedUser,
-  getLiveConfig,
-  isAdminRole,
-} from "@/lib/live";
+import { getAuthenticatedUser, getLiveConfig, isAdminRole } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
+function mapJoinError(errorCode: string | null | undefined) {
+  switch (errorCode) {
+    case "ROOM_NOT_FOUND":
+      return { status: 404, message: "라이브를 찾을 수 없습니다." };
+    case "ROOM_NOT_LIVE":
+      return { status: 400, message: "입장할 수 없는 상태입니다." };
+    case "CHANNEL_NOT_READY":
+      return { status: 400, message: "방송 채널이 준비되지 않았습니다." };
+    case "KICKED":
+      return { status: 403, message: "강퇴된 라이브는 종료 전까지 다시 입장할 수 없습니다." };
+    case "ROOM_FULL":
+      return { status: 409, message: "정원이 마감되었습니다." };
+    case "INSUFFICIENT_POINTS":
+      return { status: 402, message: "포인트가 부족합니다." };
+    default:
+      return { status: 500, message: "라이브 입장 처리에 실패했습니다." };
+  }
+}
+
+type JoinRpcResult = {
+  success: boolean;
+  error_code: string | null;
+  charged_points: number;
+  remaining_points: number;
+  role: "viewer" | "admin";
+};
+
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
@@ -24,7 +47,7 @@ export async function POST(
   const [roomRes, config] = await Promise.all([
     admin
       .from("live_rooms")
-      .select("id, host_id, status, agora_channel, entry_fee_points, viewer_limit")
+      .select("id, host_id, status, agora_channel")
       .eq("id", id)
       .single(),
     getLiveConfig(),
@@ -34,83 +57,44 @@ export async function POST(
   if (!room) return NextResponse.json({ message: "라이브를 찾을 수 없습니다." }, { status: 404 });
   if (room.status !== "live") return NextResponse.json({ message: "입장할 수 없는 상태입니다." }, { status: 400 });
   if (!room.agora_channel) return NextResponse.json({ message: "방송 채널이 준비되지 않았습니다." }, { status: 400 });
-  if (room.host_id === user.id) return NextResponse.json({ message: "호스트는 방송 시작으로 입장합니다." }, { status: 400 });
-
-  const [participantRes, viewerCountRes, pointsRes] = await Promise.all([
-    admin
-      .from("live_room_participants")
-      .select("id, role, status, paid_points, blocked_until_room_end, refund_status")
-      .eq("room_id", id)
-      .eq("user_id", user.id)
-      .maybeSingle(),
-    admin
-      .from("live_room_participants")
-      .select("id", { count: "exact", head: true })
-      .eq("room_id", id)
-      .eq("role", "viewer")
-      .eq("status", "joined"),
-    admin
-      .from("users")
-      .select("points")
-      .eq("id", user.id)
-      .single(),
-  ]);
-
-  const participant = participantRes.data as any;
-  if (participant?.status === "kicked" && participant?.blocked_until_room_end) {
-    return NextResponse.json({ message: "강퇴된 라이브는 종료 전까지 재입장할 수 없습니다." }, { status: 403 });
+  if (room.host_id === user.id) {
+    return NextResponse.json({ message: "호스트는 방송 시작 플로우로 입장합니다." }, { status: 400 });
   }
 
-  const role = isAdminRole(user.role) ? "admin" : "viewer";
-  const currentPoints = pointsRes.data?.points ?? 0;
-  const alreadyPaid = participant?.paid_points > 0 && participant?.refund_status !== "refunded";
-  const chargePoints = role === "admin" || alreadyPaid ? 0 : room.entry_fee_points;
-
-  if (role === "viewer" && !alreadyPaid && (viewerCountRes.count ?? 0) >= room.viewer_limit) {
-    return NextResponse.json({ message: "정원이 마감되었습니다." }, { status: 409 });
+  if (!AGORA_APP_ID || !isAgoraConfigured()) {
+    return NextResponse.json({ message: "Agora 설정이 완료되지 않았습니다." }, { status: 500 });
   }
-
-  if (chargePoints > 0 && currentPoints < chargePoints) {
-    return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
-  }
-
-  let remainingPoints = currentPoints;
-  if (chargePoints > 0) {
-    const { data: deductResult, error: deductError } = await admin
-      .rpc("live_join_deduct_points", { p_user_id: user.id, p_amount: chargePoints })
-      .single();
-
-    if (deductError) {
-      return NextResponse.json({ message: deductError.message }, { status: 500 });
-    }
-    if (!(deductResult as any)?.success) {
-      return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
-    }
-    remainingPoints = (deductResult as any).remaining_points;
-  }
-
-  const now = new Date().toISOString();
-  await admin.from("live_room_participants").upsert({
-    room_id: id,
-    user_id: user.id,
-    role,
-    status: "joined",
-    paid_points: participant?.paid_points ?? chargePoints,
-    joined_at: now,
-    left_at: null,
-    join_ack_at: null,
-    blocked_until_room_end: false,
-    refund_status: "none",
-  }, { onConflict: "room_id,user_id" });
 
   const uid = Math.floor(Math.random() * 100000) + 1;
   const agoraToken = await generateAgoraToken(room.agora_channel, uid, "subscriber");
+  if (!agoraToken) {
+    return NextResponse.json({ message: "Agora 토큰 생성에 실패했습니다." }, { status: 500 });
+  }
+
+  const isAdmin = isAdminRole(user.role);
+  const { data: joinResult, error: joinError } = await admin
+    .rpc("live_join_room", {
+      p_room_id: id,
+      p_user_id: user.id,
+      p_is_admin: isAdmin,
+    })
+    .single();
+
+  if (joinError) {
+    return NextResponse.json({ message: joinError.message }, { status: 500 });
+  }
+
+  const result = joinResult as JoinRpcResult | null;
+  if (!result?.success) {
+    const mapped = mapJoinError(result?.error_code);
+    return NextResponse.json({ message: mapped.message }, { status: mapped.status });
+  }
 
   return NextResponse.json({
     room_id: id,
-    role,
-    charged_points: chargePoints,
-    remaining_points: remainingPoints,
+    role: result.role,
+    charged_points: result.charged_points,
+    remaining_points: result.remaining_points,
     agora_channel: room.agora_channel,
     agora_token: agoraToken,
     agora_app_id: AGORA_APP_ID,

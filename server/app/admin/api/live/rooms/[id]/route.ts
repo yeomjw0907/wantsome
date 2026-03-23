@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/adminAuth";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { getLiveHostProfile, isMuteActive } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +22,7 @@ export async function GET(
       .from("live_rooms")
       .select(`
         id, host_id, title, thumbnail_url, entry_fee_points, viewer_limit,
-        planned_duration_min, scheduled_end_at, status, started_at, ended_at, extension_count, chat_locked,
-        users!live_rooms_host_id_fkey (
-          nickname, profile_img
-        ),
-        creators!inner (
-          display_name
-        )
+        planned_duration_min, scheduled_end_at, status, started_at, ended_at, extension_count, chat_locked
       `)
       .eq("id", id)
       .single(),
@@ -67,17 +62,16 @@ export async function GET(
   }
 
   const room = roomRes.data as any;
-  const creatorProfile = Array.isArray(room.creators) ? room.creators[0] : room.creators;
-  const hostUser = Array.isArray(room.users) ? room.users[0] : room.users;
+  const hostProfile = await getLiveHostProfile(admin, room.host_id);
 
   return NextResponse.json({
     room: {
       id: room.id,
       title: room.title,
       host_id: room.host_id,
-      host_name: creatorProfile?.display_name ?? hostUser?.nickname ?? "크리에이터",
-      host_avatar_url: hostUser?.profile_img ?? null,
-      thumbnail_url: room.thumbnail_url ?? hostUser?.profile_img ?? null,
+      host_name: hostProfile.display_name ?? hostProfile.nickname ?? "크리에이터",
+      host_avatar_url: hostProfile.avatar_url ?? null,
+      thumbnail_url: room.thumbnail_url ?? hostProfile.thumbnail_fallback_url ?? null,
       entry_fee_points: room.entry_fee_points,
       viewer_limit: room.viewer_limit,
       planned_duration_min: room.planned_duration_min,
@@ -99,7 +93,7 @@ export async function GET(
       left_at: item.left_at,
       refund_status: item.refund_status,
       blocked_until_room_end: item.blocked_until_room_end,
-      is_muted: Boolean(item.chat_muted_until),
+      is_muted: isMuteActive(item.chat_muted_until),
     })),
     chat_messages: (chatRes.data ?? []).map((item: any) => ({
       id: item.id,

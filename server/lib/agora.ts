@@ -12,6 +12,10 @@ const AGORA_APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE ?? "";
 
 export type AgoraTokenRole = "publisher" | "subscriber";
 
+export function isAgoraConfigured() {
+  return Boolean(AGORA_APP_ID && AGORA_APP_CERTIFICATE);
+}
+
 /** Agora 채널명 생성: call_{sessionId 앞 8자리} */
 export function makeChannelName(sessionId: string): string {
   return `call_${sessionId.replace(/-/g, "").slice(0, 12)}`;

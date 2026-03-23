@@ -65,6 +65,14 @@ export interface LiveParticipantRecord {
   chat_muted_reason: string | null;
 }
 
+export interface LiveHostProfile {
+  id: string;
+  display_name: string | null;
+  nickname: string | null;
+  avatar_url: string | null;
+  thumbnail_fallback_url: string | null;
+}
+
 export function makeLiveChannelName(roomId: string): string {
   return `live_${roomId.replace(/-/g, "").slice(0, 12)}`;
 }
@@ -94,6 +102,71 @@ export async function getLiveConfig(): Promise<LiveConfig> {
     maxExtensionCount: Number(map.get("live_max_extension_count") ?? LIVE_MAX_EXTENSION_COUNT),
     joinAckTimeoutSec: Number(map.get("live_join_ack_timeout_sec") ?? LIVE_JOIN_ACK_TIMEOUT_SEC),
   };
+}
+
+export async function getLiveHostProfiles(
+  admin: ReturnType<typeof createSupabaseAdmin>,
+  hostIds: string[],
+) {
+  const uniqueHostIds = Array.from(new Set(hostIds.filter(Boolean)));
+  if (uniqueHostIds.length === 0) {
+    return new Map<string, LiveHostProfile>();
+  }
+
+  const [usersRes, creatorsRes] = await Promise.all([
+    admin
+      .from("users")
+      .select("id, nickname, profile_img")
+      .in("id", uniqueHostIds),
+    admin
+      .from("creators")
+      .select("id, display_name, profile_image_url")
+      .in("id", uniqueHostIds),
+  ]);
+
+  const usersById = new Map(
+    (usersRes.data ?? []).map((row) => [
+      row.id,
+      { nickname: row.nickname, profile_img: row.profile_img },
+    ]),
+  );
+  const creatorsById = new Map(
+    (creatorsRes.data ?? []).map((row) => [
+      row.id,
+      { display_name: row.display_name, profile_image_url: row.profile_image_url },
+    ]),
+  );
+
+  const result = new Map<string, LiveHostProfile>();
+  for (const hostId of uniqueHostIds) {
+    const creator = creatorsById.get(hostId);
+    const user = usersById.get(hostId);
+    result.set(hostId, {
+      id: hostId,
+      display_name: creator?.display_name ?? null,
+      nickname: user?.nickname ?? null,
+      avatar_url: user?.profile_img ?? creator?.profile_image_url ?? null,
+      thumbnail_fallback_url: creator?.profile_image_url ?? user?.profile_img ?? null,
+    });
+  }
+
+  return result;
+}
+
+export async function getLiveHostProfile(
+  admin: ReturnType<typeof createSupabaseAdmin>,
+  hostId: string,
+) {
+  const profiles = await getLiveHostProfiles(admin, [hostId]);
+  return (
+    profiles.get(hostId) ?? {
+      id: hostId,
+      display_name: null,
+      nickname: null,
+      avatar_url: null,
+      thumbnail_fallback_url: null,
+    }
+  );
 }
 
 export async function getAuthenticatedUser(token: string) {
