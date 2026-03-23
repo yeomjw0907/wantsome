@@ -194,6 +194,10 @@ export default function CallScreen() {
     creatorId,
     creatorName,
     creatorAvatar,
+    isHost,
+    consumerId,
+    consumerName,
+    consumerAvatar,
   } = useLocalSearchParams<{
     sessionId: string;
     agoraChannel: string;
@@ -203,6 +207,10 @@ export default function CallScreen() {
     creatorId: string;
     creatorName: string;
     creatorAvatar: string;
+    isHost: string;
+    consumerId: string;
+    consumerName: string;
+    consumerAvatar: string;
   }>();
 
   const callStore = useCallStore();
@@ -210,8 +218,8 @@ export default function CallScreen() {
   const authUser = useAuthStore((s) => s.user);
   const userId = authUser?.id;
 
-  /** 현재 사용자가 크리에이터인지 여부 */
-  const isCreator = userId === creatorId;
+  /** 현재 사용자가 크리에이터인지 여부 (incoming → isHost param 우선, 아니면 id 비교) */
+  const isCreator = isHost === "true" || userId === creatorId;
   /** 채팅 발신자 표시 이름 */
   const chatDisplayName = isCreator
     ? (creatorName ?? "크리에이터")
@@ -470,21 +478,38 @@ export default function CallScreen() {
       const result = await apiCall<{
         duration_sec: number;
         points_charged: number;
+        creator_earning: number;
       }>(`/api/calls/${sessionId}/end`, { method: "POST" });
 
       callStore.endCall();
 
-      router.replace({
-        pathname: "/call/summary",
-        params: {
-          sessionId,
-          durationSec: String(result.duration_sec),
-          pointsCharged: String(result.points_charged),
-          creatorId: creatorId ?? "",
-          creatorName: creatorName ?? "",
-          creatorAvatar: creatorAvatar ?? "",
-        },
-      });
+      if (isHost === "true") {
+        // 크리에이터 → creator-summary 화면
+        router.replace({
+          pathname: "/call/creator-summary",
+          params: {
+            sessionId,
+            durationSec: String(result.duration_sec),
+            creatorEarning: String(result.creator_earning),
+            consumerId: consumerId ?? "",
+            consumerName: consumerName ?? "",
+            consumerAvatar: consumerAvatar ?? "",
+          },
+        });
+      } else {
+        // 소비자 → summary 화면
+        router.replace({
+          pathname: "/call/summary",
+          params: {
+            sessionId,
+            durationSec: String(result.duration_sec),
+            pointsCharged: String(result.points_charged),
+            creatorId: creatorId ?? "",
+            creatorName: creatorName ?? "",
+            creatorAvatar: creatorAvatar ?? "",
+          },
+        });
+      }
     } catch {
       callStore.endCall();
       router.replace("/(app)/(tabs)");

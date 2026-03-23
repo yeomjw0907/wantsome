@@ -45,22 +45,28 @@ export async function POST(
   }
 
   if (body.action === "accept") {
-    // 크리에이터 더블부킹 체크: 기존 confirmed 예약과 ±30분 내 충돌 확인
-    const reservedAt = new Date(reservation.reserved_at);
-    const windowStart = new Date(reservedAt.getTime() - 30 * 60 * 1000).toISOString();
-    const windowEnd   = new Date(reservedAt.getTime() + 30 * 60 * 1000).toISOString();
+    // 크리에이터 더블부킹 체크: duration 기반 실제 겹침
+    const thisStart = new Date(reservation.reserved_at).getTime();
+    const thisEnd = thisStart + (reservation.duration_min ?? 30) * 60_000;
+    const lookback = new Date(thisStart - 60 * 60_000).toISOString();
+    const lookforward = new Date(thisEnd).toISOString();
 
-    const { data: conflicts } = await admin
+    const { data: candidates } = await admin
       .from("reservations")
-      .select("id")
+      .select("id, reserved_at, duration_min")
       .eq("creator_id", authUser.id)
       .eq("status", "confirmed")
       .neq("id", id)
-      .gte("reserved_at", windowStart)
-      .lte("reserved_at", windowEnd)
-      .limit(1);
+      .gte("reserved_at", lookback)
+      .lte("reserved_at", lookforward);
 
-    if (conflicts && conflicts.length > 0) {
+    const realConflicts = (candidates ?? []).filter((r) => {
+      const rStart = new Date(r.reserved_at).getTime();
+      const rEnd = rStart + (r.duration_min ?? 30) * 60_000;
+      return rStart < thisEnd && rEnd > thisStart;
+    });
+
+    if (realConflicts.length > 0) {
       return NextResponse.json(
         { message: "해당 시간에 이미 확정된 예약이 있습니다. 다른 시간대를 선택해주세요." },
         { status: 409 }

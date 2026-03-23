@@ -1,6 +1,8 @@
 /**
  * 크리에이터 통화 수신 화면
  * - 소비자 프로필 + 모드 뱃지 + 분당 요금
+ * - 인라인 유저 통계 (⭐ 평점 / 🕐 평균통화 / 📞 총통화횟수)
+ * - "상세보기" 탭 시 histogram + 4카테고리 펼침
  * - 30초 링 타이머
  * - 수락(→ 통화 화면) / 거절
  */
@@ -13,6 +15,7 @@ import {
   Image,
   StatusBar,
   BackHandler,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,6 +32,31 @@ const RING_SIZE = 120;
 const STROKE = 8;
 const RADIUS = (RING_SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+type DetailStats = {
+  avg_rating: number;
+  total_calls: number;
+  avg_call_duration_sec: number;
+  histogram: {
+    under_15s: number;
+    under_1m: number;
+    under_3m: number;
+    over_3m: number;
+  };
+  category_ratings: {
+    호감: number;
+    신뢰: number;
+    매너: number;
+    매력: number;
+  };
+};
+
+function formatDuration(sec: number) {
+  if (sec < 60) return `${sec}초`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+}
 
 export default function IncomingCallScreen() {
   usePreventScreenCapture();
@@ -47,16 +75,24 @@ export default function IncomingCallScreen() {
   const router = useRouter();
   const {
     sessionId,
+    consumerId,
     consumerName,
     consumerAvatar,
     mode,
     perMinRate,
+    consumerAvgRating,
+    consumerTotalCalls,
+    consumerAvgDurationSec,
   } = useLocalSearchParams<{
     sessionId: string;
+    consumerId: string;
     consumerName: string;
     consumerAvatar: string;
     mode: string;
     perMinRate: string;
+    consumerAvgRating: string;
+    consumerTotalCalls: string;
+    consumerAvgDurationSec: string;
   }>();
 
   const [timeLeft, setTimeLeft] = useState(TIMER_TOTAL);
@@ -64,8 +100,15 @@ export default function IncomingCallScreen() {
   const progressAnim = useRef(new Animated.Value(1)).current;
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [expanded, setExpanded] = useState(false);
+  const [detailStats, setDetailStats] = useState<DetailStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
   const isBlue = mode === "blue";
   const rate = Number(perMinRate ?? 900);
+  const avgRating = Number(consumerAvgRating ?? 0);
+  const totalCalls = Number(consumerTotalCalls ?? 0);
+  const avgDurSec = Number(consumerAvgDurationSec ?? 0);
 
   // ─── 30초 타이머 ───
   useEffect(() => {
@@ -100,6 +143,19 @@ export default function IncomingCallScreen() {
     progressAnim.stopAnimation();
   };
 
+  const toggleDetail = async () => {
+    if (!expanded && !detailStats && consumerId) {
+      setStatsLoading(true);
+      try {
+        const stats = await apiCall<DetailStats>(`/api/users/${consumerId}/stats`);
+        setDetailStats(stats);
+      } catch { /* ignore */ } finally {
+        setStatsLoading(false);
+      }
+    }
+    setExpanded((v) => !v);
+  };
+
   const handleAccept = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
@@ -122,6 +178,10 @@ export default function IncomingCallScreen() {
           agoraToken: result.agora_token ?? "",
           agoraAppId: result.agora_app_id,
           perMinRate: String(result.per_min_rate),
+          isHost: "true",
+          consumerId: consumerId ?? "",
+          consumerName: consumerName ?? "",
+          consumerAvatar: consumerAvatar ?? "",
         },
       });
     } catch (e) {
@@ -153,11 +213,10 @@ export default function IncomingCallScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#1B2A4A" />
 
       {/* 상단: 프로필 + 정보 */}
-      <View className="items-center gap-4">
+      <View className="items-center gap-4 w-full">
         {/* 링 타이머 + 프로필 사진 */}
         <View style={{ width: RING_SIZE, height: RING_SIZE }}>
           <Svg width={RING_SIZE} height={RING_SIZE} style={{ position: "absolute" }}>
-            {/* 배경 링 */}
             <Circle
               cx={RING_SIZE / 2}
               cy={RING_SIZE / 2}
@@ -167,7 +226,6 @@ export default function IncomingCallScreen() {
               fill="none"
             />
           </Svg>
-          {/* 진행 링 */}
           <Svg
             width={RING_SIZE}
             height={RING_SIZE}
@@ -213,6 +271,116 @@ export default function IncomingCallScreen() {
         </View>
 
         <Text className="text-white/50 text-base mt-1">통화 요청이 왔습니다</Text>
+
+        {/* ─── 인라인 유저 통계 ─── */}
+        <View style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          backgroundColor: "rgba(255,255,255,0.08)",
+          borderRadius: 14,
+          paddingVertical: 10,
+          paddingHorizontal: 20,
+          width: "100%",
+        }}>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "#F59E0B", fontSize: 13, fontWeight: "700" }}>
+              ⭐ {avgRating > 0 ? avgRating.toFixed(1) : "-"}
+            </Text>
+            <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2 }}>평점</Text>
+          </View>
+          <View style={{ width: 1, height: 28, backgroundColor: "rgba(255,255,255,0.15)" }} />
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>
+              🕐 {avgDurSec > 0 ? formatDuration(avgDurSec) : "-"}
+            </Text>
+            <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2 }}>평균통화</Text>
+          </View>
+          <View style={{ width: 1, height: 28, backgroundColor: "rgba(255,255,255,0.15)" }} />
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>
+              📞 {totalCalls > 0 ? `${totalCalls}회` : "-"}
+            </Text>
+            <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2 }}>총통화</Text>
+          </View>
+        </View>
+
+        {/* 상세 보기 토글 */}
+        {consumerId ? (
+          <TouchableOpacity
+            onPress={toggleDetail}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
+              {expanded ? "접기" : "상세 보기"}
+            </Text>
+            <Ionicons
+              name={expanded ? "chevron-up" : "chevron-down"}
+              size={12}
+              color="rgba(255,255,255,0.5)"
+            />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* 상세 통계 펼침 */}
+        {expanded && (
+          <View style={{
+            width: "100%",
+            backgroundColor: "rgba(255,255,255,0.06)",
+            borderRadius: 14,
+            padding: 14,
+          }}>
+            {statsLoading ? (
+              <ActivityIndicator color="rgba(255,255,255,0.5)" size="small" />
+            ) : detailStats ? (
+              <>
+                {/* 히스토그램 */}
+                <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: "700", marginBottom: 8 }}>
+                  통화 시간 분포
+                </Text>
+                <View style={{ flexDirection: "row", gap: 6, marginBottom: 12 }}>
+                  {[
+                    { label: "15초미만", val: detailStats.histogram.under_15s },
+                    { label: "1분미만", val: detailStats.histogram.under_1m },
+                    { label: "3분미만", val: detailStats.histogram.under_3m },
+                    { label: "3분이상", val: detailStats.histogram.over_3m },
+                  ].map((item) => (
+                    <View key={item.label} style={{ flex: 1, alignItems: "center" }}>
+                      <Text style={{ color: "white", fontSize: 14, fontWeight: "700" }}>{item.val}</Text>
+                      <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginTop: 2, textAlign: "center" }}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* 카테고리 평점 */}
+                <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: "700", marginBottom: 8 }}>
+                  카테고리 평점
+                </Text>
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  {(["호감", "신뢰", "매너", "매력"] as const).map((cat) => {
+                    const val = detailStats.category_ratings[cat];
+                    return (
+                      <View key={cat} style={{ flex: 1, alignItems: "center" }}>
+                        <Text style={{ color: "#F59E0B", fontSize: 13, fontWeight: "700" }}>
+                          {val > 0 ? val.toFixed(1) : "-"}
+                        </Text>
+                        <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginTop: 2 }}>{cat}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            ) : (
+              <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, textAlign: "center" }}>
+                통계 정보가 없습니다
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* 남은 시간 */}
         <Text className="text-white/40 text-sm">{timeLeft}초 후 자동 거절</Text>

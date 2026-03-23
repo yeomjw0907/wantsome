@@ -190,9 +190,10 @@ export default function CallSummaryScreen() {
       <RatingModal
         visible={ratingVisible}
         callSessionId={sessionId ?? ""}
-        creatorId={creatorId ?? ""}
-        creatorName={creatorName ?? "크리에이터"}
-        creatorAvatar={creatorAvatar ?? null}
+        targetId={creatorId ?? ""}
+        targetName={creatorName ?? "크리에이터"}
+        targetAvatar={creatorAvatar ?? null}
+        direction="creator"
         onClose={() => setRatingVisible(false)}
       />
     </View>

@@ -61,10 +61,14 @@ export function useCallSignal(options: UseCallSignalOptions = {}) {
                   pathname: "/call/incoming",
                   params: {
                     sessionId: signal.session_id,
+                    consumerId: String(signal.payload.consumer_id ?? ""),
                     consumerName: String(signal.payload.consumer_nickname ?? "유저"),
                     consumerAvatar: String(signal.payload.consumer_avatar ?? ""),
                     mode: String(signal.payload.mode ?? "blue"),
                     perMinRate: String(signal.payload.per_min_rate ?? 900),
+                    consumerAvgRating: String(signal.payload.consumer_avg_rating ?? 0),
+                    consumerTotalCalls: String(signal.payload.consumer_total_calls ?? 0),
+                    consumerAvgDurationSec: String(signal.payload.consumer_avg_duration_sec ?? 0),
                   },
                 });
               }

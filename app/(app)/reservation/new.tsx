@@ -23,11 +23,13 @@ import { apiCall } from "@/lib/api";
 
 type Slot = { datetime: string; available: boolean };
 
-const DEPOSIT_MAP: Record<string, number> = {
-  "30_standard": 5000,
-  "60_standard": 10000,
-  "60_premium": 20000,
-};
+const PER_MIN_RATE: Record<string, number> = { blue: 900, red: 1300 };
+const DURATION_PRESETS = [10, 15, 20, 30, 45, 60] as const;
+
+function calcDeposit(durationMin: number, mode: string): number {
+  const rate = PER_MIN_RATE[mode] ?? 900;
+  return Math.round(durationMin * rate * 0.1);
+}
 
 const MONTH_NAMES = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -67,12 +69,11 @@ export default function ReservationNewScreen() {
   // 선택 상태
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [durationMin, setDurationMin] = useState<30 | 60>(30);
+  const [durationMin, setDurationMin] = useState<number>(30);
   const [mode, setMode] = useState<"blue" | "red">("blue");
   const [submitting, setSubmitting] = useState(false);
 
-  const depositKey = `${durationMin}_standard`;
-  const depositPoints = DEPOSIT_MAP[depositKey] ?? 5000;
+  const depositPoints = calcDeposit(durationMin, mode);
 
   // 슬롯 로드 (현재달 + 다음달)
   const loadSlots = useCallback(async () => {
@@ -334,26 +335,27 @@ export default function ReservationNewScreen() {
             {/* 통화 시간 */}
             <View>
               <Text style={{ fontSize: 13, fontWeight: "700", color: "#6B7280", marginBottom: 10 }}>통화 시간</Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                {([30, 60] as const).map((min) => {
-                  const pts = DEPOSIT_MAP[`${min}_standard`];
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {DURATION_PRESETS.map((min) => {
+                  const pts = calcDeposit(min, mode);
+                  const isChosen = durationMin === min;
                   return (
                     <TouchableOpacity
                       key={min}
                       onPress={() => setDurationMin(min)}
                       style={{
-                        flex: 1, paddingVertical: 12, borderRadius: 14,
-                        borderWidth: 2,
-                        borderColor: durationMin === min ? "#FF6B9D" : "#E5E7EB",
-                        backgroundColor: durationMin === min ? "#FFF0F5" : "white",
-                        alignItems: "center",
+                        paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
+                        borderWidth: 1.5,
+                        borderColor: isChosen ? "#FF6B9D" : "#E5E7EB",
+                        backgroundColor: isChosen ? "#FFF0F5" : "white",
+                        alignItems: "center", minWidth: 72,
                       }}
                     >
-                      <Text style={{ fontSize: 15, fontWeight: "700", color: durationMin === min ? "#FF6B9D" : "#374151" }}>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: isChosen ? "#FF6B9D" : "#374151" }}>
                         {min}분
                       </Text>
-                      <Text style={{ fontSize: 12, color: durationMin === min ? "#FF6B9D" : "#9CA3AF", marginTop: 2 }}>
-                        {pts.toLocaleString()}P
+                      <Text style={{ fontSize: 11, color: isChosen ? "#FF6B9D" : "#9CA3AF", marginTop: 2 }}>
+                        예약금 {pts.toLocaleString()}P
                       </Text>
                     </TouchableOpacity>
                   );
@@ -409,8 +411,14 @@ export default function ReservationNewScreen() {
               <Text style={{ color: "#6B7280", fontSize: 13 }}>통화 시간</Text>
               <Text style={{ color: "#1B2A4A", fontSize: 13, fontWeight: "600" }}>{durationMin}분</Text>
             </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ color: "#6B7280", fontSize: 13 }}>총 예상 비용</Text>
+              <Text style={{ color: "#6B7280", fontSize: 13 }}>
+                {(durationMin * (mode === "blue" ? 900 : 1300)).toLocaleString()}P
+              </Text>
+            </View>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
-              <Text style={{ color: "#6B7280", fontSize: 13 }}>예약금 (확정 시 차감)</Text>
+              <Text style={{ color: "#6B7280", fontSize: 13 }}>지금 차감 (예약금 10%)</Text>
               <Text style={{ color: "#FF6B9D", fontSize: 14, fontWeight: "700" }}>
                 {depositPoints.toLocaleString()}P
               </Text>

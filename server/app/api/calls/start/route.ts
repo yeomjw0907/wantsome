@@ -69,11 +69,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "해당 크리에이터는 현재 라이브 중입니다." }, { status: 400 });
   }
 
-  const { data: consumerInfo } = await admin
+  type ConsumerInfo = { nickname: string | null; profile_img: string | null; avg_rating: number | null; total_calls: number | null; avg_call_duration_sec: number | null };
+  const { data: consumerInfo } = (await (admin as any)
     .from("users")
-    .select("nickname, profile_img")
+    .select("nickname, profile_img, avg_rating, total_calls, avg_call_duration_sec")
     .eq("id", authUser.id)
-    .single();
+    .single()) as { data: ConsumerInfo | null };
 
   const { data: session, error: sessionErr } = await admin
     .from("call_sessions")
@@ -99,10 +100,14 @@ export async function POST(req: NextRequest) {
     from_user_id: authUser.id,
     type: "incoming_call",
     payload: {
+      consumer_id: authUser.id,
       consumer_nickname: consumerInfo?.nickname ?? "유저",
       consumer_avatar: consumerInfo?.profile_img ?? null,
       mode,
       per_min_rate: perMinRate,
+      consumer_avg_rating: consumerInfo?.avg_rating ?? 0,
+      consumer_total_calls: consumerInfo?.total_calls ?? 0,
+      consumer_avg_duration_sec: consumerInfo?.avg_call_duration_sec ?? 0,
     },
   });
 

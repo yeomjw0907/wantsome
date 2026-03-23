@@ -4,12 +4,12 @@ import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
-// 예약금 테이블
-const DEPOSIT_MAP: Record<string, number> = {
-  "30_standard": 5000,
-  "60_standard": 10000,
-  "60_premium": 20000,
-};
+const PER_MIN_RATE: Record<string, number> = { blue: 900, red: 1300 };
+
+function calcDeposit(durationMin: number, mode: string): number {
+  const rate = PER_MIN_RATE[mode] ?? 900;
+  return Math.round(durationMin * rate * 0.1);
+}
 
 // GET /api/reservations?role=consumer|creator&status=...
 export async function GET(req: NextRequest) {
@@ -82,13 +82,19 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as {
     creator_id: string;
     reserved_at: string;
-    duration_min: 30 | 60;
+    duration_min: number;
     mode: "blue" | "red";
-    type: "standard" | "premium";
+    type?: "standard" | "premium";
   };
 
   if (!body.creator_id || !body.reserved_at || !body.duration_min || !body.mode) {
     return NextResponse.json({ message: "필수 항목 누락" }, { status: 400 });
+  }
+
+  // duration_min 검증: 10~60분, 5분 단위
+  const durationMin = Number(body.duration_min);
+  if (durationMin < 10 || durationMin > 60 || durationMin % 5 !== 0) {
+    return NextResponse.json({ message: "예약 시간은 10~60분 사이 5분 단위여야 합니다." }, { status: 400 });
   }
 
   // 최소 2시간 리드타임 체크
@@ -100,8 +106,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const depositKey = `${body.duration_min}_${body.type ?? "standard"}`;
-  const depositPoints = DEPOSIT_MAP[depositKey] ?? 5000;
+  const depositPoints = calcDeposit(durationMin, body.mode);
 
   const admin = createSupabaseAdmin();
 
@@ -118,21 +123,27 @@ export async function POST(req: NextRequest) {
     }, { status: 422 });
   }
 
-  // 크리에이터 동시간 예약 중복 확인 (±30분)
-  const reservedAt = new Date(body.reserved_at);
-  const windowStart = new Date(reservedAt.getTime() - 30 * 60 * 1000).toISOString();
-  const windowEnd = new Date(reservedAt.getTime() + 30 * 60 * 1000).toISOString();
+  // 크리에이터 동시간 예약 중복 확인 (duration 기반 실제 겹침)
+  const newStart = new Date(body.reserved_at).getTime();
+  const newEnd = newStart + durationMin * 60_000;
+  const lookbackStart = new Date(newStart - 60 * 60_000).toISOString(); // 1시간 전부터
+  const lookforwardEnd = new Date(newEnd).toISOString();
 
-  const { data: conflicts } = await admin
+  const { data: candidates } = await admin
     .from("reservations")
-    .select("id")
+    .select("id, reserved_at, duration_min")
     .eq("creator_id", body.creator_id)
     .in("status", ["pending", "confirmed"])
-    .gte("reserved_at", windowStart)
-    .lte("reserved_at", windowEnd)
-    .limit(1);
+    .gte("reserved_at", lookbackStart)
+    .lte("reserved_at", lookforwardEnd);
 
-  if (conflicts && conflicts.length > 0) {
+  const realConflicts = (candidates ?? []).filter((r) => {
+    const rStart = new Date(r.reserved_at).getTime();
+    const rEnd = rStart + (r.duration_min ?? 30) * 60_000;
+    return rStart < newEnd && rEnd > newStart;
+  });
+
+  if (realConflicts.length > 0) {
     return NextResponse.json({ message: "해당 시간에 이미 예약이 있습니다." }, { status: 409 });
   }
 
@@ -143,7 +154,7 @@ export async function POST(req: NextRequest) {
       consumer_id: authUser.id,
       creator_id: body.creator_id,
       reserved_at: body.reserved_at,
-      duration_min: body.duration_min,
+      duration_min: durationMin,
       mode: body.mode,
       type: body.type ?? "standard",
       deposit_points: depositPoints,

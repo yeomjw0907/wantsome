@@ -51,11 +51,13 @@ export async function POST(
     .eq("id", sessionId);
 
   // 크리에이터 정산율 조회 + is_busy 해제
-  const { data: creator } = await admin
-    .from("creators")
-    .select("settlement_rate, monthly_minutes")
-    .eq("id", session.creator_id)
-    .single();
+  type ConsumerStatsRow = { total_calls: number | null; avg_call_duration_sec: number | null };
+  const [creatorRes, consumerRes] = await Promise.all([
+    admin.from("creators").select("settlement_rate, monthly_minutes").eq("id", session.creator_id).single(),
+    (admin as any).from("users").select("total_calls, avg_call_duration_sec").eq("id", session.consumer_id).single() as Promise<{ data: ConsumerStatsRow | null }>,
+  ]);
+  const creator = creatorRes.data;
+  const consumerRow = consumerRes.data;
 
   // 통화 종료 — is_busy=false
   await admin.from("creators").update({ is_busy: false }).eq("id", session.creator_id);
@@ -91,6 +93,18 @@ export async function POST(
         .from("creators")
         .update({ monthly_minutes: (creator.monthly_minutes ?? 0) + minutes })
         .eq("id", session.creator_id);
+    }
+
+    // 소비자 통화 통계 업데이트 (캐시 컬럼)
+    if (consumerRow) {
+      const prevTotal = consumerRow.total_calls ?? 0;
+      const newTotal = prevTotal + 1;
+      const prevAvg = consumerRow.avg_call_duration_sec ?? 0;
+      const newAvg = Math.round((prevAvg * prevTotal + duration_sec) / newTotal);
+      await admin.from("users").update({
+        total_calls: newTotal,
+        avg_call_duration_sec: newAvg,
+      }).eq("id", session.consumer_id);
     }
   }
 
