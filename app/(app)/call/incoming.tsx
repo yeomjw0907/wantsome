@@ -99,6 +99,8 @@ export default function IncomingCallScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const progressAnim = useRef(new Animated.Value(1)).current;
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ref로 처리 중 여부를 추적 — 타이머 콜백 stale closure 방어
+  const isProcessingRef = useRef(false);
 
   const [expanded, setExpanded] = useState(false);
   const [detailStats, setDetailStats] = useState<DetailStats | null>(null);
@@ -122,7 +124,18 @@ export default function IncomingCallScreen() {
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(timerRef.current!);
-          handleReject();
+          // state 업데이터 밖에서 비동기로 실행 (React concurrent mode 안전)
+          if (!isProcessingRef.current) {
+            setTimeout(() => {
+              if (!isProcessingRef.current) {
+                isProcessingRef.current = true;
+                setIsProcessing(true);
+                apiCall(`/api/calls/${sessionId}/reject`, { method: "POST" })
+                  .catch(() => {})
+                  .finally(() => router.back());
+              }
+            }, 0);
+          }
           return 0;
         }
         return t - 1;
@@ -130,6 +143,7 @@ export default function IncomingCallScreen() {
     }, 1000);
 
     return () => { if (timerRef.current) clearInterval(timerRef.current!); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── 하드웨어 뒤로가기 차단 ───
@@ -157,7 +171,8 @@ export default function IncomingCallScreen() {
   };
 
   const handleAccept = async () => {
-    if (isProcessing) return;
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsProcessing(true);
     stopTimer();
 
@@ -186,13 +201,15 @@ export default function IncomingCallScreen() {
       });
     } catch (e) {
       console.error("[accept]", e);
+      isProcessingRef.current = false;
       setIsProcessing(false);
       router.back();
     }
   };
 
   const handleReject = async () => {
-    if (isProcessing) return;
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsProcessing(true);
     stopTimer();
 

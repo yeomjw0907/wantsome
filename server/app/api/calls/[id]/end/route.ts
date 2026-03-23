@@ -94,18 +94,20 @@ export async function POST(
         .update({ monthly_minutes: (creator.monthly_minutes ?? 0) + minutes })
         .eq("id", session.creator_id);
     }
+  }
 
-    // 소비자 통화 통계 업데이트 (캐시 컬럼)
-    if (consumerRow) {
-      const prevTotal = consumerRow.total_calls ?? 0;
-      const newTotal = prevTotal + 1;
-      const prevAvg = consumerRow.avg_call_duration_sec ?? 0;
-      const newAvg = Math.round((prevAvg * prevTotal + duration_sec) / newTotal);
-      await admin.from("users").update({
-        total_calls: newTotal,
-        avg_call_duration_sec: newAvg,
-      }).eq("id", session.consumer_id);
-    }
+  // 소비자 통화 통계 업데이트 — points_charged 여부와 무관하게 항상 업데이트
+  // (1분 미만 통화도 total_calls/avg_call_duration_sec 에 반영)
+  if (consumerRow) {
+    const prevTotal = consumerRow.total_calls ?? 0;
+    const newTotal = prevTotal + 1;
+    const prevAvg = consumerRow.avg_call_duration_sec ?? 0;
+    const newAvg = Math.round((prevAvg * prevTotal + duration_sec) / newTotal);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("users").update({
+      total_calls: newTotal,
+      avg_call_duration_sec: newAvg,
+    }).eq("id", session.consumer_id);
   }
 
   // 상대방에게 call_ended 신호

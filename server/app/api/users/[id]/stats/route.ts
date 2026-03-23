@@ -41,6 +41,7 @@ export async function GET(
 
   // 유저 기본 stats (캐시 컬럼) — newly added columns need explicit cast
   type UserStatsRow = { avg_rating: number | null; total_calls: number | null; avg_call_duration_sec: number | null };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: userRow } = (await (admin as any)
     .from("users")
     .select("avg_rating, total_calls, avg_call_duration_sec")
@@ -56,6 +57,7 @@ export async function GET(
 
   const histogram = { under_15s: 0, under_1m: 0, under_3m: 0, over_3m: 0 };
   for (const { duration_sec: d } of callStats ?? []) {
+    if (typeof d !== "number") continue; // null duration_sec 방어
     if (d < 15) histogram.under_15s++;
     else if (d < 60) histogram.under_1m++;
     else if (d < 180) histogram.under_3m++;
