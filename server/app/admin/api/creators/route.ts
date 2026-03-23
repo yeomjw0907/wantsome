@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
   let query = admin
     .from("creators")
     .select(`
-      id, display_name, grade, is_online,
+      id, display_name, grade, is_online, is_live_now, live_enabled,
+      live_enabled_at, live_enabled_by,
       mode_blue, mode_red, total_calls, total_earnings, created_at,
       users!inner(nickname, email, role, profile_img, suspended_until, deleted_at)
     `)
@@ -58,6 +59,10 @@ export async function GET(req: NextRequest) {
         profile_img: null,
         grade: "NEWBIE",
         is_online: false,
+        is_live_now: false,
+        live_enabled: false,
+        live_enabled_at: null,
+        live_enabled_by: null,
         mode_blue: true,
         mode_red: false,
         total_calls: 0,

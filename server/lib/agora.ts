@@ -10,6 +10,8 @@
 const AGORA_APP_ID = process.env.AGORA_APP_ID ?? "";
 const AGORA_APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE ?? "";
 
+export type AgoraTokenRole = "publisher" | "subscriber";
+
 /** Agora 채널명 생성: call_{sessionId 앞 8자리} */
 export function makeChannelName(sessionId: string): string {
   return `call_${sessionId.replace(/-/g, "").slice(0, 12)}`;
@@ -21,7 +23,8 @@ export function makeChannelName(sessionId: string): string {
  */
 export async function generateAgoraToken(
   channelName: string,
-  uid: number
+  uid: number,
+  role: AgoraTokenRole = "publisher"
 ): Promise<string | null> {
   if (!AGORA_APP_CERTIFICATE) {
     // 개발 환경: App Certificate 없이 Agora 테스트 (보안 취약 — 운영 금지)
@@ -38,7 +41,7 @@ export async function generateAgoraToken(
       AGORA_APP_CERTIFICATE,
       channelName,
       uid,
-      RtcRole.PUBLISHER,
+      role === "publisher" ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER,
       expireTime,
       expireTime
     ) as string;

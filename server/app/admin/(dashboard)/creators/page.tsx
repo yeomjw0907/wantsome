@@ -1,20 +1,30 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
-import { Sprout, Star, Flame, Trophy, Users, User } from "lucide-react";
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Flame, Radio, Sprout, Star, Trophy, User, Users } from "lucide-react";
 
 interface Creator {
   id: string;
   display_name: string;
-  profile_img: string | null;
   grade: string;
   is_online: boolean;
+  is_live_now: boolean;
+  live_enabled: boolean;
+  live_enabled_at: string | null;
   mode_blue: boolean;
   mode_red: boolean;
   total_calls: number;
   total_earnings: number;
   created_at: string;
   _pending?: boolean;
-  users: { nickname: string; email: string; profile_img: string | null; suspended_until: string | null; deleted_at: string | null } | null;
+  users: {
+    nickname: string;
+    email: string;
+    role: string;
+    profile_img: string | null;
+    suspended_until: string | null;
+    deleted_at: string | null;
+  } | null;
 }
 
 const GRADE_ICON: Record<string, React.ElementType> = {
@@ -25,10 +35,10 @@ const GRADE_ICON: Record<string, React.ElementType> = {
 };
 
 const GRADE_MAP: Record<string, { label: string; color: string }> = {
-  NEWBIE:  { label: "신규",  color: "badge-gray" },
-  NORMAL:  { label: "일반",  color: "badge-blue" },
-  POPULAR: { label: "인기",  color: "badge-pink" },
-  TOP:     { label: "탑",   color: "badge-yellow" },
+  NEWBIE: { label: "새싹", color: "badge-gray" },
+  NORMAL: { label: "일반", color: "badge-blue" },
+  POPULAR: { label: "인기", color: "badge-pink" },
+  TOP: { label: "TOP", color: "badge-yellow" },
 };
 
 export default function CreatorsListPage() {
@@ -40,13 +50,21 @@ export default function CreatorsListPage() {
   const [gradeModal, setGradeModal] = useState<Creator | null>(null);
   const [newGrade, setNewGrade] = useState("");
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const loadCreators = useCallback(async () => {
     setIsLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set("q", search);
-    if (gradeFilter !== "all") params.set("grade", gradeFilter);
-    if (onlineFilter !== "all") params.set("online", onlineFilter);
+    if (search) {
+      params.set("q", search);
+    }
+    if (gradeFilter !== "all") {
+      params.set("grade", gradeFilter);
+    }
+    if (onlineFilter !== "all") {
+      params.set("online", onlineFilter);
+    }
+
     const res = await fetch(`/admin/api/creators?${params}`);
     if (res.ok) {
       const data = await res.json();
@@ -56,8 +74,8 @@ export default function CreatorsListPage() {
   }, [search, gradeFilter, onlineFilter]);
 
   useEffect(() => {
-    const t = setTimeout(loadCreators, 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(loadCreators, 300);
+    return () => clearTimeout(timer);
   }, [loadCreators]);
 
   const showToast = (msg: string, type = "success") => {
@@ -65,64 +83,110 @@ export default function CreatorsListPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const stats = useMemo(() => {
+    return {
+      total: creators.length,
+      online: creators.filter((creator) => creator.is_online).length,
+      liveEnabled: creators.filter((creator) => creator.live_enabled).length,
+      liveNow: creators.filter((creator) => creator.is_live_now).length,
+      pending: creators.filter((creator) => creator._pending).length,
+    };
+  }, [creators]);
+
   const handleGradeChange = async () => {
-    if (!gradeModal || !newGrade) return;
+    if (!gradeModal || !newGrade) {
+      return;
+    }
+
+    setIsSaving(true);
     const res = await fetch(`/admin/api/creators/${gradeModal.id}/grade`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ grade: newGrade }),
     });
+    setIsSaving(false);
+
     if (res.ok) {
-      showToast("등급이 변경됐습니다.");
+      showToast("등급을 변경했습니다.");
       setGradeModal(null);
       loadCreators();
-    } else {
-      const d = await res.json();
-      showToast(d.message || "처리 실패", "error");
+      return;
     }
+
+    const data = await res.json().catch(() => ({}));
+    showToast(data.message || "등급 변경에 실패했습니다.", "error");
   };
 
-  const onlineCount = creators.filter((c) => c.is_online).length;
+  const handleLiveToggle = async (creator: Creator, enabled: boolean) => {
+    setIsSaving(true);
+    const res = await fetch(`/admin/api/creators/${creator.id}/live`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
+    setIsSaving(false);
+
+    if (res.ok) {
+      showToast(enabled ? "라이브 기능을 활성화했습니다." : "라이브 기능을 비활성화했습니다.");
+      loadCreators();
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    showToast(data.message || "라이브 권한 변경에 실패했습니다.", "error");
+  };
 
   return (
     <>
       <div className="topbar">
-        <h2 className="topbar-title">크리에이터 전체 목록</h2>
+        <h2 className="topbar-title">크리에이터 관리</h2>
         <div className="topbar-actions">
-          <span className="text-gray text-sm">총 {creators.length}명 · 온라인 {onlineCount}명</span>
-          <span className="admin-badge">목록</span>
+          <span className="text-gray text-sm">총 {stats.total}명</span>
+          <span className="admin-badge">Creator Ops</span>
         </div>
       </div>
 
       <div className="page-content">
-        {/* 요약 카드 */}
         <div className="stats-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
           {[
-            { label: "전체", value: creators.length, color: "#1B2A4A" },
-            { label: "온라인", value: onlineCount, color: "#22C55E" },
-            { label: "신규", value: creators.filter(c => c.grade === "NEWBIE").length, color: "#9CA3AF" },
-            { label: "인기", value: creators.filter(c => c.grade === "POPULAR").length, color: "#FF6B9D" },
-            { label: "탑", value: creators.filter(c => c.grade === "TOP").length, color: "#F59E0B" },
-          ].map((s) => (
-            <div key={s.label} className="stat-card">
-              <div className="stat-label">{s.label}</div>
-              <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
+            { label: "전체", value: stats.total, color: "#1B2A4A" },
+            { label: "온라인", value: stats.online, color: "#22C55E" },
+            { label: "라이브 권한", value: stats.liveEnabled, color: "#FF6B9D" },
+            { label: "현재 방송중", value: stats.liveNow, color: "#4D9FFF" },
+            { label: "등록 대기", value: stats.pending, color: "#F59E0B" },
+          ].map((stat) => (
+            <div key={stat.label} className="stat-card">
+              <div className="stat-label">{stat.label}</div>
+              <div className="stat-value" style={{ color: stat.color }}>
+                {stat.value}
+              </div>
             </div>
           ))}
         </div>
 
         <div className="card">
-          {/* 필터 */}
           <div className="card-header">
             <span className="card-title">크리에이터 목록</span>
             <div className="filter-bar" style={{ marginBottom: 0 }}>
               <div className="search-input-wrap">
                 <span className="search-icon" style={{ display: "flex", alignItems: "center" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
                 </span>
                 <input
                   className="form-input search-input"
-                  placeholder="닉네임 검색..."
+                  placeholder="닉네임 검색"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -134,10 +198,10 @@ export default function CreatorsListPage() {
                 onChange={(e) => setGradeFilter(e.target.value)}
               >
                 <option value="all">전체 등급</option>
-                <option value="NEWBIE">신규</option>
+                <option value="NEWBIE">새싹</option>
                 <option value="NORMAL">일반</option>
                 <option value="POPULAR">인기</option>
-                <option value="TOP">탑</option>
+                <option value="TOP">TOP</option>
               </select>
               <select
                 className="form-input form-select"
@@ -152,9 +216,16 @@ export default function CreatorsListPage() {
           </div>
 
           {isLoading ? (
-            <div className="loading-center"><div className="spinner" /></div>
+            <div className="loading-center">
+              <div className="spinner" />
+            </div>
           ) : creators.length === 0 ? (
-            <div className="empty-state"><div className="icon"><Users size={32} color="#C8C8D8" /></div><p>조건에 맞는 크리에이터가 없습니다.</p></div>
+            <div className="empty-state">
+              <div className="icon">
+                <Users size={32} color="#C8C8D8" />
+              </div>
+              <p>조건에 맞는 크리에이터가 없습니다.</p>
+            </div>
           ) : (
             <div className="table-wrap">
               <table>
@@ -163,72 +234,94 @@ export default function CreatorsListPage() {
                     <th>크리에이터</th>
                     <th>상태</th>
                     <th>등급</th>
+                    <th>라이브</th>
                     <th>모드</th>
-                    <th>통화수</th>
+                    <th>통화 수</th>
                     <th>총 수익</th>
                     <th>가입일</th>
                     <th>관리</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {creators.map((c) => {
-                    const grade = GRADE_MAP[c.grade] ?? GRADE_MAP.NEWBIE;
+                  {creators.map((creator) => {
+                    const grade = GRADE_MAP[creator.grade] ?? GRADE_MAP.NEWBIE;
+                    const GradeIcon = GRADE_ICON[creator.grade] ?? Sprout;
+
                     return (
-                      <tr key={c.id}>
+                      <tr key={creator.id}>
                         <td>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div className="avatar">
-                              {c.users?.profile_img
-                                ? <img src={c.users.profile_img} alt="" />
-                                : <User size={18} color="#C8C8D8" />}
+                              {creator.users?.profile_img ? (
+                                <img src={creator.users.profile_img} alt="" />
+                              ) : (
+                                <User size={18} color="#C8C8D8" />
+                              )}
                             </div>
                             <div>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>{c.display_name}</div>
-                              <div style={{ fontSize: 11, color: "var(--gray-400)" }}>{c.users?.email}</div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{creator.display_name}</div>
+                              <div style={{ fontSize: 11, color: "var(--gray-400)" }}>{creator.users?.email}</div>
                             </div>
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <div style={{
-                              width: 7, height: 7, borderRadius: "50%",
-                              background: c.is_online ? "#22C55E" : "#D1D5DB"
-                            }} />
-                            <span style={{ fontSize: 12, color: c.is_online ? "#15803D" : "var(--gray-400)" }}>
-                              {c.is_online ? "온라인" : "오프라인"}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <span className={`badge ${creator.is_online ? "badge-green" : "badge-gray"}`}>
+                              {creator.is_online ? "온라인" : "오프라인"}
                             </span>
+                            {creator._pending && <span className="badge badge-orange">등록 대기</span>}
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                            {(() => { const GIcon = GRADE_ICON[c.grade] ?? Sprout; return (
-                              <span className={`badge ${grade.color}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                <GIcon size={11} /> {grade.label}
-                              </span>
-                            ); })()}
-                            {c._pending && (
-                              <span className="badge badge-orange" style={{ fontSize: 10 }}>미승인</span>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            {c.mode_blue && <span className="badge badge-blue" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4D9FFF", display: "inline-block" }} /> 파란불</span>}
-                            {c.mode_red && <span className="badge badge-red" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF5C7A", display: "inline-block" }} /> 빨간불</span>}
-                          </div>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{(c.total_calls ?? 0).toLocaleString()}</td>
-                        <td style={{ fontWeight: 600 }}>{(c.total_earnings ?? 0).toLocaleString()}P</td>
-                        <td style={{ color: "var(--gray-400)", fontSize: 12 }}>
-                          {new Date(c.created_at).toLocaleDateString("ko-KR")}
-                        </td>
-                        <td>
-                          <button
-                            className="btn btn-sm btn-outline"
-                            onClick={() => { setGradeModal(c); setNewGrade(c.grade); }}
+                          <span
+                            className={`badge ${grade.color}`}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
                           >
-                            등급 변경
-                          </button>
+                            <GradeIcon size={11} /> {grade.label}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <span
+                              className={`badge ${creator.live_enabled ? "badge-pink" : "badge-gray"}`}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                            >
+                              <Radio size={11} /> {creator.live_enabled ? "권한 활성" : "권한 없음"}
+                            </span>
+                            {creator.is_live_now && <span className="badge badge-blue">방송중</span>}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                            {creator.mode_blue && <span className="badge badge-blue">블루</span>}
+                            {creator.mode_red && <span className="badge badge-red">레드</span>}
+                          </div>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{(creator.total_calls ?? 0).toLocaleString()}</td>
+                        <td style={{ fontWeight: 600 }}>{(creator.total_earnings ?? 0).toLocaleString()}P</td>
+                        <td style={{ color: "var(--gray-400)", fontSize: 12 }}>
+                          {new Date(creator.created_at).toLocaleDateString("ko-KR")}
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => {
+                                setGradeModal(creator);
+                                setNewGrade(creator.grade);
+                              }}
+                              disabled={isSaving}
+                            >
+                              등급 변경
+                            </button>
+                            <button
+                              className={`btn btn-sm ${creator.live_enabled ? "btn-secondary" : "btn-primary"}`}
+                              onClick={() => handleLiveToggle(creator, !creator.live_enabled)}
+                              disabled={isSaving || creator._pending}
+                            >
+                              {creator.live_enabled ? "라이브 끄기" : "라이브 켜기"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -240,12 +333,11 @@ export default function CreatorsListPage() {
         </div>
       </div>
 
-      {/* 등급 변경 모달 */}
       {gradeModal && (
         <div className="modal-backdrop" onClick={() => setGradeModal(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <span className="modal-title">등급 변경 — {gradeModal.display_name}</span>
+              <span className="modal-title">등급 변경: {gradeModal.display_name}</span>
               <button
                 onClick={() => setGradeModal(null)}
                 style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--gray-400)" }}
@@ -257,67 +349,58 @@ export default function CreatorsListPage() {
               <div className="form-group">
                 <label className="form-label">현재 등급</label>
                 <div style={{ padding: "8px 0" }}>
-                  {(() => { const GIcon = GRADE_ICON[gradeModal.grade] ?? Sprout; return (
-                    <span className={`badge ${GRADE_MAP[gradeModal.grade]?.color ?? "badge-gray"}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <GIcon size={11} /> {GRADE_MAP[gradeModal.grade]?.label}
-                    </span>
-                  ); })()}
+                  <span className={`badge ${GRADE_MAP[gradeModal.grade]?.color ?? "badge-gray"}`}>
+                    {GRADE_MAP[gradeModal.grade]?.label ?? gradeModal.grade}
+                  </span>
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">변경할 등급</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[
-                    { key: "NEWBIE", Icon: Sprout, label: "신규" },
+                    { key: "NEWBIE", Icon: Sprout, label: "새싹" },
                     { key: "NORMAL", Icon: Star, label: "일반" },
                     { key: "POPULAR", Icon: Flame, label: "인기" },
-                    { key: "TOP", Icon: Trophy, label: "탑" },
-                  ].map((g) => (
+                    { key: "TOP", Icon: Trophy, label: "TOP" },
+                  ].map((gradeOption) => (
                     <button
-                      key={g.key}
-                      onClick={() => setNewGrade(g.key)}
+                      key={gradeOption.key}
+                      onClick={() => setNewGrade(gradeOption.key)}
                       style={{
                         padding: "12px 16px",
-                        border: `2px solid ${newGrade === g.key ? "var(--pink)" : "var(--gray-200)"}`,
+                        border: `2px solid ${newGrade === gradeOption.key ? "var(--pink)" : "var(--gray-200)"}`,
                         borderRadius: 10,
-                        background: newGrade === g.key ? "rgba(255,107,157,0.05)" : "white",
+                        background: newGrade === gradeOption.key ? "rgba(255,107,157,0.05)" : "white",
                         cursor: "pointer",
                         fontFamily: "inherit",
                         fontWeight: 600,
                         fontSize: 14,
-                        color: newGrade === g.key ? "var(--pink)" : "var(--gray-700)",
+                        color: newGrade === gradeOption.key ? "var(--pink)" : "var(--gray-700)",
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
                         justifyContent: "center",
                       }}
                     >
-                      <g.Icon size={15} /> {g.label}
+                      <gradeOption.Icon size={15} /> {gradeOption.label}
                     </button>
                   ))}
                 </div>
               </div>
-              <p style={{ fontSize: 12, color: "var(--gray-400)", marginTop: 8 }}>
-                superadmin 전용 기능입니다. 등급 변경은 즉시 반영됩니다.
-              </p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setGradeModal(null)}>취소</button>
-              <button
-                className="btn btn-primary"
-                onClick={handleGradeChange}
-                disabled={newGrade === gradeModal.grade}
-              >
-                변경 적용
+              <button className="btn btn-secondary" onClick={() => setGradeModal(null)}>
+                취소
+              </button>
+              <button className="btn btn-primary" onClick={handleGradeChange} disabled={newGrade === gradeModal.grade || isSaving}>
+                적용
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {toast && (
-        <div className={`toast ${toast.type}`}>{toast.msg}</div>
-      )}
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
     </>
   );
 }

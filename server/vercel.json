@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/calls/tick", "schedule": "0 3 * * *" },
+    { "path": "/api/live/tick", "schedule": "*/5 * * * *" },
     { "path": "/api/settlements/run", "schedule": "0 9 15 * *" },
     { "path": "/api/creators/update-grades", "schedule": "0 0 1 * *" },
     { "path": "/api/reports/daily-summary", "schedule": "0 9 * * *" },

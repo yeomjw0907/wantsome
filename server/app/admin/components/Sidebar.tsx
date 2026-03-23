@@ -1,29 +1,29 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Clock,
-  Users,
   AlertTriangle,
-  User,
-  CreditCard,
-  Megaphone,
   Bell,
-  Coins,
+  CreditCard,
+  LayoutDashboard,
+  LayoutGrid,
+  Megaphone,
+  PackageCheck,
+  Radio,
   Settings,
   ShieldCheck,
   ShoppingBag,
-  LayoutGrid,
-  PackageCheck,
+  Clock,
+  User,
+  Users,
+  Coins,
 } from "lucide-react";
 
 const NAV = [
   {
     section: "메인",
-    items: [
-      { href: "/admin", label: "대시보드", icon: LayoutDashboard, exact: true },
-    ],
+    items: [{ href: "/admin", label: "대시보드", icon: LayoutDashboard, exact: true }],
   },
   {
     section: "크리에이터",
@@ -35,16 +35,17 @@ const NAV = [
   {
     section: "운영",
     items: [
+      { href: "/admin/live", label: "라이브 관리", icon: Radio },
       { href: "/admin/reports", label: "신고 관리", icon: AlertTriangle },
       { href: "/admin/users", label: "유저 관리", icon: User },
       { href: "/admin/settlements", label: "정산 관리", icon: CreditCard },
     ],
   },
   {
-    section: "쇼핑",
+    section: "샵",
     items: [
       { href: "/admin/products", label: "상품 관리", icon: ShoppingBag },
-      { href: "/admin/posts", label: "포스트 관리", icon: LayoutGrid },
+      { href: "/admin/posts", label: "게시물 관리", icon: LayoutGrid },
       { href: "/admin/orders", label: "주문 관리", icon: PackageCheck },
     ],
   },
@@ -78,34 +79,35 @@ export default function Sidebar({ role, pendingCreators = 0, pendingReports = 0 
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <h1>want<span>some</span></h1>
-        <p>관리자 패널 {isSuperAdmin ? "· superadmin" : "· admin"}</p>
+        <h1>
+          want<span>some</span>
+        </h1>
+        <p>관리자 권한: {isSuperAdmin ? "superadmin" : "admin"}</p>
       </div>
 
       <nav className="sidebar-nav">
         {NAV.map((section) => {
-          if (section.section === "superadmin" && !isSuperAdmin) return null;
+          if (section.section === "superadmin" && !isSuperAdmin) {
+            return null;
+          }
 
           return (
             <div key={section.section}>
               <div className="nav-section">{section.section}</div>
               {section.items.map((item) => {
-                const isActive = (item as { href: string; label: string; icon: React.ElementType; exact?: boolean }).exact
-                  ? pathname === item.href
-                  : pathname.startsWith(item.href);
-
+                const isActive = "exact" in item && item.exact ? pathname === item.href : pathname.startsWith(item.href);
                 let badge = 0;
-                if (item.href === "/admin/creators/pending") badge = pendingCreators;
-                if (item.href === "/admin/reports") badge = pendingReports;
+                if (item.href === "/admin/creators/pending") {
+                  badge = pendingCreators;
+                }
+                if (item.href === "/admin/reports") {
+                  badge = pendingReports;
+                }
 
                 const Icon = item.icon;
 
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`nav-item ${isActive ? "active" : ""}`}
-                  >
+                  <Link key={item.href} href={item.href} className={`nav-item ${isActive ? "active" : ""}`}>
                     <Icon size={16} style={{ flexShrink: 0, opacity: 0.85 }} />
                     {item.label}
                     {badge > 0 && <span className="badge">{badge}</span>}

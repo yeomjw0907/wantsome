@@ -64,7 +64,7 @@ function resolveBaseUrl(): string {
   return envUrl || "http://localhost:3000";
 }
 
-const BASE_URL = resolveBaseUrl();
+export const BASE_URL = resolveBaseUrl();
 
 export async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
   // 세션 조회 실패해도 공개 API(상품 목록 등)는 호출해야 함

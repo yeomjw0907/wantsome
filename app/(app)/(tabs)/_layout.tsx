@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { View, Text } from "react-native";
+import { Text, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiCall } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
-// 뱃지 아이콘 컴포넌트
 function BadgeIcon({
   name,
   color,
@@ -19,11 +18,7 @@ function BadgeIcon({
 }) {
   return (
     <View style={{ position: "relative" }}>
-      <Ionicons
-        name={(focused ? name : `${name}-outline`) as any}
-        size={22}
-        color={color}
-      />
+      <Ionicons name={(focused ? name : `${name}-outline`) as any} size={22} color={color} />
       {badge && badge > 0 ? (
         <View
           style={{
@@ -53,23 +48,31 @@ export default function TabsLayout() {
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
+
     const load = async () => {
       try {
-        const res = await apiCall<{ conversations: Array<{
-          consumer_id: string;
-          consumer_unread: number;
-          creator_unread: number;
-        }> }>("/api/conversations");
-        const total = (res.conversations ?? []).reduce((sum, c) => {
-          const isConsumer = c.consumer_id === user.id;
-          return sum + (isConsumer ? c.consumer_unread : c.creator_unread);
+        const res = await apiCall<{
+          conversations: Array<{
+            consumer_id: string;
+            consumer_unread: number;
+            creator_unread: number;
+          }>;
+        }>("/api/conversations");
+
+        const total = (res.conversations ?? []).reduce((sum, conversation) => {
+          const isConsumer = conversation.consumer_id === user.id;
+          return sum + (isConsumer ? conversation.consumer_unread : conversation.creator_unread);
         }, 0);
         setUnreadMessages(total);
-      } catch { /* ignore */ }
+      } catch {
+        // ignore
+      }
     };
+
     load();
-    // 30초마다 갱신
     const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, [user?.id]);
@@ -98,39 +101,27 @@ export default function TabsLayout() {
           title: "홈",
           tabBarLabel: "홈",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
-              size={22}
-              color={color}
-            />
+            <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="posts"
+        name="live"
         options={{
-          title: "피드",
-          tabBarLabel: "피드",
+          title: "라이브",
+          tabBarLabel: "라이브",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "grid" : "grid-outline"}
-              size={22}
-              color={color}
-            />
+            <Ionicons name={focused ? "radio" : "radio-outline"} size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="shop"
         options={{
-          title: "쇼핑",
-          tabBarLabel: "쇼핑",
+          title: "샵",
+          tabBarLabel: "샵",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "bag" : "bag-outline"}
-              size={22}
-              color={color}
-            />
+            <Ionicons name={focused ? "bag" : "bag-outline"} size={22} color={color} />
           ),
         }}
       />
@@ -140,30 +131,21 @@ export default function TabsLayout() {
           title: "메시지",
           tabBarLabel: "메시지",
           tabBarIcon: ({ color, focused }) => (
-            <BadgeIcon
-              name="chatbubble-ellipses"
-              color={color}
-              focused={focused}
-              badge={unreadMessages}
-            />
+            <BadgeIcon name="chatbubble-ellipses" color={color} focused={focused} badge={unreadMessages} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "내 정보",
-          tabBarLabel: "내 정보",
+          title: "프로필",
+          tabBarLabel: "프로필",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "person" : "person-outline"}
-              size={22}
-              color={color}
-            />
+            <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} />
           ),
         }}
       />
-      {/* 예약 탭 숨김 — 메시지 탭 서브탭으로 통합 */}
+      <Tabs.Screen name="posts" options={{ href: null }} />
       <Tabs.Screen name="reservations" options={{ href: null }} />
     </Tabs>
   );
