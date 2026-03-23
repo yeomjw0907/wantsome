@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { shouldRefundPendingAck } from "@/lib/liveRuntime";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { getLiveConfig } from "@/lib/live";
 
@@ -16,6 +17,7 @@ export async function POST(req: NextRequest) {
   const ackCutoff = new Date(now.getTime() - config.joinAckTimeoutSec * 1000).toISOString();
 
   let refunded = 0;
+  let refund_failed = 0;
   let autoEnded = 0;
 
   const { data: pendingAcks } = await admin
@@ -28,11 +30,33 @@ export async function POST(req: NextRequest) {
     .lt("joined_at", ackCutoff);
 
   for (const participant of pendingAcks ?? []) {
+    if (!shouldRefundPendingAck({
+      role: "viewer",
+      status: "joined",
+      refund_status: "none",
+      join_ack_at: null,
+      joined_at: participant.joined_at,
+      ackCutoffIso: ackCutoff,
+    })) {
+      continue;
+    }
+
     if ((participant.paid_points ?? 0) > 0) {
-      await admin.rpc("increment_user_points", {
+      const { error: refundError } = await admin.rpc("increment_user_points", {
         p_user_id: participant.user_id,
         p_amount: participant.paid_points,
       });
+
+      if (refundError) {
+        console.error("[live tick] refund failed", {
+          roomId: participant.room_id,
+          userId: participant.user_id,
+          points: participant.paid_points,
+          message: refundError.message,
+        });
+        refund_failed++;
+        continue;
+      }
     }
 
     await admin
@@ -70,5 +94,5 @@ export async function POST(req: NextRequest) {
     autoEnded++;
   }
 
-  return NextResponse.json({ refunded, auto_ended: autoEnded });
+  return NextResponse.json({ refunded, refund_failed, auto_ended: autoEnded });
 }

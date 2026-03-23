@@ -8,13 +8,12 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import {
+  buildAvailableReservationSlots,
+  isValidReservationDuration,
+} from "@/lib/reservations";
 
 export const dynamic = "force-dynamic";
-
-type Slot = {
-  datetime: string;
-  available: boolean;
-};
 
 export async function GET(
   req: NextRequest,
@@ -32,7 +31,7 @@ export async function GET(
       { status: 400 }
     );
   }
-  if (durationMin < 10 || durationMin > 60 || durationMin % 5 !== 0) {
+  if (!isValidReservationDuration(durationMin)) {
     return NextResponse.json(
       { message: "duration_min은 10~60분 사이 5분 단위여야 합니다" },
       { status: 400 }
@@ -50,48 +49,8 @@ export async function GET(
     return NextResponse.json({ slots: [] });
   }
 
-  const availMap = new Map<number, { start_time: string; end_time: string }>();
-  for (const row of availability) {
-    availMap.set(row.day_of_week, {
-      start_time: row.start_time,
-      end_time: row.end_time,
-    });
-  }
-
-  const slots: Slot[] = [];
   const fromDate = new Date(`${fromStr}T00:00:00`);
   const toDate = new Date(`${toStr}T23:59:59`);
-  const now = new Date();
-  const minBookingMs = 2 * 60 * 60 * 1000;
-  const stepMs = 10 * 60 * 1000;
-  const durationMs = durationMin * 60_000;
-
-  const cur = new Date(fromDate);
-  while (cur <= toDate) {
-    const avail = availMap.get(cur.getDay());
-    if (avail) {
-      const [startH, startM] = avail.start_time.split(":").map(Number);
-      const [endH, endM] = avail.end_time.split(":").map(Number);
-
-      const windowStart = new Date(cur);
-      windowStart.setHours(startH, startM, 0, 0);
-
-      const windowEnd = new Date(cur);
-      windowEnd.setHours(endH, endM, 0, 0);
-
-      let t = new Date(windowStart);
-      while (t.getTime() + durationMs <= windowEnd.getTime()) {
-        slots.push({ datetime: t.toISOString(), available: true });
-        t = new Date(t.getTime() + stepMs);
-      }
-    }
-    cur.setDate(cur.getDate() + 1);
-  }
-
-  if (slots.length === 0) {
-    return NextResponse.json({ slots: [] });
-  }
-
   const { data: reservations } = await admin
     .from("reservations")
     .select("reserved_at, duration_min")
@@ -100,21 +59,12 @@ export async function GET(
     .gte("reserved_at", new Date(fromDate.getTime() - 60 * 60_000).toISOString())
     .lte("reserved_at", toDate.toISOString());
 
-  const result = slots.map((slot) => {
-    const slotStart = new Date(slot.datetime).getTime();
-    const slotEnd = slotStart + durationMs;
-
-    if (slotStart - now.getTime() < minBookingMs) {
-      return { ...slot, available: false };
-    }
-
-    const overlaps = (reservations ?? []).some((res) => {
-      const resStart = new Date(res.reserved_at).getTime();
-      const resEnd = resStart + (res.duration_min ?? 30) * 60_000;
-      return slotStart < resEnd && slotEnd > resStart;
-    });
-
-    return { ...slot, available: !overlaps };
+  const result = buildAvailableReservationSlots({
+    availability: availability ?? [],
+    reservations: reservations ?? [],
+    fromDate,
+    toDate,
+    durationMin,
   });
 
   return NextResponse.json({ slots: result });

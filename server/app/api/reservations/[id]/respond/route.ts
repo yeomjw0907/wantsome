@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 import { sendPushToUser } from "@/lib/push";
+import { hasReservationConflict } from "@/lib/reservations";
 
 export const dynamic = "force-dynamic";
 
@@ -60,13 +61,7 @@ export async function POST(
       .gte("reserved_at", lookback)
       .lte("reserved_at", lookforward);
 
-    const realConflicts = (candidates ?? []).filter((r) => {
-      const rStart = new Date(r.reserved_at).getTime();
-      const rEnd = rStart + (r.duration_min ?? 30) * 60_000;
-      return rStart < thisEnd && rEnd > thisStart;
-    });
-
-    if (realConflicts.length > 0) {
+    if (hasReservationConflict(candidates ?? [], thisStart, reservation.duration_min ?? 30)) {
       return NextResponse.json(
         { message: "해당 시간에 이미 확정된 예약이 있습니다. 다른 시간대를 선택해주세요." },
         { status: 409 }

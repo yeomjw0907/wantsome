@@ -1,106 +1,102 @@
 /**
- * POST /api/ratings — 유저 → 크리에이터 평가 (4카테고리 별점)
+ * POST /api/ratings
+ * Consumer -> creator rating with four categories.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import {
+  computeOverallCategoryAverage,
+  hasAnyCategoryRating,
+  type FourCategoryRatingRow,
+} from "@/lib/ratings";
 
 export const dynamic = "force-dynamic";
 
-function avgOfDefined(values: (number | null | undefined)[]): number | null {
-  const defined = values.filter((v): v is number => typeof v === "number");
-  if (defined.length === 0) return null;
-  return defined.reduce((s, v) => s + v, 0) / defined.length;
-}
+type RatingBody = {
+  call_session_id: string;
+  creator_id: string;
+  comment?: string;
+} & FourCategoryRatingRow;
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
   if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const authClient = createSupabaseClient(token);
-  const { data: { user: authUser }, error: authErr } = await authClient.auth.getUser(token);
-  if (authErr || !authUser) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
-
-  const body = await req.json();
   const {
-    call_session_id,
-    creator_id,
-    rating_호감,
-    rating_신뢰,
-    rating_매너,
-    rating_매력,
-    comment,
-  } = body as {
-    call_session_id: string;
-    creator_id: string;
-    rating_호감?: number;
-    rating_신뢰?: number;
-    rating_매너?: number;
-    rating_매력?: number;
-    comment?: string;
-  };
-
-  if (!call_session_id || !creator_id) {
-    return NextResponse.json({ message: "필수 값이 누락됐습니다." }, { status: 400 });
+    data: { user: authUser },
+    error: authErr,
+  } = await authClient.auth.getUser(token);
+  if (authErr || !authUser) {
+    return NextResponse.json({ message: "Invalid token" }, { status: 401 });
   }
 
-  // 최소 1개 카테고리 입력 필수
-  const hasAnyRating = [rating_호감, rating_신뢰, rating_매너, rating_매력].some(
-    (v) => typeof v === "number" && v >= 1 && v <= 5
-  );
-  if (!hasAnyRating) {
+  const body = (await req.json()) as RatingBody;
+  const callSessionId = body.call_session_id;
+  const creatorId = body.creator_id;
+
+  if (!callSessionId || !creatorId) {
+    return NextResponse.json({ message: "필수 값이 누락되었습니다." }, { status: 400 });
+  }
+
+  const ratingPayload: FourCategoryRatingRow = {
+    "rating_호감": body["rating_호감"],
+    "rating_신뢰": body["rating_신뢰"],
+    "rating_매너": body["rating_매너"],
+    "rating_매력": body["rating_매력"],
+  };
+
+  if (!hasAnyCategoryRating(ratingPayload)) {
     return NextResponse.json({ message: "최소 1개 카테고리 평점이 필요합니다." }, { status: 400 });
   }
 
   const admin = createSupabaseAdmin();
-
   const { data: session } = await admin
     .from("call_sessions")
     .select("id, consumer_id, creator_id, status")
-    .eq("id", call_session_id)
+    .eq("id", callSessionId)
     .single();
 
-  if (!session) return NextResponse.json({ message: "통화 기록을 찾을 수 없습니다." }, { status: 404 });
+  if (!session) {
+    return NextResponse.json({ message: "통화 기록을 찾을 수 없습니다." }, { status: 404 });
+  }
   if (session.consumer_id !== authUser.id) {
     return NextResponse.json({ message: "본인의 통화만 평가할 수 있습니다." }, { status: 403 });
   }
   if (session.status !== "ended") {
-    return NextResponse.json({ message: "완료된 통화만 평가할 수 있습니다." }, { status: 400 });
+    return NextResponse.json({ message: "종료된 통화만 평가할 수 있습니다." }, { status: 400 });
   }
 
+  // Supabase type generation does not know the new Korean-named columns yet.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin_ = admin as any;
+  const adminUntyped = admin as any;
 
-  const { error } = await admin_.from("creator_ratings").upsert(
+  const { error } = await adminUntyped.from("creator_ratings").upsert(
     {
-      call_session_id,
+      call_session_id: callSessionId,
       consumer_id: authUser.id,
-      creator_id,
-      rating_호감: rating_호감 ?? null,
-      rating_신뢰: rating_신뢰 ?? null,
-      rating_매너: rating_매너 ?? null,
-      rating_매력: rating_매력 ?? null,
-      comment: comment?.slice(0, 100) ?? null,
+      creator_id: creatorId,
+      "rating_호감": ratingPayload["rating_호감"] ?? null,
+      "rating_신뢰": ratingPayload["rating_신뢰"] ?? null,
+      "rating_매너": ratingPayload["rating_매너"] ?? null,
+      "rating_매력": ratingPayload["rating_매력"] ?? null,
+      comment: body.comment?.slice(0, 100) ?? null,
     },
-    { onConflict: "call_session_id" }
+    { onConflict: "call_session_id" },
   );
 
-  if (error) return NextResponse.json({ message: error.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ message: error.message }, { status: 500 });
+  }
 
-  // creators.avg_rating 재계산
-  type RatingRow = { rating_호감: number | null; rating_신뢰: number | null; rating_매너: number | null; rating_매력: number | null };
-  const { data: allRatings } = (await admin_.from("creator_ratings")
+  const { data: allRatings } = (await adminUntyped
+    .from("creator_ratings")
     .select("rating_호감, rating_신뢰, rating_매너, rating_매력")
-    .eq("creator_id", creator_id)) as { data: RatingRow[] | null };
+    .eq("creator_id", creatorId)) as { data: FourCategoryRatingRow[] | null };
 
-  if (allRatings && allRatings.length > 0) {
-    const rowAvgs = allRatings.map((r) =>
-      avgOfDefined([r.rating_호감, r.rating_신뢰, r.rating_매너, r.rating_매력])
-    ).filter((v): v is number => v !== null);
-
-    if (rowAvgs.length > 0) {
-      const overall = rowAvgs.reduce((s, v) => s + v, 0) / rowAvgs.length;
-      await admin_.from("creators").update({ avg_rating: Math.round(overall * 10) / 10 }).eq("id", creator_id);
-    }
+  const overall = computeOverallCategoryAverage(allRatings ?? []);
+  if (overall !== null) {
+    await adminUntyped.from("creators").update({ avg_rating: overall }).eq("id", creatorId);
   }
 
   return NextResponse.json({ success: true });

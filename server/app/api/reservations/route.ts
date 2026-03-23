@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 import { sendPushToUser } from "@/lib/push";
+import {
+  calcReservationDeposit,
+  hasReservationConflict,
+  isValidReservationDuration,
+} from "@/lib/reservations";
 
 export const dynamic = "force-dynamic";
-
-const PER_MIN_RATE: Record<string, number> = { blue: 900, red: 1300 };
-
-function calcDeposit(durationMin: number, mode: string): number {
-  const rate = PER_MIN_RATE[mode] ?? 900;
-  return Math.round(durationMin * rate * 0.1);
-}
 
 // GET /api/reservations?role=consumer|creator&status=...
 export async function GET(req: NextRequest) {
@@ -93,7 +91,7 @@ export async function POST(req: NextRequest) {
 
   // duration_min 검증: 10~60분, 5분 단위
   const durationMin = Number(body.duration_min);
-  if (durationMin < 10 || durationMin > 60 || durationMin % 5 !== 0) {
+  if (!isValidReservationDuration(durationMin)) {
     return NextResponse.json({ message: "예약 시간은 10~60분 사이 5분 단위여야 합니다." }, { status: 400 });
   }
 
@@ -106,7 +104,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const depositPoints = calcDeposit(durationMin, body.mode);
+  const depositPoints = calcReservationDeposit(durationMin, body.mode);
 
   const admin = createSupabaseAdmin();
 
@@ -137,17 +135,21 @@ export async function POST(req: NextRequest) {
     .gte("reserved_at", lookbackStart)
     .lte("reserved_at", lookforwardEnd);
 
-  const realConflicts = (candidates ?? []).filter((r) => {
-    const rStart = new Date(r.reserved_at).getTime();
-    const rEnd = rStart + (r.duration_min ?? 30) * 60_000;
-    return rStart < newEnd && rEnd > newStart;
-  });
-
-  if (realConflicts.length > 0) {
+  if (hasReservationConflict(candidates ?? [], newStart, durationMin)) {
     return NextResponse.json({ message: "해당 시간에 이미 예약이 있습니다." }, { status: 409 });
   }
 
-  // 예약 생성 + 포인트 차감 (트랜잭션)
+  const deductReason = `reservation_deposit:${authUser.id}:${body.creator_id}:${body.reserved_at}`;
+  const { error: deductError } = await admin.rpc("deduct_points", {
+    p_user_id: authUser.id,
+    p_amount: depositPoints,
+    p_reason: deductReason,
+  });
+
+  if (deductError) {
+    return NextResponse.json({ message: "예약금 차감에 실패했습니다." }, { status: 500 });
+  }
+
   const { data: reservation, error: resErr } = await admin
     .from("reservations")
     .insert({
@@ -163,16 +165,23 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (resErr) {
+  if (resErr || !reservation) {
+    const { error: refundError } = await admin.rpc("add_points", {
+      p_user_id: authUser.id,
+      p_amount: depositPoints,
+      p_reason: `${deductReason}:rollback`,
+    });
+
+    if (refundError) {
+      console.error("[reservations create] failed to rollback deducted points", {
+        userId: authUser.id,
+        amount: depositPoints,
+        message: refundError.message,
+      });
+    }
+
     return NextResponse.json({ message: "예약 생성 실패" }, { status: 500 });
   }
-
-  // 포인트 차감
-  await admin.rpc("deduct_points", {
-    p_user_id: authUser.id,
-    p_amount: depositPoints,
-    p_reason: `reservation_deposit:${reservation.id}`,
-  }).then(null, () => null);
 
   // 크리에이터에게 푸시 알림
   await sendPushToUser(admin, body.creator_id, {

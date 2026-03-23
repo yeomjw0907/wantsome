@@ -4,6 +4,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin, createSupabaseClient } from "@/lib/supabase";
+import {
+  getRequestedConversationTarget,
+  resolvePostCallConversationParticipants,
+} from "@/lib/conversations";
 
 export const dynamic = "force-dynamic";
 
@@ -73,27 +77,17 @@ export async function POST(req: NextRequest) {
       .eq("id", body.call_session_id)
       .single();
 
-    if (!session) {
-      return NextResponse.json({ message: "Call session not found" }, { status: 404 });
-    }
-    if (session.status !== "ended") {
-      return NextResponse.json({ message: "Only ended calls can open DMs" }, { status: 400 });
-    }
-    if (session.consumer_id !== authUser.id && session.creator_id !== authUser.id) {
-      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
-
-    const requestedTargetId =
-      body.target_user_id ?? body.consumer_id ?? body.creator_id ?? null;
-    const otherPartyId =
-      session.consumer_id === authUser.id ? session.creator_id : session.consumer_id;
-
-    if (requestedTargetId && requestedTargetId !== otherPartyId) {
-      return NextResponse.json({ message: "Target must be the other call participant" }, { status: 403 });
+    const resolved = resolvePostCallConversationParticipants(
+      authUser.id,
+      session,
+      getRequestedConversationTarget(body),
+    );
+    if (!resolved.ok) {
+      return NextResponse.json({ message: resolved.message }, { status: resolved.status });
     }
 
-    creatorId = session.creator_id;
-    consumerId = session.consumer_id;
+    creatorId = resolved.creatorId;
+    consumerId = resolved.consumerId;
   } else {
     if (!creatorId) {
       return NextResponse.json({ message: "creator_id or call_session_id is required" }, { status: 400 });
