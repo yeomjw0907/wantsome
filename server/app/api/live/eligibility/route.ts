@@ -6,10 +6,24 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
-  if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!token) {
+    return NextResponse.json({
+      eligible: false,
+      live_enabled: false,
+      is_live_now: false,
+      reason: "로그인 후 라이브 권한을 확인할 수 있습니다.",
+    });
+  }
 
   const user = await getAuthenticatedUser(token);
-  if (!user) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({
+      eligible: false,
+      live_enabled: false,
+      is_live_now: false,
+      reason: "세션이 만료되었습니다. 다시 로그인해주세요.",
+    });
+  }
 
   const admin = createSupabaseAdmin();
   const { data: creator } = await admin

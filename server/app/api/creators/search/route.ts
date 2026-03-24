@@ -1,19 +1,14 @@
-/**
- * GET /api/creators/search?q=닉네임&mode=blue|red
- * 닉네임으로 크리에이터 검색
- */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-/** 닉네임 검색 — 공개 (피드와 동일) */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const q    = (searchParams.get("q") ?? "").trim();
+  const query = (searchParams.get("q") ?? "").trim();
   const mode = searchParams.get("mode") ?? "blue";
 
-  if (q.length < 1) {
+  if (query.length < 1) {
     return NextResponse.json({ creators: [] });
   }
 
@@ -22,12 +17,12 @@ export async function GET(req: NextRequest) {
 
   const { data: rows, error } = await admin
     .from("creators")
-    .select(`
-      id, display_name, grade, is_online, mode_blue, mode_red, avg_rating,
-      users!inner(profile_img, is_verified)
-    `)
+    .select(
+      `id, display_name, grade, is_online, mode_blue, mode_red, avg_rating, profile_image_url,
+       users(profile_img, is_verified)`,
+    )
     .eq(column, true)
-    .ilike("display_name", `%${q}%`)
+    .ilike("display_name", `%${query}%`)
     .order("is_online", { ascending: false })
     .limit(20);
 
@@ -35,19 +30,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  const creators = (rows ?? []).map((r: any) => {
-    const u = r.users ?? {};
+  const creators = (rows ?? []).map((row: any) => {
+    const user = Array.isArray(row.users) ? row.users[0] ?? {} : row.users ?? {};
+
     return {
-      id:               r.id,
-      display_name:     r.display_name,
-      profile_image_url: u.profile_img ?? null,
-      grade:            r.grade ?? "신규",
-      is_online:        r.is_online ?? false,
-      mode_blue:        r.mode_blue ?? true,
-      mode_red:         r.mode_red ?? false,
-      is_verified:      u.is_verified ?? false,
-      avg_rating:       r.avg_rating ?? 0,
-      rate_per_min:     mode === "red" ? 1300 : 900,
+      id: row.id,
+      display_name: row.display_name ?? "크리에이터",
+      profile_image_url: user.profile_img ?? row.profile_image_url ?? null,
+      grade: row.grade ?? "루키",
+      is_online: row.is_online ?? false,
+      mode_blue: row.mode_blue ?? true,
+      mode_red: row.mode_red ?? false,
+      is_verified: user.is_verified ?? false,
+      avg_rating: row.avg_rating ?? 0,
+      rate_per_min: mode === "red" ? 1300 : 900,
     };
   });
 

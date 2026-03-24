@@ -24,6 +24,7 @@ import { PointBadge } from "@/components/ui/PointBadge";
 import { ModeTab, type FeedMode } from "@/components/feed/ModeTab";
 import { CreatorCard } from "@/components/feed/CreatorCard";
 import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
+import { PostsFeedPanel } from "@/components/home/PostsFeedPanel";
 import CallWaitingModal from "@/components/CallWaitingModal";
 import { apiCall } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -405,6 +406,7 @@ export default function FeedScreen() {
     setLoading,
   } = useCreatorStore();
 
+  const [homeTab, setHomeTab] = useState<"influencer" | "feed">("influencer");
   const [mode, setMode] = useState<FeedMode>("blue");
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
@@ -439,6 +441,15 @@ export default function FeedScreen() {
     setSelectedVibes(["전체"]);
     setSearchText("");
     setIsSearching(false);
+  };
+
+  const handleHomeTabChange = (tab: "influencer" | "feed") => {
+    setHomeTab(tab);
+    if (tab === "feed") {
+      setSearchText("");
+      setIsSearching(false);
+      setSearchResults([]);
+    }
   };
 
   const toggleCategoryOpen = () => {
@@ -494,7 +505,10 @@ export default function FeedScreen() {
         }
         setPage(nextPage);
       } catch {
-        if (!append) setFeed(mode, [], false);
+        if (!append) {
+          setFeed(mode, [], false);
+          Toast.show({ type: "error", text1: "인플루언서", text2: "크리에이터 목록을 불러오지 못했습니다." });
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -606,10 +620,50 @@ export default function FeedScreen() {
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
         <Text className="text-navy text-lg font-bold">wantsome</Text>
-        <View className="flex-row items-center gap-3">
+        <View className="flex-row items-center gap-2">
           <TouchableOpacity onPress={() => router.push("/charge")} activeOpacity={0.8}>
             <PointBadge points={points} />
           </TouchableOpacity>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#F3F4F6",
+              borderRadius: 999,
+              padding: 3,
+            }}
+          >
+            {([
+              { key: "influencer", label: "인플루언서" },
+              { key: "feed", label: "피드" },
+            ] as const).map((tab) => {
+              const active = homeTab === tab.key;
+
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => handleHomeTabChange(tab.key)}
+                  activeOpacity={0.8}
+                  style={{
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    backgroundColor: active ? "#111827" : "transparent",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "700",
+                      color: active ? "#fff" : "#6B7280",
+                    }}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
           <TouchableOpacity
             className="w-9 h-9 items-center justify-center"
             onPress={() => router.push("/notifications" as any)}
@@ -619,6 +673,11 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {homeTab === "feed" ? (
+        <PostsFeedPanel />
+      ) : (
+        <>
 
       <View className="px-4 pt-3 pb-2 bg-white">
         <View className="flex-row items-center bg-gray-100 rounded-2xl px-3 py-2.5 gap-2">
@@ -778,6 +837,8 @@ export default function FeedScreen() {
             ) : null
           }
         />
+      )}
+        </>
       )}
 
       {callModal && (

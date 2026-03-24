@@ -13,7 +13,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: "#FFFFFF" },
         }}
       />
-      <Toast config={toastConfig} position="bottom" bottomOffset={100} />
+      <Toast config={toastConfig} position="bottom" bottomOffset={96} visibilityTime={2200} />
       <StatusBar style="auto" />
     </>
   );

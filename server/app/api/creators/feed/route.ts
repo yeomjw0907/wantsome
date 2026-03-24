@@ -9,12 +9,11 @@ const PAGE_SIZE = 20;
 export type FeedMode = "blue" | "red";
 
 export async function GET(req: NextRequest) {
-  // 완전 공개 피드 — 클라이언트가 만료·불일치 JWT를내도 목록은 반환 (앱이 항상 Authorization 붙임)
   const { searchParams } = new URL(req.url);
-  const mode     = (searchParams.get("mode") ?? "blue") as FeedMode;
-  const page     = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const limit    = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10)));
-  const category = searchParams.get("category") ?? ""; // 카테고리 필터
+  const mode = (searchParams.get("mode") ?? "blue") as FeedMode;
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10)));
+  const category = searchParams.get("category") ?? "";
 
   if (mode !== "blue" && mode !== "red") {
     return NextResponse.json({ message: "Invalid mode" }, { status: 400 });
@@ -26,17 +25,20 @@ export async function GET(req: NextRequest) {
   let query = admin
     .from("creators")
     .select(
-      `id, display_name, grade, is_online, mode_blue, mode_red,
+      `id, display_name, grade, is_online, mode_blue, mode_red, profile_image_url,
        settlement_rate, monthly_minutes, created_at, avg_rating, categories,
-       users!inner(nickname, profile_img, is_verified)`
+       users(nickname, profile_img, is_verified)`,
     )
     .eq(column, true);
 
-  // 카테고리 필터 (콤마 구분 → 배열 변환, OR 조건)
   if (category && category !== "전체") {
-    const cats = category.split(",").map((c) => c.trim()).filter(Boolean);
-    if (cats.length > 0) {
-      query = query.overlaps("categories", cats);
+    const categories = category
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (categories.length > 0) {
+      query = query.overlaps("categories", categories);
     }
   }
 
@@ -47,29 +49,35 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     if (error.code === "42P01") {
-      return NextResponse.json({ creators: [], total: 0, hasMore: false }, { status: 200 });
+      return NextResponse.json({ creators: [], total: 0, hasMore: false });
     }
+
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  const creators = (rows ?? []).map((r: any) => {
-    const u = r.users ?? {};
+  const creators = (rows ?? []).map((row: any) => {
+    const user = Array.isArray(row.users) ? row.users[0] ?? {} : row.users ?? {};
+
     return {
-      id:               r.id,
-      display_name:     r.display_name ?? u.nickname ?? "크리에이터",
-      profile_image_url: u.profile_img ?? null,
-      grade:            r.grade ?? "신규",
-      is_online:        r.is_online ?? false,
-      mode_blue:        r.mode_blue ?? true,
-      mode_red:         r.mode_red ?? false,
-      settlement_rate:  r.settlement_rate ?? 0.5,
-      monthly_minutes:  r.monthly_minutes ?? 0,
-      is_verified:      u.is_verified ?? false,
-      avg_rating:       r.avg_rating ?? 0,
-      categories:       r.categories ?? [],
-      rate_per_min:     PER_MIN_RATES[mode],
+      id: row.id,
+      display_name: row.display_name ?? user.nickname ?? "크리에이터",
+      profile_image_url: user.profile_img ?? row.profile_image_url ?? null,
+      grade: row.grade ?? "루키",
+      is_online: row.is_online ?? false,
+      mode_blue: row.mode_blue ?? true,
+      mode_red: row.mode_red ?? false,
+      settlement_rate: row.settlement_rate ?? 0.5,
+      monthly_minutes: row.monthly_minutes ?? 0,
+      is_verified: user.is_verified ?? false,
+      avg_rating: row.avg_rating ?? 0,
+      categories: row.categories ?? [],
+      rate_per_min: PER_MIN_RATES[mode],
     };
   });
 
-  return NextResponse.json({ creators, total: creators.length, hasMore: creators.length >= limit });
+  return NextResponse.json({
+    creators,
+    total: creators.length,
+    hasMore: creators.length >= limit,
+  });
 }

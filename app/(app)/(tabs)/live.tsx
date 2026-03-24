@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,8 +22,8 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import type {
   LiveCreateRoomResponse,
   LiveEligibilityResponse,
-  LiveRoomsResponse,
   LiveRoomListItem,
+  LiveRoomsResponse,
   LiveStartRoomResponse,
 } from "@/types/live";
 
@@ -70,15 +70,23 @@ function formatCountdown(iso: string) {
   if (remainMs <= 0) {
     return "곧 종료";
   }
+
   const totalMin = Math.floor(remainMs / 60000);
   const hour = Math.floor(totalMin / 60);
   const min = totalMin % 60;
-  return hour > 0 ? `${hour}시간 ${min}분 남음` : `${min}분 남음`;
+
+  if (hour > 0) {
+    return `${hour}시간 ${min}분 남음`;
+  }
+
+  return `${min}분 남음`;
 }
 
 export default function LiveTabScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const isCreatorUser = user?.role === "creator" || user?.role === "both";
+
   const [rooms, setRooms] = useState<LiveRoomListItem[]>([]);
   const [eligibility, setEligibility] = useState<LiveEligibilityResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,28 +98,44 @@ export default function LiveTabScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
+    setRefreshing(true);
+
     try {
-      const [eligibilityRes, roomsRes] = await Promise.all([
-        apiCall<LiveEligibilityResponse>("/api/live/eligibility"),
-        apiCall<LiveRoomsResponse>("/api/live/rooms"),
-      ]);
-      setEligibility(eligibilityRes);
+      const roomsRes = await apiCall<LiveRoomsResponse>("/api/live/rooms");
       setRooms(roomsRes.rooms ?? []);
     } catch (error) {
       const message = error instanceof Error ? error.message : "라이브 정보를 불러오지 못했습니다.";
       Toast.show({ type: "error", text1: "라이브", text2: message });
+    }
+
+    if (!isCreatorUser) {
+      setEligibility(null);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    try {
+      const eligibilityRes = await apiCall<LiveEligibilityResponse>("/api/live/eligibility");
+      setEligibility(eligibilityRes);
+    } catch (error) {
+      setEligibility({
+        eligible: false,
+        live_enabled: false,
+        is_live_now: false,
+        reason: error instanceof Error ? error.message : "라이브 권한을 확인하지 못했습니다.",
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isCreatorUser]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   const onRefresh = () => {
-    setRefreshing(true);
     loadData();
   };
 
@@ -136,12 +160,14 @@ export default function LiveTabScreen() {
 
   const handleCreateAndStart = async () => {
     const trimmedTitle = title.trim();
+
     if (trimmedTitle.length < 2 || trimmedTitle.length > 50) {
-      Alert.alert("제목 확인", "방송 제목은 2자 이상 50자 이하로 입력해 주세요.");
+      Alert.alert("제목 확인", "방송 제목은 2자 이상 50자 이하로 입력해주세요.");
       return;
     }
 
     setSubmitting(true);
+
     try {
       let thumbnailUrl: string | undefined;
       if (thumbnailUri) {
@@ -185,6 +211,18 @@ export default function LiveTabScreen() {
     }
   };
 
+  const creatorStatusText = useMemo(() => {
+    if (!isCreatorUser) {
+      return null;
+    }
+
+    if (eligibility?.eligible) {
+      return "라이브 권한이 활성화되어 있습니다.";
+    }
+
+    return eligibility?.reason ?? "관리자 승인 후 라이브를 시작할 수 있습니다.";
+  }, [eligibility, isCreatorUser]);
+
   const renderRoom = ({ item }: { item: LiveRoomListItem }) => (
     <TouchableOpacity
       activeOpacity={0.9}
@@ -212,6 +250,7 @@ export default function LiveTabScreen() {
             <Ionicons name="videocam" size={32} color="#C0C0CC" />
           </View>
         )}
+
         <View
           style={{
             position: "absolute",
@@ -225,6 +264,7 @@ export default function LiveTabScreen() {
         >
           <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>LIVE</Text>
         </View>
+
         <View
           style={{
             position: "absolute",
@@ -275,10 +315,10 @@ export default function LiveTabScreen() {
               }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <View>
+                <View style={{ flex: 1, paddingRight: 16 }}>
                   <Text style={{ color: "#fff", fontSize: 22, fontWeight: "700" }}>라이브</Text>
                   <Text style={{ color: "rgba(255,255,255,0.72)", marginTop: 6, fontSize: 13 }}>
-                    썸네일만 보고 입장 여부를 결정할 수 있습니다.
+                    썸네일만 보고 입장 여부를 먼저 결정할 수 있습니다.
                   </Text>
                 </View>
                 <View
@@ -295,7 +335,7 @@ export default function LiveTabScreen() {
                 </View>
               </View>
 
-              {user && ["creator", "both"].includes(user.role) && (
+              {isCreatorUser ? (
                 <View
                   style={{
                     backgroundColor: "rgba(255,255,255,0.06)",
@@ -304,18 +344,15 @@ export default function LiveTabScreen() {
                     gap: 10,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>호스트 메뉴</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 12 }}>
-                    {eligibility?.eligible
-                      ? "라이브 권한이 활성화되어 있습니다."
-                      : eligibility?.reason ?? "관리자 승인 후 라이브를 시작할 수 있습니다."}
-                  </Text>
+                  <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>크리에이터 메뉴</Text>
+                  <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 12 }}>{creatorStatusText}</Text>
                   <TouchableOpacity
                     activeOpacity={0.85}
                     disabled={!eligibility?.eligible || eligibility?.is_live_now}
                     onPress={() => setModalVisible(true)}
                     style={{
-                      backgroundColor: !eligibility?.eligible || eligibility?.is_live_now ? "rgba(255,255,255,0.14)" : "#FF6B9D",
+                      backgroundColor:
+                        !eligibility?.eligible || eligibility?.is_live_now ? "rgba(255,255,255,0.14)" : "#FF6B9D",
                       borderRadius: 16,
                       paddingVertical: 14,
                       alignItems: "center",
@@ -326,11 +363,11 @@ export default function LiveTabScreen() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-              )}
+              ) : null}
             </View>
 
             <View style={{ marginTop: 20, marginBottom: 12, flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: "#111827" }}>진행 중 라이브</Text>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: "#111827" }}>진행 중인 라이브</Text>
               <Text style={{ fontSize: 12, color: "#6B7280" }}>{rooms.length}개 방송</Text>
             </View>
           </View>
@@ -379,7 +416,7 @@ export default function LiveTabScreen() {
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="예: 오늘 밤 고민상담"
+                  placeholder="예: 오늘 밤 고민 상담"
                   maxLength={50}
                   style={{
                     borderWidth: 1,
@@ -452,7 +489,9 @@ export default function LiveTabScreen() {
                 }}
               >
                 <Text style={{ fontSize: 12, color: "#6B7280" }}>운영 고정값</Text>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#111827" }}>입장료 50,000P · 최대 10명 · 연장 최대 2회</Text>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: "#111827" }}>
+                  입장료 50,000P · 최대 10명 · 연장 최대 2회
+                </Text>
               </View>
 
               <TouchableOpacity

@@ -56,12 +56,6 @@ async function buildRoomSummary(
 }
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
-  if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const user = await getAuthenticatedUser(token);
-  if (!user) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
-
   const admin = createSupabaseAdmin();
   const { data: rooms, error } = await admin
     .from("live_rooms")
