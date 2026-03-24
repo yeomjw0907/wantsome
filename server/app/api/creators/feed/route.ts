@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
       is_online:        r.is_online ?? false,
       mode_blue:        r.mode_blue ?? true,
       mode_red:         r.mode_red ?? false,
-      settlement_rate:  r.settlement_rate ?? 0.75,
+      settlement_rate:  r.settlement_rate ?? 0.5,
       monthly_minutes:  r.monthly_minutes ?? 0,
       is_verified:      u.is_verified ?? false,
       avg_rating:       r.avg_rating ?? 0,

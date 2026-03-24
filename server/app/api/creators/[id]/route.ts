@@ -68,7 +68,7 @@ export async function GET(
     avg_rating:          c.avg_rating ?? 0,
     categories:          c.categories ?? [],
     post_count:          postCount ?? 0,
-    settlement_rate:     creator.settlement_rate ?? 0.75,
+    settlement_rate:     creator.settlement_rate ?? 0.5,
     available_times:     c.available_times ?? null,
   });
 }

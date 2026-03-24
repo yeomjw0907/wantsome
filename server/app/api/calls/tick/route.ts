@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
           .eq("id", session.creator_id);
 
         // 양측에 call_ended 신호
-        const creatorEarning = Math.floor(points_charged * (creator?.settlement_rate ?? 0.75));
+        const creatorEarning = Math.floor(points_charged * (creator?.settlement_rate ?? 0.5));
         await admin.from("call_signals").insert([
           {
             session_id: session.id,

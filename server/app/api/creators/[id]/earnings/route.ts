@@ -26,7 +26,7 @@ export async function GET(
     .eq("id", id)
     .single();
 
-  const settlement_rate = creator?.settlement_rate ?? 0.75;
+  const settlement_rate = creator?.settlement_rate ?? 0.5;
 
   // 오늘 날짜 범위
   const todayStart = new Date();
