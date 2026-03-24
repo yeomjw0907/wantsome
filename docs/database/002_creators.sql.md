@@ -8,7 +8,7 @@ CREATE TABLE creators (
   display_name     TEXT NOT NULL,
   bio              TEXT,
   grade            TEXT DEFAULT '신규',         -- 신규|일반|인기|탑
-  settlement_rate  NUMERIC DEFAULT 0.75,        -- 정산율 (론칭: 0.75 단일)
+  settlement_rate  NUMERIC DEFAULT 0.5,         -- 정산율 (기본: 0.5 단일)
   is_online        BOOLEAN DEFAULT FALSE,
   mode_blue        BOOLEAN DEFAULT TRUE,
   mode_red         BOOLEAN DEFAULT FALSE,

@@ -39,8 +39,8 @@
 유저 결제 100원
   └─ 앱스토어 수수료 30% 차감
      └─ 플랫폼 실수령 70원
-        ├─ 크리에이터 75% → 52.5원
-        └─ 플랫폼 25%    → 17.5원
+        ├─ 크리에이터 50% → 35원
+        └─ 플랫폼 50%    → 35원
 ```
 
 **크리에이터 원천징수:** 정산액의 3.3% 공제 후 지급
@@ -57,7 +57,7 @@
 | 🔥 인기 | 65% | 월 통화 1,500분+ |
 | 💎 탑 | 70% | 플랫폼 선정 TOP20 |
 
-**론칭 초기:** 단일 75% 적용
+**론칭 초기:** 단일 50% 적용
 
 ---
 
@@ -97,7 +97,7 @@
 
 ```
 total_points  = SUM(points_charged) 전월 완료 세션
-gross_amount  = total_points × settlement_rate (e.g. 0.75)
+gross_amount  = total_points × settlement_rate (e.g. 0.5)
 tax_amount    = gross_amount × 0.033  ← 원천징수 3.3%
 net_amount    = gross_amount - tax_amount
 ```
