@@ -62,7 +62,7 @@ export async function POST(
   // 통화 종료 — is_busy=false
   await admin.from("creators").update({ is_busy: false }).eq("id", session.creator_id);
 
-  const settlement_rate = creator?.settlement_rate ?? 0.75;
+  const settlement_rate = creator?.settlement_rate ?? 0.5;
   const creator_earning = Math.floor(points_charged * settlement_rate);
 
   if (points_charged > 0) {

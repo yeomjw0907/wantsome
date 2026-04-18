@@ -3,7 +3,7 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-const SETTLEMENT_RATE = 0.75;    // 기본 정산율 75%
+const SETTLEMENT_RATE = 0.5;     // 기본 정산율 50%
 const WITHHOLDING_RATE = 0.033;  // 원천징수 3.3%
 
 // Vercel Cron: 매월 15일 09:00 실행
