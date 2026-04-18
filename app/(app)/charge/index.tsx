@@ -76,58 +76,66 @@ export default function ChargeScreen() {
 
     initConnection().catch(() => null);
 
-    const updatedSub = purchaseUpdatedListener(async (purchase: Purchase) => {
-      const pending = pendingPurchaseRef.current;
-      if (!pending) return;
+    // expo-iap는 네이티브 모듈이라 Expo Go에서 사용 불가 — try-catch로 크래시 방지
+    let updatedSub: { remove: () => void } | null = null;
+    let errorSub: { remove: () => void } | null = null;
 
-      const { productId, userId } = pending;
-      pendingPurchaseRef.current = null;
+    try {
+      updatedSub = purchaseUpdatedListener(async (purchase: Purchase) => {
+        const pending = pendingPurchaseRef.current;
+        if (!pending) return;
 
-      try {
-        const res = await apiCall<VerifyIapResponse>("/api/payments/verify-iap", {
-          method: "POST",
-          body: JSON.stringify({
-            user_id: userId,
-            purchase_token: purchase.purchaseToken ?? "",
-            platform: Platform.OS,
-            product_id: productId,
-            idempotency_key: `${userId}_${productId}_${purchase.transactionId ?? Date.now()}`,
-          }),
-        });
+        const { productId, userId } = pending;
+        pendingPurchaseRef.current = null;
 
-        await finishTransaction({ purchase, isConsumable: true });
+        try {
+          const res = await apiCall<VerifyIapResponse>("/api/payments/verify-iap", {
+            method: "POST",
+            body: JSON.stringify({
+              user_id: userId,
+              purchase_token: purchase.purchaseToken ?? "",
+              platform: Platform.OS,
+              product_id: productId,
+              idempotency_key: `${userId}_${productId}_${purchase.transactionId ?? Date.now()}`,
+            }),
+          });
 
-        if (!mounted) return;
-        setPoints(res.new_balance);
-        if (res.is_first_charged) setFirstChargeInfo(null, true);
-        Toast.show({
-          type: "success",
-          text1: "충전 완료",
-          text2: `+${res.points_added.toLocaleString()}P`,
-        });
-      } catch (e) {
-        const message = e instanceof Error ? e.message : "충전에 실패했습니다.";
-        Toast.show({ type: "error", text1: message });
-      } finally {
+          await finishTransaction({ purchase, isConsumable: true });
+
+          if (!mounted) return;
+          setPoints(res.new_balance);
+          if (res.is_first_charged) setFirstChargeInfo(null, true);
+          Toast.show({
+            type: "success",
+            text1: "충전 완료",
+            text2: `+${res.points_added.toLocaleString()}P`,
+          });
+        } catch (e) {
+          const message = e instanceof Error ? e.message : "충전에 실패했습니다.";
+          Toast.show({ type: "error", text1: message });
+        } finally {
+          if (mounted) setChargingProductId(null);
+        }
+      });
+
+      errorSub = purchaseErrorListener((error) => {
+        // wasPending 체크: 실제 구매 시도 중에만 에러 표시
+        // (앱 재진입 시 이전 세션의 스테일 에러 이벤트가 즉시 발화하는 경우 방지)
+        const wasPending = pendingPurchaseRef.current !== null;
+        pendingPurchaseRef.current = null;
         if (mounted) setChargingProductId(null);
-      }
-    });
-
-    const errorSub = purchaseErrorListener((error) => {
-      // wasPending 체크: 실제 구매 시도 중에만 에러 표시
-      // (앱 재진입 시 이전 세션의 스테일 에러 이벤트가 즉시 발화하는 경우 방지)
-      const wasPending = pendingPurchaseRef.current !== null;
-      pendingPurchaseRef.current = null;
-      if (mounted) setChargingProductId(null);
-      if (wasPending && error.code !== ErrorCode.UserCancelled) {
-        Toast.show({ type: "error", text1: error.message ?? "결제에 실패했습니다." });
-      }
-    });
+        if (wasPending && error.code !== ErrorCode.UserCancelled) {
+          Toast.show({ type: "error", text1: error.message ?? "결제에 실패했습니다." });
+        }
+      });
+    } catch {
+      // Expo Go 등 네이티브 모듈 미탑재 환경 — 화면 표시는 정상, 구매만 비활성
+    }
 
     return () => {
       mounted = false;
-      updatedSub.remove();
-      errorSub.remove();
+      updatedSub?.remove();
+      errorSub?.remove();
     };
   }, [setPoints, setFirstChargeInfo]);
 
