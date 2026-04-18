@@ -4,6 +4,8 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
+import { checkRateLimit, rateLimitExceeded } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +71,10 @@ export async function POST(
   const { content } = await req.json() as { content: string };
   if (!content?.trim()) return NextResponse.json({ message: "내용을 입력하세요" }, { status: 400 });
 
+  // 레이트 리밋: 유저당 1분에 30회
+  const allowed = await checkRateLimit(`dm:${authUser.id}`, 30, 60);
+  if (!allowed) return rateLimitExceeded(60);
+
   const admin = createSupabaseAdmin();
 
   // 권한 확인
@@ -100,15 +106,25 @@ export async function POST(
     [unreadField]: currentUnread + 1,
   }).eq("id", convId);
 
-  // 수신자 알림
+  // 수신자 알림 (DB + 푸시)
   const { data: senderInfo } = await admin.from("users").select("nickname").eq("id", authUser.id).maybeSingle();
-  await admin.from("notifications").insert({
-    user_id: recipientId,
-    type: "dm",
-    title: `${senderInfo?.nickname ?? "누군가"}님의 메시지`,
-    body: content.trim().slice(0, 80),
-    data: { conversation_id: convId },
-  });
+  const notifTitle = `${senderInfo?.nickname ?? "누군가"}님의 메시지`;
+  const notifBody = content.trim().slice(0, 80);
+
+  await Promise.all([
+    admin.from("notifications").insert({
+      user_id: recipientId,
+      type: "dm",
+      title: notifTitle,
+      body: notifBody,
+      data: { conversation_id: convId },
+    }),
+    sendPushToUser(admin, recipientId, {
+      title: notifTitle,
+      body: notifBody,
+      data: { type: "dm", conversation_id: convId },
+    }),
+  ]);
 
   return NextResponse.json({ message: msg }, { status: 201 });
 }

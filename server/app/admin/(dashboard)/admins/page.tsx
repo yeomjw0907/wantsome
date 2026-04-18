@@ -286,7 +286,7 @@ export default function AdminsPage() {
                           })}
                         </td>
                         <td style={{ fontWeight: 600, fontSize: 13 }}>
-                          {(log.users as any)?.nickname ?? "-"}
+                          {(log.users as unknown as { nickname: string | null } | null)?.nickname ?? "-"}
                         </td>
                         <td>
                           <span className="badge badge-blue" style={{ fontSize: 11 }}>

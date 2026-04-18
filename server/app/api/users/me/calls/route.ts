@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       mode,
       status,
       duration_sec,
-      total_cost,
+      points_charged,
       started_at,
       ended_at,
       creator_id,
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       )
     `, { count: "exact" })
     .eq("consumer_id", authUser.id)
-    .eq("status", "ENDED")
+    .eq("status", "ended")
     .order("started_at", { ascending: false })
     .range(offset, offset + limit - 1);
 

@@ -41,12 +41,11 @@ export async function GET(
 
   // 유저 기본 stats (캐시 컬럼) — newly added columns need explicit cast
   type UserStatsRow = { avg_rating: number | null; total_calls: number | null; avg_call_duration_sec: number | null };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userRow } = (await (admin as any)
+  const { data: userRow } = await (admin
     .from("users")
     .select("avg_rating, total_calls, avg_call_duration_sec")
     .eq("id", id)
-    .single()) as { data: UserStatsRow | null };
+    .single() as unknown as Promise<{ data: UserStatsRow | null; error: unknown }>);
 
   // 통화 기록 히스토그램 (실시간 집계)
   const { data: callStats } = await admin
@@ -66,11 +65,10 @@ export async function GET(
 
   // 카테고리별 평균 (user_ratings) — Korean column names need explicit cast
   type RatingRow = { rating_호감: number | null; rating_신뢰: number | null; rating_매너: number | null; rating_매력: number | null };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: ratings } = (await (admin as any)
+  const { data: ratings } = await (admin
     .from("user_ratings")
     .select("rating_호감, rating_신뢰, rating_매너, rating_매력")
-    .eq("consumer_id", id)) as { data: RatingRow[] | null };
+    .eq("consumer_id", id) as unknown as Promise<{ data: RatingRow[] | null; error: unknown }>);
 
   const category_ratings = {
     호감: avgOf((ratings ?? []).map((r) => r.rating_호감)),

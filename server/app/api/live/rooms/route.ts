@@ -7,13 +7,14 @@ import {
   getAuthenticatedUser,
   getLiveConfig,
   getLiveHostProfiles,
+  type LiveRoomRecord,
 } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
 async function buildRoomSummary(
   admin: ReturnType<typeof createSupabaseAdmin>,
-  room: any,
+  room: LiveRoomRecord,
   hostProfile: {
     display_name: string | null;
     nickname: string | null;
@@ -71,11 +72,11 @@ export async function GET(req: NextRequest) {
 
   const hostProfiles = await getLiveHostProfiles(
     admin,
-    (rooms ?? []).map((room: any) => room.host_id),
+    (rooms ?? []).map((room) => room.host_id),
   );
 
   const summaries = await Promise.all(
-    (rooms ?? []).map((room: any) =>
+    (rooms ?? []).map((room) =>
       buildRoomSummary(
         admin,
         room,
@@ -124,7 +125,8 @@ export async function POST(req: NextRequest) {
     getLiveConfig(),
   ]);
 
-  const creator = creatorRes.data as any;
+  type LiveCreatorRow = { id: string; live_enabled: boolean | null; is_live_now: boolean; is_busy: boolean; profile_image_url: string | null };
+  const creator = creatorRes.data as unknown as LiveCreatorRow | null;
   if (!creator?.live_enabled) {
     return NextResponse.json({ message: "라이브 권한이 없습니다." }, { status: 403 });
   }

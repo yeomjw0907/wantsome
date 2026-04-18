@@ -6,17 +6,17 @@ export const dynamic = "force-dynamic";
 // Vercel Cron: 매월 1일 00:00 실행
 // Grade thresholds (monthly_minutes 기준)
 const GRADE_RULES = [
-  { grade: "탑", minMinutes: 600 },
-  { grade: "인기", minMinutes: 200 },
-  { grade: "일반", minMinutes: 30 },
-  { grade: "신규", minMinutes: 0 },
+  { grade: "탑", minMinutes: 600, settlementRate: 0.75 },
+  { grade: "인기", minMinutes: 200, settlementRate: 0.70 },
+  { grade: "일반", minMinutes: 30,  settlementRate: 0.65 },
+  { grade: "신규", minMinutes: 0,   settlementRate: 0.55 },
 ] as const;
 
-function calcGrade(minutes: number): string {
+function calcGrade(minutes: number): { grade: string; settlementRate: number } {
   for (const rule of GRADE_RULES) {
-    if (minutes >= rule.minMinutes) return rule.grade;
+    if (minutes >= rule.minMinutes) return rule;
   }
-  return "신규";
+  return { grade: "신규", settlementRate: 0.55 };
 }
 
 export async function GET(req: NextRequest) {
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       .from("call_sessions")
       .select("duration_sec")
       .eq("creator_id", creator.user_id)
-      .eq("status", "ENDED")
+      .eq("status", "ended")
       .gte("started_at", prevMonthStart)
       .lt("started_at", prevMonthEnd);
 
@@ -65,18 +65,21 @@ export async function GET(req: NextRequest) {
     const totalMinutes = Math.floor(
       (sessions ?? []).reduce((sum, s) => sum + (s.duration_sec ?? 0), 0) / 60
     );
-    const newGrade = calcGrade(totalMinutes);
+    const { grade: newGrade, settlementRate } = calcGrade(totalMinutes);
 
-    const { error: updateErr } = await admin
-      .from("creator_profiles")
-      .update({
+    const [profileUpdate, creatorUpdate] = await Promise.all([
+      admin.from("creator_profiles").update({
         grade: newGrade,
         monthly_minutes: totalMinutes,
         grade_updated_at: now.toISOString(),
-      })
-      .eq("user_id", creator.user_id);
+      }).eq("user_id", creator.user_id),
+      // creators 테이블 정산율도 함께 업데이트
+      admin.from("creators").update({
+        settlement_rate: settlementRate,
+      }).eq("id", creator.user_id),
+    ]);
 
-    if (updateErr) {
+    if (profileUpdate.error || creatorUpdate.error) {
       errors.push(creator.user_id);
     } else {
       updated++;

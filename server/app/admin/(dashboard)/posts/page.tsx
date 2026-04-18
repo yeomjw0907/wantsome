@@ -131,7 +131,7 @@ export default function AdminPostsPage() {
                   <span style={{ fontSize: 12, fontWeight: 600, color: "#1B2A4A" }}>{post.creator_name}</span>
                 </div>
                 {post.caption && (
-                  <p style={{ fontSize: 11, color: "#6B7280", marginBottom: 6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}>
+                  <p style={{ fontSize: 11, color: "#6B7280", marginBottom: 6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as string }}>
                     {post.caption}
                   </p>
                 )}

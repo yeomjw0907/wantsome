@@ -3,8 +3,8 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-const SETTLEMENT_RATE = 0.5;     // 기본 정산율 50%
 const WITHHOLDING_RATE = 0.033;  // 원천징수 3.3%
+const DEFAULT_SETTLEMENT_RATE = 0.55;  // 최소 보장 정산율 (신규)
 
 // Vercel Cron: 매월 15일 09:00 실행
 export async function GET(req: NextRequest) {
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
   const periodStart = `${period}-01T00:00:00Z`;
   const periodEnd = `${targetYear}-${String(targetMonth + 1 > 12 ? 1 : targetMonth + 1).padStart(2, "0")}-01T00:00:00Z`;
 
-  // 승인된 크리에이터 조회
+  // 승인된 크리에이터 + 개인별 정산율 조회
   const { data: creators, error: creatorErr } = await admin
     .from("creator_profiles")
-    .select("user_id")
+    .select("user_id, creators!inner(settlement_rate)")
     .eq("status", "APPROVED");
 
   if (creatorErr || !creators) {
@@ -54,21 +54,25 @@ export async function GET(req: NextRequest) {
     // 해당 월 종료된 통화 수익 합산
     const { data: sessions } = await admin
       .from("call_sessions")
-      .select("total_points")
+      .select("points_charged")
       .eq("creator_id", creator.user_id)
-      .eq("status", "ENDED")
+      .eq("status", "ended")
       .gte("ended_at", periodStart)
       .lt("ended_at", periodEnd);
 
-    const totalPoints = (sessions ?? []).reduce((sum, s) => sum + (s.total_points ?? 0), 0);
+    const totalPoints = (sessions ?? []).reduce((sum, s) => sum + (s.points_charged ?? 0), 0);
 
     if (totalPoints === 0) {
       skipped++;
       continue;
     }
 
+    // 크리에이터별 정산율 (creators.settlement_rate), 없으면 기본값 적용
+    const creatorData = creator as unknown as { user_id: string; creators: { settlement_rate: number } | null };
+    const settlementRate = creatorData.creators?.settlement_rate ?? DEFAULT_SETTLEMENT_RATE;
+
     // 정산 금액 계산 (1P = 1원)
-    const settlementAmount = Math.floor(totalPoints * SETTLEMENT_RATE);
+    const settlementAmount = Math.floor(totalPoints * settlementRate);
     const taxAmount = Math.floor(settlementAmount * WITHHOLDING_RATE);
     const netAmount = settlementAmount - taxAmount;
 

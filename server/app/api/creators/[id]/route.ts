@@ -48,8 +48,13 @@ export async function GET(
     .eq("creator_id", id)
     .eq("is_deleted", false);
 
-  const u = (creator as any).users ?? {};
-  const c = creator as any;
+  type CreatorWithUser = typeof creator & {
+    users: { nickname: string | null; profile_img: string | null; is_verified: boolean } | null;
+    bio: string | null; avg_rating: number | null; categories: string[] | null; available_times: unknown;
+  };
+  const typed = creator as unknown as CreatorWithUser;
+  const u = typed.users ?? {};
+  const c = typed;
 
   return NextResponse.json({
     id:                  creator.id,

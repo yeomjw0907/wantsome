@@ -21,7 +21,7 @@ async function getDashboardData() {
     admin.from("point_charges").select("amount_krw").eq("status", "PAID").gte("created_at", monthStart),
     admin.from("users").select("id", { count: "exact", head: true }).gte("created_at", todayStart).is("deleted_at", null),
     admin.from("users").select("id", { count: "exact", head: true }).gte("created_at", monthStart).is("deleted_at", null),
-    admin.from("call_sessions").select("duration_sec").eq("status", "ENDED").gte("started_at", todayStart),
+    admin.from("call_sessions").select("duration_sec").eq("status", "ended").gte("started_at", todayStart),
     admin.from("creator_profiles").select("id", { count: "exact", head: true }).eq("status", "PENDING"),
     admin.from("reports").select("id", { count: "exact", head: true }).eq("status", "PENDING"),
     admin.from("users").select("id", { count: "exact", head: true }).is("deleted_at", null),

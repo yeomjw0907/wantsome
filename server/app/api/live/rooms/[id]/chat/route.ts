@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
-import { getAuthenticatedUser, isAdminRole, isMuteActive } from "@/lib/live";
+import { getAuthenticatedUser, isAdminRole, isMuteActive, type LiveParticipantRecord } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,8 @@ async function getParticipantAccess(
 
   if (!roomRes.data) return { error: "라이브를 찾을 수 없습니다.", status: 404 as const };
 
-  const room = roomRes.data as any;
+  type RoomStatusRow = { host_id: string; status: string; chat_locked: boolean | null };
+  const room = roomRes.data as unknown as RoomStatusRow;
   if (room.status !== "live" && room.status !== "ended") {
     return { error: "채팅을 조회할 수 없는 상태입니다.", status: 400 as const };
   }
@@ -32,7 +33,7 @@ async function getParticipantAccess(
 
   const isHost = room.host_id === userId;
   const isAdmin = isAdminRole(userRole);
-  const participant = participantRes.data as any;
+  const participant = participantRes.data as unknown as Pick<LiveParticipantRecord, "role" | "status" | "chat_muted_until"> | null;
 
   if (!isHost && !isAdmin && participant?.status !== "joined") {
     return { error: "입장자만 채팅을 사용할 수 있습니다.", status: 403 as const };
@@ -72,16 +73,20 @@ export async function GET(
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
+  type ChatMessageWithUser = { id: string; sender_id: string; sender_role: string; message: string; created_at: string; users: { nickname: string | null; profile_img: string | null } | null };
   return NextResponse.json({
-    messages: (messages ?? []).map((item: any) => ({
-      id: item.id,
-      sender_id: item.sender_id,
-      sender_role: item.sender_role,
-      sender_name: item.users?.nickname ?? "사용자",
-      sender_avatar_url: item.users?.profile_img ?? null,
-      message: item.message,
-      created_at: item.created_at,
-    })),
+    messages: (messages ?? []).map((item) => {
+      const msg = item as unknown as ChatMessageWithUser;
+      return {
+        id: msg.id,
+        sender_id: msg.sender_id,
+        sender_role: msg.sender_role,
+        sender_name: msg.users?.nickname ?? "사용자",
+        sender_avatar_url: msg.users?.profile_img ?? null,
+        message: msg.message,
+        created_at: msg.created_at,
+      };
+    }),
   });
 }
 

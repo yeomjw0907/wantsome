@@ -7,6 +7,8 @@
  * 서버 환경변수에 등록하세요.
  */
 
+import { logger } from "@/lib/logger";
+
 const AGORA_APP_ID = process.env.AGORA_APP_ID ?? "";
 const AGORA_APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE ?? "";
 
@@ -32,7 +34,7 @@ export async function generateAgoraToken(
 ): Promise<string | null> {
   if (!AGORA_APP_CERTIFICATE) {
     // 개발 환경: App Certificate 없이 Agora 테스트 (보안 취약 — 운영 금지)
-    console.warn("[Agora] AGORA_APP_CERTIFICATE 없음 → no-token 모드");
+    logger.warn("Agora no-token mode: AGORA_APP_CERTIFICATE not set");
     return null;
   }
 
@@ -51,7 +53,7 @@ export async function generateAgoraToken(
     ) as string;
     return token;
   } catch {
-    console.error("[Agora] agora-token 패키지 오류. npm install agora-token 실행 필요");
+    logger.error("Agora token build failed: agora-token package error");
     return null;
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/adminAuth";
 import { createSupabaseAdmin } from "@/lib/supabase";
-import { getLiveHostProfile, isMuteActive } from "@/lib/live";
+import { getLiveHostProfile, isMuteActive, type LiveRoomRecord } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
@@ -61,8 +61,12 @@ export async function GET(
     return NextResponse.json({ message: "라이브를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  const room = roomRes.data as any;
+  const room = roomRes.data as unknown as LiveRoomRecord;
   const hostProfile = await getLiveHostProfile(admin, room.host_id);
+
+  type ParticipantWithUser = { user_id: string; role: string; status: string; paid_points: number | null; joined_at: string | null; left_at: string | null; refund_status: string; blocked_until_room_end: boolean; chat_muted_until: string | null; users: { nickname: string | null; profile_img: string | null } | null };
+  type ChatWithUser = { id: string; sender_id: string; sender_role: string; message: string; created_at: string; users: { nickname: string | null } | null };
+  type ModerationWithUsers = { id: string; target_user_id: string; actor_user_id: string; actor_role: string; action: string; reason: string | null; created_at: string; actor: { nickname: string | null } | null; target: { nickname: string | null } | null };
 
   return NextResponse.json({
     room: {
@@ -82,38 +86,30 @@ export async function GET(
       extension_count: room.extension_count,
       chat_locked: room.chat_locked,
     },
-    participants: (participantsRes.data ?? []).map((item: any) => ({
-      user_id: item.user_id,
-      name: item.users?.nickname ?? "사용자",
-      avatar_url: item.users?.profile_img ?? null,
-      role: item.role,
-      status: item.status,
-      paid_points: item.paid_points,
-      joined_at: item.joined_at,
-      left_at: item.left_at,
-      refund_status: item.refund_status,
-      blocked_until_room_end: item.blocked_until_room_end,
-      is_muted: isMuteActive(item.chat_muted_until),
-    })),
-    chat_messages: (chatRes.data ?? []).map((item: any) => ({
-      id: item.id,
-      sender_id: item.sender_id,
-      sender_role: item.sender_role,
-      sender_name: item.users?.nickname ?? "사용자",
-      message: item.message,
-      created_at: item.created_at,
-    })),
-    moderation_actions: (actionsRes.data ?? []).map((item: any) => ({
-      id: item.id,
-      target_user_id: item.target_user_id,
-      target_name: item.target?.nickname ?? null,
-      actor_user_id: item.actor_user_id,
-      actor_name: item.actor?.nickname ?? "관리자",
-      actor_role: item.actor_role,
-      action: item.action,
-      reason: item.reason,
-      created_at: item.created_at,
-    })),
-    gift_points: (giftsRes.data ?? []).reduce((sum: number, item: any) => sum + (item.amount ?? 0), 0),
+    participants: (participantsRes.data ?? []).map((item) => {
+      const p = item as unknown as ParticipantWithUser;
+      return {
+        user_id: p.user_id,
+        name: p.users?.nickname ?? "사용자",
+        avatar_url: p.users?.profile_img ?? null,
+        role: p.role,
+        status: p.status,
+        paid_points: p.paid_points,
+        joined_at: p.joined_at,
+        left_at: p.left_at,
+        refund_status: p.refund_status,
+        blocked_until_room_end: p.blocked_until_room_end,
+        is_muted: isMuteActive(p.chat_muted_until),
+      };
+    }),
+    chat_messages: (chatRes.data ?? []).map((item) => {
+      const m = item as unknown as ChatWithUser;
+      return { id: m.id, sender_id: m.sender_id, sender_role: m.sender_role, sender_name: m.users?.nickname ?? "사용자", message: m.message, created_at: m.created_at };
+    }),
+    moderation_actions: (actionsRes.data ?? []).map((item) => {
+      const a = item as unknown as ModerationWithUsers;
+      return { id: a.id, target_user_id: a.target_user_id, target_name: a.target?.nickname ?? null, actor_user_id: a.actor_user_id, actor_name: a.actor?.nickname ?? "관리자", actor_role: a.actor_role, action: a.action, reason: a.reason, created_at: a.created_at };
+    }),
+    gift_points: (giftsRes.data ?? []).reduce((sum, item) => sum + ((item as unknown as { amount: number | null }).amount ?? 0), 0),
   });
 }

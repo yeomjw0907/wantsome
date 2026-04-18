@@ -38,7 +38,8 @@ function resolveBaseUrl(): string {
     return "https://api.wantsome.kr";
   }
 
-  return envUrl || "http://localhost:3000";
+  // LAN IP 감지 실패 시: localhost는 물리 기기에서 접근 불가이므로 프로덕션 API로 폴백
+  return envUrl && !isLoopbackApiUrl(envUrl) ? envUrl : "https://api.wantsome.kr";
 }
 
 export const BASE_URL = resolveBaseUrl();

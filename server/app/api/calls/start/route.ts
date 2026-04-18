@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin, createSupabaseClient } from "@/lib/supabase";
+import { sendPushToUser } from "@/lib/push";
+import { checkRateLimit, rateLimitExceeded } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +36,10 @@ export async function POST(req: NextRequest) {
   if (!creator_id || !["blue", "red"].includes(mode)) {
     return NextResponse.json({ message: "creator_id, mode 필수" }, { status: 400 });
   }
+
+  // 레이트 리밋: 유저당 1분에 10회
+  const allowed = await checkRateLimit(`call_start:${authUser.id}`, 10, 60);
+  if (!allowed) return rateLimitExceeded(60);
 
   const perMinRate = PER_MIN_RATE[mode];
   const admin = createSupabaseAdmin();
@@ -70,11 +77,11 @@ export async function POST(req: NextRequest) {
   }
 
   type ConsumerInfo = { nickname: string | null; profile_img: string | null; avg_rating: number | null; total_calls: number | null; avg_call_duration_sec: number | null };
-  const { data: consumerInfo } = (await (admin as any)
+  const { data: consumerInfo } = await (admin
     .from("users")
     .select("nickname, profile_img, avg_rating, total_calls, avg_call_duration_sec")
     .eq("id", authUser.id)
-    .single()) as { data: ConsumerInfo | null };
+    .single() as unknown as Promise<{ data: ConsumerInfo | null; error: unknown }>);
 
   const { data: session, error: sessionErr } = await admin
     .from("call_sessions")
@@ -90,7 +97,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (sessionErr || !session) {
-    console.error("[calls/start] session insert error:", sessionErr);
+    logger.error("calls/start session insert error", { error: sessionErr?.message });
     return NextResponse.json({ message: "세션 생성 실패" }, { status: 500 });
   }
 
@@ -109,6 +116,13 @@ export async function POST(req: NextRequest) {
       consumer_total_calls: consumerInfo?.total_calls ?? 0,
       consumer_avg_duration_sec: consumerInfo?.avg_call_duration_sec ?? 0,
     },
+  });
+
+  // 크리에이터 앱이 백그라운드일 때도 수신 알림 전달
+  await sendPushToUser(admin, creator_id, {
+    title: "📞 전화가 왔어요",
+    body: `${consumerInfo?.nickname ?? "유저"}님이 전화를 걸었어요`,
+    data: { type: "incoming_call", session_id: session.id, mode },
   });
 
   return NextResponse.json({

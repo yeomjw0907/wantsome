@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 import { sendPushToUser } from "@/lib/push";
+import { logger } from "@/lib/logger";
 import {
   calcReservationDeposit,
   hasReservationConflict,
@@ -173,10 +174,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (refundError) {
-      console.error("[reservations create] failed to rollback deducted points", {
+      logger.error("reservations rollback failed", {
         userId: authUser.id,
         amount: depositPoints,
-        message: refundError.message,
+        error: refundError.message,
       });
     }
 

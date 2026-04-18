@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (reportErr || !report) {
-    console.error("[reports] insert error:", reportErr);
+    logger.error("reports insert error", { error: reportErr?.message });
     return NextResponse.json({ message: "신고 접수 실패" }, { status: 500 });
   }
 

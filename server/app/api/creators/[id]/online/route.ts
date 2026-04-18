@@ -51,17 +51,18 @@ async function sendOnlinePush(
 
   if (!favs || favs.length === 0) return;
 
-  const creatorName =
-    (creator as any)?.display_name ?? (creator as any)?.users?.nickname ?? "크리에이터";
+  type CreatorOnlineRow = { display_name: string | null; users: { nickname: string | null } | null };
+  const creatorTyped = creator as unknown as CreatorOnlineRow | null;
+  const creatorName = creatorTyped?.display_name ?? creatorTyped?.users?.nickname ?? "크리에이터";
 
   const { data: tokenRows } = await admin
     .from("push_tokens")
     .select("token")
-    .in("user_id", favs.map((f: any) => f.user_id));
+    .in("user_id", (favs ?? []).map((f) => f.user_id));
 
   if (!tokenRows || tokenRows.length === 0) return;
 
-  const messages = tokenRows.map((r: any) => ({
+  const messages = tokenRows.map((r) => ({
     to: r.token,
     title: `${creatorName}님이 접속했어요! 💫`,
     body: "지금 바로 통화해보세요",

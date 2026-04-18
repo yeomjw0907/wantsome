@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
-import { getAuthenticatedUser, getLiveHostProfile, isAdminRole, isMuteActive } from "@/lib/live";
+import { getAuthenticatedUser, getLiveHostProfile, isAdminRole, isMuteActive, type LiveParticipantRecord } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,7 @@ export async function GET(
       .maybeSingle(),
   ]);
 
-  const participant = participantRes.data as any;
+  const participant = participantRes.data as unknown as Pick<LiveParticipantRecord, "role" | "status" | "blocked_until_room_end" | "chat_muted_until"> | null;
   const isKicked = participant?.status === "kicked" && participant?.blocked_until_room_end;
   const isJoined = participant?.status === "joined";
 

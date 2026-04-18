@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 import { getProduct } from "@/lib/products";
+import { checkRateLimit, rateLimitExceeded } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   let body: {
     user_id: string;
-    receipt: string;
+    purchase_token: string;
     platform: string;
     product_id: string;
     idempotency_key: string;
@@ -35,16 +36,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { user_id, receipt, platform, product_id, idempotency_key } = body;
+  const { user_id, purchase_token, platform, product_id, idempotency_key } = body;
   if (
     !user_id ||
     !idempotency_key ||
     !product_id ||
-    typeof receipt !== "string" ||
+    typeof purchase_token !== "string" ||
     !VALID_PLATFORMS.includes(platform as (typeof VALID_PLATFORMS)[number])
   ) {
     return NextResponse.json(
-      { message: "Missing or invalid: user_id, receipt, platform, product_id, idempotency_key" },
+      { message: "Missing or invalid: user_id, purchase_token, platform, product_id, idempotency_key" },
       { status: 400 }
     );
   }
@@ -52,6 +53,10 @@ export async function POST(req: NextRequest) {
   if (user_id !== authUser.id) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
+
+  // 레이트 리밋: 유저당 1시간에 5회
+  const allowed = await checkRateLimit(`iap:${authUser.id}`, 5, 3600);
+  if (!allowed) return rateLimitExceeded(3600);
 
   const product = getProduct(product_id);
   if (!product) {
@@ -91,7 +96,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "User not found" }, { status: 404 });
   }
 
-  const currentPoints = userRow.points ?? 0;
   const isFirstCharged = userRow.is_first_charged ?? false;
   const firstChargeDeadline = userRow.first_charge_deadline
     ? new Date(userRow.first_charge_deadline)
@@ -101,43 +105,30 @@ export async function POST(req: NextRequest) {
 
   const pointsToAdd = isFirst ? product.points * 2 : product.points;
   const bonusPoints = Math.floor(product.points * product.bonus);
-  const newBalance = currentPoints + pointsToAdd;
 
-  const { error: updateError } = await admin
-    .from("users")
-    .update({
-      points: newBalance,
-      ...(isFirst ? { is_first_charged: true } : {}),
-    })
-    .eq("id", user_id);
-
-  if (updateError) {
-    return NextResponse.json({ message: "Failed to update user points" }, { status: 500 });
-  }
-
-  const { error: insertError } = await admin.from("point_charges").insert({
-    user_id,
-    product_id: product.id,
-    amount_krw: product.price,
-    points: pointsToAdd,
-    bonus: bonusPoints,
-    is_first: isFirst,
-    platform,
-    iap_receipt: receipt || null,
-    idempotency_key,
+  // point_charges 기록 + users.points 업데이트를 단일 DB 트랜잭션으로 처리
+  const { data: rpcRows, error: rpcError } = await admin.rpc("verify_iap_charge", {
+    p_user_id:         user_id,
+    p_product_id:      product.id,
+    p_amount_krw:      product.price,
+    p_points_to_add:   pointsToAdd,
+    p_bonus:           bonusPoints,
+    p_is_first:        isFirst,
+    p_platform:        platform,
+    p_purchase_token:  purchase_token || null,
+    p_idempotency_key: idempotency_key,
   });
 
-  if (insertError) {
-    return NextResponse.json(
-      { message: "Failed to record charge (possible duplicate idempotency_key)" },
-      { status: 500 }
-    );
+  if (rpcError || !rpcRows || rpcRows.length === 0) {
+    return NextResponse.json({ message: "포인트 지급에 실패했습니다" }, { status: 500 });
   }
+
+  const result = rpcRows[0] as { is_duplicate: boolean; new_balance: number; points_added: number };
 
   return NextResponse.json({
     success: true,
-    points_added: pointsToAdd,
-    new_balance: newBalance,
+    points_added: result.points_added,
+    new_balance: result.new_balance,
     is_first_charged: isFirst,
   });
 }

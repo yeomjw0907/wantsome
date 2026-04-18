@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import {
+  initConnection,
+  requestPurchase,
+  finishTransaction,
+  purchaseUpdatedListener,
+  purchaseErrorListener,
+  ErrorCode,
+  type Purchase,
+} from "expo-iap";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePointStore } from "@/stores/usePointStore";
 import { PRODUCTS, type ProductId } from "@/constants/products";
@@ -44,6 +53,7 @@ export default function ChargeScreen() {
   const [countdown, setCountdown] = useState("");
   const [chargingProductId, setChargingProductId] = useState<ProductId | null>(null);
   const [pendingProductId, setPendingProductId] = useState<ProductId | null>(null);
+  const pendingPurchaseRef = useRef<{ productId: ProductId; userId: string } | null>(null);
   const showFirstChargeBanner =
     !isFirstCharged &&
     firstChargeDeadline &&
@@ -59,6 +69,67 @@ export default function ChargeScreen() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [showFirstChargeBanner, firstChargeDeadline]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    let mounted = true;
+
+    initConnection().catch(() => null);
+
+    const updatedSub = purchaseUpdatedListener(async (purchase: Purchase) => {
+      const pending = pendingPurchaseRef.current;
+      if (!pending) return;
+
+      const { productId, userId } = pending;
+      pendingPurchaseRef.current = null;
+
+      try {
+        const res = await apiCall<VerifyIapResponse>("/api/payments/verify-iap", {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: userId,
+            purchase_token: purchase.purchaseToken ?? "",
+            platform: Platform.OS,
+            product_id: productId,
+            idempotency_key: `${userId}_${productId}_${purchase.transactionId ?? Date.now()}`,
+          }),
+        });
+
+        await finishTransaction({ purchase, isConsumable: true });
+
+        if (!mounted) return;
+        setPoints(res.new_balance);
+        if (res.is_first_charged) setFirstChargeInfo(null, true);
+        Toast.show({
+          type: "success",
+          text1: "충전 완료",
+          text2: `+${res.points_added.toLocaleString()}P`,
+        });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "충전에 실패했습니다.";
+        Toast.show({ type: "error", text1: message });
+      } finally {
+        if (mounted) setChargingProductId(null);
+      }
+    });
+
+    const errorSub = purchaseErrorListener((error) => {
+      // wasPending 체크: 실제 구매 시도 중에만 에러 표시
+      // (앱 재진입 시 이전 세션의 스테일 에러 이벤트가 즉시 발화하는 경우 방지)
+      const wasPending = pendingPurchaseRef.current !== null;
+      pendingPurchaseRef.current = null;
+      if (mounted) setChargingProductId(null);
+      if (wasPending && error.code !== ErrorCode.UserCancelled) {
+        Toast.show({ type: "error", text1: error.message ?? "결제에 실패했습니다." });
+      }
+    });
+
+    return () => {
+      mounted = false;
+      updatedSub.remove();
+      errorSub.remove();
+    };
+  }, [setPoints, setFirstChargeInfo]);
 
   const onProductPress = useCallback(
     (productId: ProductId) => {
@@ -81,40 +152,29 @@ export default function ChargeScreen() {
       const userId = user?.id;
       if (!userId) return;
 
-      const idempotencyKey = `${userId}_${productId}_${Date.now()}`;
-      const platform = Platform.OS as "ios" | "android";
+      const product = PRODUCTS.find((p) => p.id === productId);
+      if (!product) return;
+
       setPendingProductId(null);
       setChargingProductId(productId);
+      pendingPurchaseRef.current = { productId, userId };
 
       try {
-        const res = await apiCall<VerifyIapResponse>("/api/payments/verify-iap", {
-          method: "POST",
-          body: JSON.stringify({
-            user_id: userId,
-            receipt: "dev_mock_receipt",
-            platform,
-            product_id: productId,
-            idempotency_key: idempotencyKey,
-          }),
-        });
-
-        setPoints(res.new_balance);
-        if (res.is_first_charged) {
-          setFirstChargeInfo(null, true);
-        }
-        Toast.show({
-          type: "success",
-          text1: "충전 완료",
-          text2: `+${res.points_added.toLocaleString()}P`,
+        await requestPurchase({
+          type: "in-app",
+          request: {
+            apple: { sku: product.storeId },
+            google: { skus: [product.storeId] },
+          },
         });
       } catch (e) {
-        const message = e instanceof Error ? e.message : "충전에 실패했습니다.";
-        Toast.show({ type: "error", text1: message });
-      } finally {
+        pendingPurchaseRef.current = null;
         setChargingProductId(null);
+        const message = e instanceof Error ? e.message : "결제를 시작할 수 없습니다.";
+        Toast.show({ type: "error", text1: message });
       }
     },
-    [user?.id, setPoints, setFirstChargeInfo]
+    [user?.id]
   );
 
   const cardWidth = width - 32;
@@ -185,11 +245,13 @@ export default function ChargeScreen() {
                       <Text className="text-navy text-base font-semibold">
                         {product.name}
                       </Text>
-                      <View className="bg-pink rounded-full px-2 py-0.5">
-                        <Text className="text-white text-xs font-semibold">
-                          +{(product.bonus * 100).toFixed(0)}%
-                        </Text>
-                      </View>
+                      {product.bonus > 0 && (
+                        <View className="bg-pink rounded-full px-2 py-0.5">
+                          <Text className="text-white text-xs font-semibold">
+                            +{(product.bonus * 100).toFixed(0)}%
+                          </Text>
+                        </View>
+                      )}
                       {showFirstBadge && (
                         <View
                           className="rounded-full px-2 py-0.5"

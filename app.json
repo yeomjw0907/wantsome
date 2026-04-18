@@ -103,7 +103,8 @@
           "sounds": []
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-iap"
     ],
     "extra": {
       "eas": {

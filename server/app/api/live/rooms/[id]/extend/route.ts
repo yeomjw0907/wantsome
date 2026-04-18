@@ -30,7 +30,8 @@ export async function POST(
     getLiveConfig(),
   ]);
 
-  const room = roomRes.data as any;
+  type LiveRoomExtendRow = { id: string; host_id: string; status: string; scheduled_end_at: string; extension_count: number | null };
+  const room = roomRes.data as unknown as LiveRoomExtendRow | null;
   if (!room) return NextResponse.json({ message: "라이브를 찾을 수 없습니다." }, { status: 404 });
   if (room.host_id !== user.id) return NextResponse.json({ message: "권한이 없습니다." }, { status: 403 });
   if (room.status !== "live") return NextResponse.json({ message: "진행 중인 라이브만 연장할 수 있습니다." }, { status: 400 });

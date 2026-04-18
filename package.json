@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "apple:oauth-secret": "node scripts/generate-apple-oauth-secret.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -15,6 +16,7 @@
     "expo": "~55.0.5",
     "expo-constants": "~55.0.9",
     "expo-font": "~55.0.4",
+    "expo-iap": "^4.2.1",
     "expo-image-picker": "~55.0.13",
     "expo-linking": "~55.0.8",
     "expo-notifications": "~55.0.13",
@@ -36,6 +38,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "jose": "^6.0.10",
     "@expo/ngrok": "^4.1.0",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^55.0.10",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { shouldRefundPendingAck } from "@/lib/liveRuntime";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { getLiveConfig } from "@/lib/live";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +49,11 @@ export async function POST(req: NextRequest) {
       });
 
       if (refundError) {
-        console.error("[live tick] refund failed", {
+        logger.error("live tick refund failed", {
           roomId: participant.room_id,
           userId: participant.user_id,
           points: participant.paid_points,
-          message: refundError.message,
+          error: refundError.message,
         });
         refund_failed++;
         continue;

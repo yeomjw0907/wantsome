@@ -86,57 +86,57 @@ export async function POST(req: NextRequest) {
         const minutes = Math.floor(duration_sec / 60);
         const points_charged = minutes * per_min_rate;
 
-        // 세션 종료
-        await admin
-          .from("call_sessions")
-          .update({
-            status: "ended",
-            ended_at: endedAt.toISOString(),
-            duration_sec,
-            points_charged,
-          })
-          .eq("id", session.id);
+        // 핵심: 세션 종료 + 포인트 차감을 단일 DB 트랜잭션으로 처리
+        const { data: rpcRows, error: rpcError } = await admin.rpc("end_call_atomic", {
+          p_session_id:     session.id,
+          p_ended_at:       endedAt.toISOString(),
+          p_duration_sec:   duration_sec,
+          p_points_charged: points_charged,
+          p_consumer_id:    session.consumer_id,
+          p_creator_id:     session.creator_id,
+        });
 
-        // 소비자 포인트 차감 (이미 매 분 차감됐으므로 남은 잔액만 처리)
-        if (consumer.points > 0) {
-          await admin
-            .from("users")
-            .update({ points: 0 })
-            .eq("id", session.consumer_id);
+        if (rpcError || !rpcRows || rpcRows.length === 0) {
+          continue; // 실패 시 다음 세션으로 — 다음 tick에서 재시도됨
         }
 
-        // [버그 수정] 크리에이터 is_busy=false + monthly_minutes 집계
+        const { already_ended } = rpcRows[0] as { already_ended: boolean };
+        if (already_ended) {
+          ended++;
+          continue;
+        }
+
+        // 비핵심 업데이트 — 실패해도 세션/포인트는 이미 원자적으로 처리됨
         const { data: creator } = await admin
           .from("creators")
           .select("monthly_minutes, settlement_rate")
           .eq("id", session.creator_id)
           .single();
 
-        await admin
-          .from("creators")
-          .update({
+        const creatorEarning = Math.floor(points_charged * (creator?.settlement_rate ?? 0.5));
+
+        await Promise.all([
+          admin.from("creators").update({
             is_busy: false,
             monthly_minutes: (creator?.monthly_minutes ?? 0) + minutes,
-          })
-          .eq("id", session.creator_id);
+          }).eq("id", session.creator_id),
 
-        // 양측에 call_ended 신호
-        const creatorEarning = Math.floor(points_charged * (creator?.settlement_rate ?? 0.5));
-        await admin.from("call_signals").insert([
-          {
-            session_id: session.id,
-            to_user_id: session.consumer_id,
-            from_user_id: session.creator_id,
-            type: "call_ended",
-            payload: { duration_sec, points_charged, reason: "insufficient_points" },
-          },
-          {
-            session_id: session.id,
-            to_user_id: session.creator_id,
-            from_user_id: session.consumer_id,
-            type: "call_ended",
-            payload: { duration_sec, points_charged, creator_earning: creatorEarning, reason: "insufficient_points" },
-          },
+          admin.from("call_signals").insert([
+            {
+              session_id: session.id,
+              to_user_id: session.consumer_id,
+              from_user_id: session.creator_id,
+              type: "call_ended",
+              payload: { duration_sec, points_charged, reason: "insufficient_points" },
+            },
+            {
+              session_id: session.id,
+              to_user_id: session.creator_id,
+              from_user_id: session.consumer_id,
+              type: "call_ended",
+              payload: { duration_sec, points_charged, creator_earning: creatorEarning, reason: "insufficient_points" },
+            },
+          ]),
         ]);
 
         ended++;

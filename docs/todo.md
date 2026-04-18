@@ -1,177 +1,215 @@
-# wantsome — 사용자(개발자) 할 일 목록
+# wantsome — 출시 준비 체크리스트
 
-> AI(Claude)가 코드로 구현할 수 없는 **외부 서비스 계정/설정/등록** 작업입니다.
-> 아래 항목들을 순서대로 완료해야 앱이 실제 동작합니다.
-
----
-
-## 🔴 필수 (앱 동작에 필수)
-
-### 1. Supabase 프로젝트 설정
-- [x] [supabase.com](https://supabase.com) → 프로젝트 생성
-- [x] `server/supabase/001_initial.sql` 실행 (users, creators, system_config 등)
-- [x] `server/supabase/002_point_charges.sql` 실행
-- [x] `server/supabase/003_calls.sql` 실행 (call_sessions, call_signals)
-- [x] `server/supabase/004_creator_profiles.sql` 실행 (Phase 2에서 생성됨)
-- [x] `server/supabase/005_reservations.sql` 실행 (Phase 3에서 생성됨)
-- [x] `server/supabase/006_reports.sql` 실행
-- [x] `server/supabase/007_admin.sql` 실행 (Phase 5에서 생성됨)
-- [x] **Row Level Security(RLS)** 활성화 확인 (각 SQL 파일에 포함됨)
-- [x] **Realtime** 활성화: `creators`, `call_signals`, `users` 테이블 → Supabase 대시보드 → Table Editor → Realtime 토글 ON
-- [x] `system_config` 초기값 INSERT (docs/admin/01_admin_page.md 참고)
-- [x] Storage 버킷 생성:
-  - `id-cards` (private) — 크리에이터 신분증
-  - `profile-images` (public) — 프로필 사진
-  - `contracts` (private) — 계약서 PDF
-
-### 2. Agora 설정
-- [x] [agora.io](https://www.agora.io) → 계정 생성 → 프로젝트 생성
-- [x] App ID 복사 → `.env` / `server/.env`에 `EXPO_PUBLIC_AGORA_APP_ID=` 입력
-- [x] **App Certificate** 활성화 → `server/.env`에 `AGORA_APP_CERTIFICATE=` 입력
-  - ⚠️ App Certificate가 없으면 토큰 없이 테스트는 가능하지만, 프로덕션에서는 반드시 필요
-- [x] Agora 콘솔 → 사용량 확인 (무료 플랜: 월 10,000분)
-
-### 3. 소셜 로그인 (Supabase Auth)
-- [ ] Supabase 대시보드 → Authentication → Providers
-  - **Google OAuth**:
-    - Google Cloud Console → OAuth 2.0 클라이언트 ID 생성
-    - Client ID, Client Secret → Supabase에 입력
-    - 리디렉트 URL: `https://{your-project}.supabase.co/auth/v1/callback`
-  - **Apple Sign In**:
-    - Apple Developer → Certificates → Sign In with Apple 설정
-    - App ID suffix, Team ID → Supabase에 입력
-    - 로컬 테스트는 실제 디바이스 + Apple 계정 필요
-  - **Kakao (선택)**:
-    - [developers.kakao.com](https://developers.kakao.com) → 앱 생성
-    - REST API 키 → Supabase Kakao 프로바이더에 입력
-- [ ] `GUIDE_SOCIAL_LOGIN.md` 참고
-
-### 4. 환경변수 설정
-- [ ] `.env` 파일 생성 (`.env.example` 복사 후 값 입력):
-  ```
-  EXPO_PUBLIC_SUPABASE_URL=
-  EXPO_PUBLIC_SUPABASE_ANON_KEY=
-  EXPO_PUBLIC_AGORA_APP_ID=
-  EXPO_PUBLIC_API_BASE_URL=https://your-server.vercel.app
-  ```
-- [ ] `server/.env` 파일 생성 (`server/.env.example` 복사 후 값 입력):
-  ```
-  SUPABASE_URL=
-  SUPABASE_SERVICE_ROLE_KEY=
-  AGORA_APP_CERTIFICATE=
-  PORTONE_API_SECRET=
-  SLACK_WEBHOOK_URL=
-  ```
-
-### 5. API 서버 배포 (Vercel)
-- [ ] [vercel.com](https://vercel.com) → 계정 생성 (GitHub 연동)
-- [ ] `server/` 폴더를 Vercel 프로젝트로 배포
-  - Root Directory: `server`
-  - Framework: Next.js
-- [ ] Vercel 대시보드 → Settings → Environment Variables → server/.env 값들 입력
-- [ ] 배포 완료 후 URL → `.env`의 `EXPO_PUBLIC_API_BASE_URL` 업데이트
-- [ ] `docs/context/07_vercel_deploy.md` 참고
+> **최종 업데이트: 2026-04-18** — IAP·소셜 로그인·코드 기준 동기화
+>
+> **서비스 포지션:** 성인 플랫폼이 아니라 **인플루언서(크리에이터)와 팬이 1:1 영상통화**로 소통하는 서비스. 스토어 설명·심사 노트·등급 설문도 이에 맞게 작성한다.
+>
+> 🧑 = 사람이 직접 해야 하는 외부 계정/설정 작업  
+> 🤖 = 코드/서버에서 처리하는 작업  
+> ✅ = 완료
 
 ---
 
-## 🟡 권장 (프로덕션 필수)
-
-### 6. PortOne V2 (본인인증 + 계좌 실명조회)
-- [ ] [portone.io](https://portone.io) → 계정 생성 → 사업자 등록 필요
-- [ ] Store ID, Channel Key → `.env`에 입력:
-  ```
-  EXPO_PUBLIC_PORTONE_STORE_ID=
-  EXPO_PUBLIC_PORTONE_CHANNEL_KEY=
-  PORTONE_API_SECRET=
-  ```
-- [ ] PASS 본인인증 채널 설정 (KG이니시스 또는 다날)
-- [ ] 계좌 실명조회 API 연동
-- [ ] ⚠️ **사업자등록증 필수** — 개인사업자 또는 법인 등록 후 PortOne 계약 가능
-
-### 7. Apple Developer Program (iOS 배포)
-- [ ] [developer.apple.com](https://developer.apple.com) → 연 $99 등록
-- [ ] Bundle ID: `kr.wantsome.app` 등록
-- [ ] 연령 등급: 17+ 설정 (성인 콘텐츠)
-- [ ] App Store Connect → 앱 생성
-- [ ] 개인정보처리방침 URL 필요: `https://wantsome.kr/privacy`
-- [ ] Expo EAS 설정: `docs/context/06_eas_build.md` 참고
-
-### 8. Google Play Console (Android 배포)
-- [ ] [play.google.com/console](https://play.google.com/console) → 일회성 $25 등록
-- [ ] Package Name: `kr.wantsome.app`
-- [ ] 콘텐츠 등급: IARC 설문 → 성인(18+)
-- [ ] 개인정보처리방침 URL 필요
-
-### 9. Expo EAS (앱 빌드/배포)
-- [ ] `npm install -g eas-cli`
-- [ ] `eas login` → Expo 계정으로 로그인
-- [ ] `eas build:configure`
-- [ ] `eas build --platform ios` / `eas build --platform android`
-- [ ] `docs/context/06_eas_build.md` 참고
+## 현재 출시 준비도: **약 40%** — 심사 제출 전 필수 작업 남음
 
 ---
 
-## 🟢 선택 (운영 편의)
+# 🔴 지금 해야 할 것 (우선순위)
 
-### 10. Slack 웹훅 설정
-- [ ] Slack 워크스페이스 생성 또는 기존 워크스페이스 사용
-- [ ] 채널 생성: `#긴급-신고`, `#크리에이터-심사`, `#포인트-로그`, `#정산-알림`, `#매출-리포트`, `#운영-알림`
-- [ ] Slack App → Incoming Webhooks 활성화 → Webhook URL 복사
-- [ ] `server/.env`에 `SLACK_WEBHOOK_URL=` 입력
+## [🧑] 1. 실제 IAP(인앱결제) — 스토어 등록 + 서버 환경변수
 
-### 11. Expo Push Notifications
-- [ ] Expo 대시보드 → Push Notifications → 설정
-- [ ] iOS: APNs 키 (.p8) → Expo 업로드
-- [ ] Android: FCM 서버 키 → Expo 업로드
-- [ ] 앱에서 `expo-notifications` 권한 요청 로직 이미 포함됨
+앱(`expo-iap`)은 이미 구매 → `/api/payments/verify-iap` 로 `purchase_token`·`product_id`를 보냅니다. `**dev_mock_receipt` 하드코딩은 현재 코드에 없음** (`app/(app)/charge/index.tsx` 기준).
 
-### 12. 관리자 superadmin 계정 설정
-- [ ] 서버 배포 후 본인 계정으로 로그인
-- [ ] Supabase SQL Editor에서:
-  ```sql
-  UPDATE users SET role = 'superadmin' WHERE id = '당신의_user_id';
+다만 **서버는 아직 Apple/Google 공식 API로 영수증을 검증하지 않음**. 스토어에 상품만 올리고 끝이 아니라, 이후 **[🤖] 서버 영수증 검증 구현**이 필요합니다.
+
+### 1-A. 반드시 맞출 것: 상품 ID = 코드와 동일
+
+`constants/products.ts` / `server/lib/products.ts`와 **완전히 동일한 Product ID**로 스토어에 **소모형** 상품을 만듭니다. (예전 문서의 4종 `points_1000` 등은 **사용하지 않음**.)
+
+
+| 앱 내부 ID  | 인앱 상품 ID (스토어 등록명)              | 가격(원) 참고 | 지급 포인트  |
+| -------- | ------------------------------- | -------- | ------- |
+| POINT_01 | `kr.wantsome.app.points_5500`   | 4,900    | 5,500   |
+| POINT_02 | `kr.wantsome.app.points_11500`  | 9,900    | 11,500  |
+| POINT_03 | `kr.wantsome.app.points_24000`  | 19,900   | 24,000  |
+| POINT_04 | `kr.wantsome.app.points_50000`  | 39,900   | 50,000  |
+| POINT_05 | `kr.wantsome.app.points_105000` | 79,900   | 105,000 |
+| POINT_06 | `kr.wantsome.app.points_200000` | 149,000  | 200,000 |
+
+
+가격·표시명은 스토어 정책에 맞게 조정 가능. **문자열 ID는 위와 통일**하는 것을 권장합니다.
+
+### 1-B. Apple (iOS)
+
+1. [App Store Connect](https://appstoreconnect.apple.com) → 해당 앱 → **기능** → **인앱 구매**
+2. **소모형**으로 위 6개 Product ID 각각 생성
+3. **앱 정보**(또는 앱 설정) → **공유 암호(App-Specific Shared Secret)** 생성
+4. 배포 서버 `server/.env` (로컬이면 `server/.env.local` 등 실제 로드되는 파일):
+  ```env
+   APPLE_IAP_SHARED_SECRET=여기에_공유_암호
   ```
-- [ ] 이후 관리자 패널 URL: `https://your-server.vercel.app/admin`에서 관리
+5. 참고: `server/.env.example`에 키 이름만 정리해 둠 — **실제 값은 커밋 금지**
 
-### 13. 사업자 정보 system_config 입력
-- [ ] 사업자 등록 완료 후 Supabase SQL Editor에서:
-  ```sql
-  UPDATE system_config SET value = '원썸 컴퍼니' WHERE key = 'company_name';
-  UPDATE system_config SET value = '[대표자명]' WHERE key = 'ceo_name';
-  UPDATE system_config SET value = '[사업자번호]' WHERE key = 'business_number';
-  -- ... (docs/screens/07_profile_settings.md 참고)
+### 1-C. Google (Android)
+
+1. [Google Play Console](https://play.google.com/console) → 앱 → **수익 창출** → **인앱 상품** → 위와 **동일한 product ID**로 소모품 6개
+2. [Google Cloud Console](https://console.cloud.google.com) → 서비스 계정 생성 → **JSON 키** 다운로드
+3. Play Console에서 해당 서비스 계정에 **Google Play Android Developer API** 권한 연결 (공식 문서: “API 액세스” 단계)
+4. `server/.env`:
+  ```env
+   GOOGLE_SERVICE_ACCOUNT_JSON=JSON_전체_한줄_또는_이스케이프
   ```
+   (구현 시 **파일 경로**만 읽도록 바꿀 수 있음 — 검증 코드 작성 시 통일)
+
+### 1-D. 서버 영수증 검증 (아직 미구현 → 출시 전 필수에 가깝음)
+
+- **iOS:** `verifyReceipt` 또는 StoreKit 2 JWS 검증 + 공유 암호  
+- **Android:** Play Developer API로 `purchaseToken` 검증  
+- 현재 `server/app/api/payments/verify-iap/route.ts`는 **클라이언트가 보낸 정보만으로 DB 지급**하므로, 스토어 연동 후 **반드시 검증 단계 추가** 필요
 
 ---
 
-## 📋 Claude(AI)가 구현한 기능 목록
+## [🤖] 2. 서버 IAP 영수증 검증 구현
 
-> 아래는 이미 코드로 구현 완료된 기능입니다.
-
-### 앱 (React Native / Expo)
-- [x] 온보딩 전체 플로우 (splash → login → terms → verify → role → mode → profile → charge-promo)
-- [x] 메인 피드 (2컬럼 그리드, 파란불/빨간불, 무한스크롤, Realtime)
-- [x] 포인트 충전 화면 (IAP 연동, 첫충전 배너)
-- [x] 영상통화 플로우 (start → incoming → accept/reject → call → summary)
-- [x] ReportBottomSheet (신고 시스템)
-- [x] 크리에이터 프로필 페이지
-- [x] 크리에이터 온보딩 (계약서 서명, 신분증, 계좌)
-- [x] 크리에이터 대시보드 (수익/등급/정산/예약)
-- [x] 예약 탭 (목록, 상세, 수락/거절)
-- [x] 내 프로필 탭 (충전 내역, 통화 기록)
-- [x] 설정 (알림, 로그아웃, 탈퇴)
-
-### 서버 (Next.js / Vercel)
-- [x] 인증 API (social-login, verify-identity)
-- [x] 영상통화 API (start, accept, reject, cancel, end, tick)
-- [x] 결제 API (products, verify-iap)
-- [x] 크리에이터 API (feed, online 토글, earnings)
-- [x] 신고 API (/api/reports)
-- [x] 예약 API (CRUD + cron)
-- [x] 정산 API (run cron, update-grades)
-- [x] 유저 API (me, points, charges, calls, delete)
-- [x] 관리자 패널 (대시보드, 크리에이터 심사, 신고, 유저, 정산, 시스템)
+클라이언트는 이미 실제 구매 흐름 사용. **서버에서 Apple/Google에 영수증 검증** 후에만 `verify_iap_charge` RPC 호출하도록 변경.
 
 ---
 
-*최종 업데이트: 2026-03-12 (Claude Code 자동 작성)*
+## [🤖] 3. 관리자 API 권한 검증 추가 (보안)
+
+`server/app/admin/api/`* 전체에 superadmin(또는 역할) 검증 없음 → 일반 유저 호출 위험.
+
+---
+
+## 🔴 CRITICAL — 앱스토어 심사 반려 사유
+
+### [🧑] 4. 개인정보처리방침 + 이용약관 페이지 게시
+
+- `https://wantsome.kr/privacy`, `https://wantsome.kr/terms`
+- App Store Connect / Play Console 스토어 등록정보에 URL 입력
+
+### [🧑] 5. Apple Developer Program + App Store Connect 앱
+
+- 연 $99, Bundle ID `kr.wantsome.app` (✅ 식별자 작업은 아래 완료 기록 참고)
+- 새 앱 생성 후 **연령 등급**은 App Store Connect 설문에서 **실제 기능·콘텐츠**에 맞게 선택 (영상통화·커뮤니티 등; “성인 전용 앱”으로 단정하지 말고 사실대로)
+
+### [🧑] 6. Google Play Console
+
+- 일회성 $25, 패키지 `kr.wantsome.app`
+- **IARC** 설문에서 앱 내용에 맞는 등급·속성 선택 (인플루언서–팬 1:1 영상통화·예약·포인트 등; 과도한 성인 키워드 없이 사실대로)
+
+---
+
+## 🟠 HIGH — 출시 전 완료 필요
+
+### [🧑] 7. 푸시 알림 (APNs 키 → Expo)
+
+Apple Developer → **Keys** → APNs → `.p8` → [expo.dev](https://expo.dev) 프로젝트 Credentials에 업로드
+
+### [🤖] 8. 푸시 백엔드 (FCM 발송)
+
+`/api/push/register` 이후 실제 발송 로직
+
+### [🧑] 9. Slack 웹훅
+
+`server/.env` → `SLACK_WEBHOOK_URL=`
+
+### [🤖] 10. 정산율 정책 vs 코드 일치
+
+계약서 등급별 % vs DB/코드 50% 등 — 정책 확정 후 반영
+
+### [🧑] 11. EAS Build + TestFlight
+
+`eas build --platform ios|android --profile production` 등
+
+---
+
+## 🟡 MEDIUM
+
+### [✅] 12. 소셜 로그인 Supabase 연동 — **완료**
+
+Supabase **Authentication → Providers** 에서 **Email, Apple, Google, Kakao** 활성화 확인.  
+(Apple은 **Secret Key = JWT** — `npm run apple:oauth-secret` 로 생성한 문자열 전체, **약 6개월마다 갱신**)
+
+상세 단계는 **아래「완료 기록」** 참고.
+
+### [✅] 13. API 커스텀 도메인 — **완료** (2026-04-18 점검)
+
+- `api.wantsome.kr` DNS → A 레코드 `216.150.16.193`, `216.150.1.65` (Vercel 계열)
+- `https://api.wantsome.kr` → **HTTP 200** 응답 확인
+- `eas.json` 의 `preview` / `production` 에 `EXPO_PUBLIC_API_BASE_URL: "https://api.wantsome.kr"` 이미 설정됨 (`staging` 은 `https://api-staging.wantsome.kr` — 별도 스테이징 쓸 때만 해당)
+
+### [🤖] 14. 트랜잭션 롤백
+
+### [🤖] 15. 관리자 RBAC
+
+### [🧑] 16. PortOne PASS (선택)
+
+---
+
+## 🟢 NICE TO HAVE
+
+17–21 (구조화 로깅, any 제거, 레이트 리밋, SMS OTP, 사업자 정보) — 기존과 동일
+
+---
+
+## 🤖 Claude 요청 시 처리 가능 작업
+
+
+| #     | 작업                  | 비고         |
+| ----- | ------------------- | ---------- |
+| 2     | IAP 서버 영수증 검증       | Apple+Play |
+| 3     | 관리자 API 권한          |            |
+| 8     | FCM 푸시 백엔드          |            |
+| 10    | 정산율 + system_config |            |
+| 14–15 | 트랜잭션 / RBAC         |            |
+
+
+---
+
+## 앱스토어 심사 제출 가능 조건 (요약)
+
+
+| 항목                                   | 상태              |
+| ------------------------------------ | --------------- |
+| Supabase, Agora                      | ✅               |
+| API 도메인 `api.wantsome.kr` + 앱 빌드 env | ✅               |
+| 소셜 로그인 앱 + Supabase 대시보드             | ✅               |
+| 실제 IAP (스토어 상품 + 서버 검증 + env)        | ❌               |
+| 개인정보/약관 URL                          | ❌               |
+| Apple/Google 개발자·스토어 계정 (앱 제출용)      | 부분 ✅ / 제출 절차 남음 |
+| EAS 프로덕션 빌드                          | ❌               |
+| APNs → Expo                          | ❌               |
+
+
+---
+
+# ✅ 완료·진행 기록 (아래로 모음)
+
+## 사용자 직접 완료 (2026-04 기준)
+
+- **Apple Developer Program** 유료 가입
+- **App ID** `kr.wantsome.app` — **Sign In with Apple** (Primary, 서버 알림 URL 생략 가능)
+- **Services ID** `kr.wantsome.app.signin` — Web 도메인 `ftnfdtvaxsvosdyjdxfq.supabase.co`, Return URL `https://ftnfdtvaxsvosdyjdxfq.supabase.co/auth/v1/callback`
+- **Key** — Sign in with Apple용 `.p8` (Key ID 예: `WC5Y5XRK2S`), Supabase Apple Provider에 **Client IDs + JWT 형식 Secret Key** 입력 (레포 `npm run apple:oauth-secret` 참고)
+- **Google** — Cloud OAuth 클라이언트 + Supabase Google Provider
+- **Kakao** — REST API 키 + Redirect URI + Supabase Kakao Provider
+- **Supabase 대시보드** — Sign In / Providers 에서 **Apple, Google, Kakao** 사용 설정
+- **API 커스텀 도메인** — `api.wantsome.kr` (DNS·HTTPS 정상, `eas.json` 프로덕션/프리뷰 API URL과 일치)
+
+## 이미 완료된 항목 (기존)
+
+**인프라**
+
+- Supabase 프로젝트 + 마이그레이션
+- Agora App ID
+- Vercel API 배포
+- `wantsome.kr` 도메인
+
+**앱 기능**
+
+- 소셜 로그인 **코드**, 온보딩, 메인 피드, **크리에이터(인플루언서)–팬 1:1 영상통화**, 예약, 라이브, 쇼핑, 즐겨찾기, 신고, 크리에이터 온보딩, **포인트 충전 UI(expo-iap 연동)**, DM, 관리자 화면 다수, 정산 크론잡 등
+
+---
+
+*작업 완료 시 이 파일의 체크 상태·날짜를 갱신하세요.*

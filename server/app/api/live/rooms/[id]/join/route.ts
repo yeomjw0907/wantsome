@@ -35,7 +35,8 @@ export async function POST(
     getLiveConfig(),
   ]);
 
-  const room = roomRes.data as any;
+  type LiveRoomJoinRow = { id: string; host_id: string; status: string; agora_channel: string | null };
+  const room = roomRes.data as unknown as LiveRoomJoinRow | null;
   if (!room) return NextResponse.json({ message: "라이브를 찾을 수 없습니다." }, { status: 404 });
   if (room.status !== "live") return NextResponse.json({ message: "입장할 수 없는 상태입니다." }, { status: 400 });
   if (!room.agora_channel) return NextResponse.json({ message: "방송 채널이 준비되지 않았습니다." }, { status: 400 });

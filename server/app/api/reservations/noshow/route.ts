@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         // 소비자 노쇼 (consumer_ready_at IS NULL)
         await admin
           .from("reservations")
-          .update({ status: "noshow", noshow_at: now.toISOString() } as any)
+          .update({ status: "noshow", noshow_at: now.toISOString() } as unknown as { status: string })
           .eq("id", res.id);
 
         // 크리에이터에게 예약금 50% 보상
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
         // 크리에이터 노쇼 (consumer_ready_at IS NOT NULL, creator_ready_at IS NULL)
         await admin
           .from("reservations")
-          .update({ status: "noshow", noshow_at: now.toISOString() } as any)
+          .update({ status: "noshow", noshow_at: now.toISOString() } as unknown as { status: string })
           .eq("id", res.id);
 
         // 소비자 예약금 전액 환불
@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
       // reminder_sent_at 먼저 기록 (중복 방지)
       await admin
         .from("reservations")
-        .update({ reminder_sent_at: now.toISOString() } as any)
+        .update({ reminder_sent_at: now.toISOString() } as unknown as { status: string })
         .eq("id", res.id);
 
       // 크리에이터 is_busy 확인

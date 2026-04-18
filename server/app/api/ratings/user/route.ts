@@ -73,10 +73,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Supabase type generation does not know the new Korean-named columns yet.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const adminUntyped = admin as any;
+  type UserRatingRow = {
+    call_session_id: string; creator_id: string; consumer_id: string;
+    "rating_호감": number | null; "rating_신뢰": number | null;
+    "rating_매너": number | null; "rating_매력": number | null;
+  };
 
-  const { error } = await adminUntyped.from("user_ratings").upsert(
+  const { error } = await (admin.from("user_ratings").upsert(
     {
       call_session_id: callSessionId,
       creator_id: authUser.id,
@@ -85,22 +88,22 @@ export async function POST(req: NextRequest) {
       "rating_신뢰": ratingPayload["rating_신뢰"] ?? null,
       "rating_매너": ratingPayload["rating_매너"] ?? null,
       "rating_매력": ratingPayload["rating_매력"] ?? null,
-    },
+    } as unknown as UserRatingRow,
     { onConflict: "call_session_id" },
-  );
+  ) as unknown as Promise<{ error: { message: string } | null }>);
 
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  const { data: allRatings } = (await adminUntyped
+  const { data: allRatings } = await (admin
     .from("user_ratings")
     .select("rating_호감, rating_신뢰, rating_매너, rating_매력")
-    .eq("consumer_id", consumerId)) as { data: FourCategoryRatingRow[] | null };
+    .eq("consumer_id", consumerId) as unknown as Promise<{ data: FourCategoryRatingRow[] | null; error: unknown }>);
 
   const overall = computeOverallCategoryAverage(allRatings ?? []);
   if (overall !== null) {
-    await adminUntyped.from("users").update({ avg_rating: overall }).eq("id", consumerId);
+    await admin.from("users").update({ avg_rating: overall }).eq("id", consumerId);
   }
 
   return NextResponse.json({ success: true });

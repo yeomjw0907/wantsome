@@ -254,7 +254,7 @@ export default function PointsPage() {
                         </div>
                         <div style={{ fontSize: 11, color: "var(--gray-400)" }}>
                           {log.detail?.before?.toLocaleString()}P → {log.detail?.after?.toLocaleString()}P
-                          · 처리자: {(log.users as any)?.nickname ?? "시스템"}
+                          · 처리자: {(log.users as unknown as { nickname: string | null } | null)?.nickname ?? "시스템"}
                         </div>
                       </div>
                       <div style={{ fontSize: 11, color: "var(--gray-400)", whiteSpace: "nowrap", marginLeft: 12 }}>

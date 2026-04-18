@@ -48,8 +48,8 @@ export async function GET(req: NextRequest) {
   // 어제 통화 통계
   const { data: callStats } = await admin
     .from("call_sessions")
-    .select("duration_sec, total_points")
-    .eq("status", "ENDED")
+    .select("duration_sec, points_charged")
+    .eq("status", "ended")
     .gte("ended_at", dayStart)
     .lte("ended_at", dayEnd);
 
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   const totalMinutes = Math.floor(
     (callStats ?? []).reduce((sum, s) => sum + (s.duration_sec ?? 0), 0) / 60
   );
-  const totalRevenue = (callStats ?? []).reduce((sum, s) => sum + (s.total_points ?? 0), 0);
+  const totalRevenue = (callStats ?? []).reduce((sum, s) => sum + (s.points_charged ?? 0), 0);
 
   // 어제 신규 가입자
   const { count: newUsers } = await admin
