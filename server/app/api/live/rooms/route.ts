@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     .from("live_rooms")
     .select(`
       id, host_id, title, thumbnail_url, entry_fee_points, viewer_limit,
-      planned_duration_min, scheduled_end_at, status, started_at, extension_count
+      planned_duration_min, scheduled_end_at, status, agora_channel, started_at, ended_at, extension_count
     `)
     .eq("status", "live")
     .order("started_at", { ascending: false })
