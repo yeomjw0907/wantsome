@@ -114,7 +114,7 @@ export async function DELETE(req: NextRequest) {
     .from("call_sessions")
     .select("id")
     .eq("consumer_id", authUser.id)
-    .in("status", ["WAITING", "ACTIVE"])
+    .in("status", ["pending", "active"])
     .limit(1);
 
   if (activeCalls && activeCalls.length > 0) {

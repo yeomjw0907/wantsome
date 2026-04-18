@@ -60,10 +60,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "등록 실패" }, { status: 500 });
   }
 
-  // users 테이블에 role 업데이트 (CREATOR_PENDING)
+  // users 테이블에 role 업데이트 (creator 심사 진행 중)
   const { error: userErr } = await admin
     .from("users")
-    .update({ role: "CREATOR_PENDING" })
+    .update({ role: "creator" })
     .eq("id", authUser.id);
 
   if (userErr && userErr.code !== "42P01") {
