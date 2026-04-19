@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { apiCall } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -126,7 +127,8 @@ export default function PhoneVerifyScreen() {
       }
 
       Toast.show({ type: "success", text1: "로그인되었습니다." });
-      router.replace("/(auth)/terms");
+      const ageOk = await AsyncStorage.getItem("age_verified");
+      router.replace(ageOk ? "/(auth)/terms" : "/(auth)/age-check");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "오류가 발생했습니다.";
       Toast.show({ type: "error", text1: msg });

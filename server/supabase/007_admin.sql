@@ -65,7 +65,7 @@ CREATE POLICY "settlements_creator_read" ON creator_settlements
 
 -- 5) system_config 추가 키
 INSERT INTO system_config (key, value, updated_at) VALUES
-  ('company_name',       '원썸 컴퍼니',   NOW()),
+  ('company_name',       '주식회사 98점7도',   NOW()),
   ('ceo_name',           '',               NOW()),
   ('business_number',    '',               NOW()),
   ('business_address',   '',               NOW()),

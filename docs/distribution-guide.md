@@ -1,7 +1,7 @@
-# wantsome 배포 가이드
+# wantsome(원썸) 배포 가이드
 ## APK (Android) + TestFlight (iOS) 배포 완전 가이드
 
-> 작성일: 2025-03-15 | 대상: wantsome 개발팀
+> 작성일: 2025-03-15 | 대상: 원썸(wantsome) 개발팀 · 법인: 주식회사 98점7도
 
 ---
 

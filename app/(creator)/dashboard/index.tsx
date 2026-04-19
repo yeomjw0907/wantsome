@@ -25,6 +25,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
+import { formatModeLabel } from "@/constants/branding";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useCreatorStore } from "@/stores/useCreatorStore";
 
@@ -416,7 +417,7 @@ export default function CreatorDashboardScreen() {
                 </Text>
                 <View className={`rounded-full px-2 py-0.5 ${res.mode === "blue" ? "bg-bluebell" : "bg-red-light"}`}>
                   <Text className={`text-xs font-semibold ${res.mode === "blue" ? "text-blue" : "text-red"}`}>
-                    {res.mode === "blue" ? "파란불" : "빨간불"}
+                    {formatModeLabel(res.mode)}
                   </Text>
                 </View>
               </View>

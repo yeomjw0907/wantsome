@@ -53,7 +53,7 @@ contract.tsx:
 
 id-card.tsx:
 - "크리에이터 인증 뱃지 획득" 포지셔닝 (신분증 제출 아님)
-- 혜택 안내: 검색 상단 노출 + 빨간불 모드 활성화
+- 혜택 안내: 검색 상단 노출 + 프리미엄(red) 모드 활성화
 - expo-image-picker 카메라/갤러리
 - POST /api/creators/upload-id
 

@@ -420,6 +420,7 @@ export default function FeedScreen() {
   const [searchResults, setSearchResults] = useState<typeof feedBlue>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [feedError, setFeedError] = useState(false);
 
   const [callModal, setCallModal] = useState<{
     sessionId: string;
@@ -433,7 +434,7 @@ export default function FeedScreen() {
   const creators = mode === "blue" ? feedBlue : feedRed;
   const hasMore = mode === "blue" ? hasMoreBlue : hasMoreRed;
   const vibeOptions = mode === "blue" ? BLUE_VIBES : RED_VIBES;
-  const modeColor = mode === "blue" ? "#4D9FFF" : "#F59E0B";
+  const modeColor = mode === "blue" ? "#4D9FFF" : "#FF5C7A";
 
   const handleModeChange = (m: FeedMode) => {
     setMode(m);
@@ -489,7 +490,10 @@ export default function FeedScreen() {
   const loadFeed = useCallback(
     async (nextPage: number, append: boolean) => {
       try {
-        if (!append) setLoading(true);
+        if (!append) {
+          setLoading(true);
+          setFeedError(false);
+        }
         const cats = buildCategoryParams();
         const catParam = cats ? `&category=${encodeURIComponent(cats)}` : "";
         const res = await apiCall<{
@@ -504,10 +508,18 @@ export default function FeedScreen() {
           setFeed(mode, res.creators, res.hasMore);
         }
         setPage(nextPage);
-      } catch {
+      } catch (e) {
+        if (__DEV__) {
+          console.warn("[Feed] loadFeed failed", e);
+        }
         if (!append) {
           setFeed(mode, [], false);
-          Toast.show({ type: "error", text1: "인플루언서", text2: "크리에이터 목록을 불러오지 못했습니다." });
+          setFeedError(true);
+          Toast.show({
+            type: "error",
+            text1: "목록을 불러오지 못했습니다",
+            text2: "네트워크 또는 서버 설정을 확인해 주세요.",
+          });
         }
       } finally {
         setLoading(false);
@@ -824,6 +836,26 @@ export default function FeedScreen() {
             isLoading && !isSearching ? (
               <View className="py-12 items-center">
                 <ActivityIndicator size="large" color="#FF6B9D" />
+              </View>
+            ) : feedError && !isSearching ? (
+              <View className="flex-1 min-h-[280px] justify-center items-center px-8 pt-8 pb-12">
+                <Ionicons name="cloud-offline-outline" size={48} color="#94A3B8" />
+                <Text className="text-navy text-lg font-semibold text-center mt-4 mb-2">
+                  연결에 실패했습니다
+                </Text>
+                <Text className="text-gray-500 text-sm text-center leading-5 mb-6">
+                  API 주소(EXPO_PUBLIC_API_BASE_URL)와 서버 상태를 확인해 주세요.
+                </Text>
+                <TouchableOpacity
+                  className="bg-navy px-6 py-3 rounded-full"
+                  onPress={() => {
+                    setPage(1);
+                    loadFeed(1, false);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text className="text-white font-semibold">다시 시도</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <FeedEmptyState mode={mode} />

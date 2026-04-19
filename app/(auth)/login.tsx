@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "@/lib/supabase";
 import { apiCall } from "@/lib/api";
@@ -122,7 +123,8 @@ export default function LoginScreen() {
       }
 
       Toast.show({ type: "success", text1: "로그인되었습니다." });
-      router.replace("/(auth)/terms");
+      const ageOk = await AsyncStorage.getItem("age_verified");
+      router.replace(ageOk ? "/(auth)/terms" : "/(auth)/age-check");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "로그인에 실패했습니다.";
       Toast.show({ type: "error", text1: msg });

@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   PanResponder,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 
 type ToastType = "success" | "error" | "info";
@@ -16,9 +18,9 @@ interface ToastProps {
 }
 
 const COLORS: Record<ToastType, string> = {
-  success: "#2F9E6F",
-  error: "#FF5C73",
-  info: "#5B6576",
+  success: "#16A34A",
+  error: "#E11D48",
+  info: "#475569",
 };
 
 function TossToast({
@@ -30,70 +32,93 @@ function TossToast({
   text1?: string;
   text2?: string;
 }) {
-  const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
+  const entrance = useRef(new Animated.Value(48)).current;
+  const drag = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useMemo(
+    () => Animated.add(entrance, drag),
+    [entrance, drag]
+  );
 
-  useEffect(() => {
-    translateY.setValue(0);
-    opacity.setValue(1);
-  }, [opacity, text1, text2, translateY]);
-
-  const hideToast = () => {
+  const hideToast = useCallback(() => {
     Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 28,
-        duration: 180,
+      Animated.timing(entrance, {
+        toValue: 72,
+        duration: 260,
         useNativeDriver: true,
       }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
+      Animated.timing(drag, { toValue: 0, duration: 260, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 220, useNativeDriver: true }),
     ]).start(() => {
       Toast.hide();
-      translateY.setValue(0);
-      opacity.setValue(1);
+      entrance.setValue(48);
+      drag.setValue(0);
+      opacity.setValue(0);
     });
-  };
+  }, [entrance, drag, opacity]);
 
-  const panResponder = useMemo(
+  const hideRef = useRef(hideToast);
+  hideRef.current = hideToast;
+
+  useEffect(() => {
+    entrance.setValue(48);
+    drag.setValue(0);
+    opacity.setValue(0);
+    Animated.parallel([
+      Animated.spring(entrance, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 9,
+        tension: 70,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const timer = setTimeout(() => {
+      hideRef.current();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [text1, text2, entrance, drag, opacity]);
+
+  const handlePan = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          Math.abs(gestureState.dy) > 6 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
-        onPanResponderMove: (_, gestureState) => {
-          translateY.setValue(Math.max(0, gestureState.dy));
-          opacity.setValue(Math.max(0.4, 1 - Math.min(gestureState.dy, 60) / 120));
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, g) =>
+          g.dy > 5 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderMove: (_, g) => {
+          const next = Math.max(0, g.dy);
+          drag.setValue(next);
+          opacity.setValue(Math.max(0.35, 1 - Math.min(next, 72) / 90));
         },
-        onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dy > 30 || gestureState.vy > 0.8) {
+        onPanResponderRelease: (_, g) => {
+          if (g.dy > 32 || g.vy > 0.45) {
             hideToast();
             return;
           }
-
           Animated.parallel([
-            Animated.spring(translateY, {
+            Animated.spring(drag, {
               toValue: 0,
               useNativeDriver: true,
-              speed: 18,
-              bounciness: 5,
+              friction: 8,
             }),
             Animated.spring(opacity, {
               toValue: 1,
               useNativeDriver: true,
-              speed: 18,
-              bounciness: 5,
+              friction: 8,
             }),
           ]).start();
         },
       }),
-    [opacity, translateY],
+    [drag, opacity, hideToast]
   );
 
   return (
     <Animated.View
-      {...panResponder.panHandlers}
       style={[
         styles.wrapper,
         {
@@ -103,18 +128,32 @@ function TossToast({
       ]}
     >
       <View style={styles.toast}>
-        <View style={[styles.indicator, { backgroundColor: COLORS[type] }]} />
-        <View style={styles.textBlock}>
-          {text1 ? (
-            <Text style={styles.title} numberOfLines={1}>
-              {text1}
-            </Text>
-          ) : null}
-          {text2 ? (
-            <Text style={styles.body} numberOfLines={2}>
-              {text2}
-            </Text>
-          ) : null}
+        <View style={styles.dragHit} {...handlePan.panHandlers}>
+          <View style={styles.dragBar} />
+        </View>
+        <View style={styles.row}>
+          <View style={[styles.indicator, { backgroundColor: COLORS[type] }]} />
+          <View style={styles.textBlock}>
+            {text1 ? (
+              <Text style={styles.title} numberOfLines={2}>
+                {text1}
+              </Text>
+            ) : null}
+            {text2 ? (
+              <Text style={styles.body} numberOfLines={3}>
+                {text2}
+              </Text>
+            ) : null}
+          </View>
+          <Pressable
+            onPress={hideToast}
+            hitSlop={14}
+            style={styles.closeBtn}
+            accessibilityLabel="닫기"
+            accessibilityRole="button"
+          >
+            <Ionicons name="close" size={20} color="#64748B" />
+          </Pressable>
         </View>
       </View>
     </Animated.View>
@@ -122,51 +161,81 @@ function TossToast({
 }
 
 export const toastConfig = {
-  success: ({ text1, text2 }: ToastProps) => <TossToast type="success" text1={text1} text2={text2} />,
-  error: ({ text1, text2 }: ToastProps) => <TossToast type="error" text1={text1} text2={text2} />,
-  info: ({ text1, text2 }: ToastProps) => <TossToast type="info" text1={text1} text2={text2} />,
+  success: ({ text1, text2 }: ToastProps) => (
+    <TossToast type="success" text1={text1} text2={text2} />
+  ),
+  error: ({ text1, text2 }: ToastProps) => (
+    <TossToast type="error" text1={text1} text2={text2} />
+  ),
+  info: ({ text1, text2 }: ToastProps) => (
+    <TossToast type="info" text1={text1} text2={text2} />
+  ),
 };
 
 const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
   },
   toast: {
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 400,
     alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 18,
-    backgroundColor: "rgba(20, 23, 30, 0.96)",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    shadowColor: "#000",
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(15, 23, 42, 0.1)",
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 14,
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+    overflow: "hidden",
+  },
+  dragHit: {
+    alignItems: "center",
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  dragBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(148, 163, 184, 0.55)",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingLeft: 14,
+    paddingRight: 10,
+    paddingBottom: 14,
+    gap: 10,
   },
   indicator: {
-    width: 6,
+    width: 3,
+    marginTop: 3,
     alignSelf: "stretch",
+    minHeight: 32,
     borderRadius: 999,
   },
   textBlock: {
     flex: 1,
-    gap: 2,
+    gap: 4,
+    paddingRight: 2,
   },
   title: {
-    color: "#FFFFFF",
+    color: "#0F172A",
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: -0.2,
   },
   body: {
-    color: "rgba(255,255,255,0.74)",
+    color: "#64748B",
     fontSize: 13,
     lineHeight: 18,
+  },
+  closeBtn: {
+    padding: 4,
+    marginTop: -2,
   },
 });

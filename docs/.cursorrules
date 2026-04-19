@@ -22,10 +22,10 @@
 ## 디자인 토큰
 Navy:            #1B2A4A   (텍스트, 헤더)
 Pink:            #FF6B9D   (CTA 버튼 — 메인 포인트)
-Bluebell:        #D1E4F8   (파란불 배경/뱃지 전용 — 버튼/텍스트 사용 금지)
-Blue Accent:     #4D9FFF   (파란불 아이콘, 강조)
-Red Accent:      #FF5C7A   (빨간불 아이콘)
-Red Light:       #FFEEF1   (빨간불 배경)
+Bluebell:        #D1E4F8   (스탠다드 blue 배경/뱃지 전용 — 버튼/텍스트 사용 금지)
+Blue Accent:     #4D9FFF   (스탠다드 아이콘, 강조)
+Red Accent:      #FF5C7A   (프리미엄 red 아이콘)
+Red Light:       #FFEEF1   (프리미엄 배경)
 White:           #FFFFFF
 Gray-50:         #F8F8FA
 Gray-100:        #F0F0F5
@@ -47,5 +47,5 @@ Gray-500:        #8E8EA0
 - 이중 충전 방지: idempotency_key 필수
 
 ## 분당 단가 (절대 변경 금지)
-파란불: 900P/분
-빨간불: 1,300P/분
+스탠다드(blue): 900P/분
+프리미엄(red): 1,300P/분

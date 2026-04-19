@@ -26,6 +26,7 @@ import {
 } from "expo-screen-capture";
 import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
+import { formatModeLabel } from "@/constants/branding";
 
 const TIMER_TOTAL = 30;
 const RING_SIZE = 120;
@@ -283,7 +284,8 @@ export default function IncomingCallScreen() {
 
         <View className={`rounded-full px-3 py-1 ${isBlue ? "bg-blue-500/30" : "bg-red-500/30"}`}>
           <Text className={`text-sm font-semibold ${isBlue ? "text-blue-300" : "text-red-300"}`}>
-            {isBlue ? "🔵 파란불" : "🔴 빨간불"} · {rate.toLocaleString()}P/분
+            {isBlue ? "🔵 " : "⭐ "}
+            {formatModeLabel(isBlue ? "blue" : "red")} · {rate.toLocaleString()}P/분
           </Text>
         </View>
 

@@ -17,7 +17,7 @@ CREATE TABLE users (
   verified_at   TIMESTAMPTZ,
   -- 모드
   blue_mode     BOOLEAN DEFAULT TRUE,
-  red_mode      BOOLEAN DEFAULT FALSE,          -- 빨간불 동의 여부
+  red_mode      BOOLEAN DEFAULT FALSE,          -- 프리미엄(red) 동의 여부
   -- 포인트
   points        INTEGER DEFAULT 0,
   -- 첫충전

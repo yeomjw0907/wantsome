@@ -120,7 +120,14 @@ export default function ProfileTabScreen() {
           color: "#FF6B9D",
         },
       ]
-    : [];
+    : [
+        {
+          icon: "mic-outline",
+          label: "크리에이터 신청",
+          onPress: () => router.push("/(creator)/onboarding/contract" as any),
+          color: "#FF6B9D",
+        },
+      ];
 
   const settingItems: MenuItem[] = [
     {

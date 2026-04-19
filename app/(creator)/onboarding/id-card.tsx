@@ -1,7 +1,7 @@
 /**
  * 크리에이터 온보딩 - 신분증 업로드 (인증 뱃지 획득)
  * - "크리에이터 인증 뱃지" 포지셔닝 (신분증 제출이 아닌 혜택 중심)
- * - 혜택 안내: 검색 상단 노출 + 빨간불 모드 활성화
+ * - 혜택 안내: 검색 상단 노출 + 프리미엄(레드) 모드 활성화
  * - expo-image-picker 카메라/갤러리
  * - POST /api/creators/upload-id
  */
@@ -19,13 +19,14 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
-import { apiCall } from "@/lib/api";
+import { uploadFormData } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { MODE_LABEL } from "@/constants/branding";
 
 const BENEFITS = [
   { icon: "search", label: "피드 상단 노출 우선순위", color: "#4D9FFF" },
   { icon: "star", label: "인증 뱃지 ✅ 획득", color: "#FF9800" },
-  { icon: "flame", label: "빨간불 🔴 모드 활성화", color: "#FF5C7A" },
+  { icon: "flame", label: `${MODE_LABEL.red} 모드 활성화`, color: "#FF5C7A" },
   { icon: "shield-checkmark", label: "신뢰도 향상 (소비자 신뢰)", color: "#22C55E" },
 ];
 
@@ -94,11 +95,7 @@ export default function IdCardScreen() {
         name: `id-card-${Date.now()}.jpg`,
       } as unknown as Blob);
 
-      await apiCall("/api/creators/upload-id", {
-        method: "POST",
-        headers: { "Content-Type": "multipart/form-data" },
-        body: formData as unknown as BodyInit,
-      });
+      await uploadFormData<{ success: boolean }>("/api/creators/upload-id", formData);
 
       Toast.show({
         type: "success",
@@ -116,7 +113,7 @@ export default function IdCardScreen() {
   const handleSkip = () => {
     Alert.alert(
       "나중에 인증하기",
-      "신분증 인증 없이도 파란불 모드는 이용 가능합니다. 빨간불 모드와 인증 뱃지는 인증 후 활성화됩니다.",
+      `신분증 인증 없이도 ${MODE_LABEL.blue} 모드는 이용 가능합니다. ${MODE_LABEL.red} 모드와 인증 뱃지는 인증 후 활성화됩니다.`,
       [
         { text: "취소", style: "cancel" },
         {
@@ -156,7 +153,7 @@ export default function IdCardScreen() {
           ✅ 크리에이터 인증 뱃지
         </Text>
         <Text className="text-gray-500 text-sm mb-6">
-          신분증으로 성인 인증을 완료하면 아래 혜택을 받을 수 있습니다.
+          본인·연령 확인을 완료하면 아래 혜택을 받을 수 있습니다.
         </Text>
 
         {/* 혜택 카드 */}
@@ -215,7 +212,7 @@ export default function IdCardScreen() {
         <View className="bg-yellow-50 rounded-xl px-4 py-3 flex-row gap-2">
           <Ionicons name="lock-closed" size={16} color="#F59E0B" />
           <Text className="text-yellow-700 text-xs flex-1">
-            신분증 정보는 암호화되어 안전하게 보관되며, 성인 인증 목적으로만 사용됩니다. 관리자만 열람 가능합니다.
+            신분증 정보는 암호화되어 안전하게 보관되며, 본인 확인 및 연령 확인 목적으로만 사용됩니다. 관리자만 열람 가능합니다.
           </Text>
         </View>
       </View>

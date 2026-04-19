@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { COMPANY_LEGAL_NAME, MODE_LABEL, SERVICE_NAME } from "@/lib/branding";
 
 export const metadata: Metadata = {
-  title: "wantsome — 크리에이터와 실시간 영상통화",
-  description: "내가 원하는 사람과 1:1 영상통화. 파란불(일상/취미)부터 빨간불(성인)까지, 크리에이터와 지금 바로 연결하세요.",
+  title: `${SERVICE_NAME}(wantsome) — 크리에이터와 실시간 영상통화`,
+  description: `내가 원하는 사람과 1:1 영상통화. ${MODE_LABEL.blue}(일상·취미)부터 ${MODE_LABEL.red}(프리미엄)까지, 크리에이터와 지금 바로 연결하세요.`,
 };
 
 async function getSystemConfig() {
@@ -21,7 +22,7 @@ async function getSystemConfig() {
 export default async function HomePage() {
   const cfg = await getSystemConfig();
 
-  const companyName = cfg.company_name || "원썸 컴퍼니";
+  const companyName = cfg.company_name || COMPANY_LEGAL_NAME;
   const ceoName = cfg.ceo_name || "-";
   const businessNumber = cfg.business_number || "-";
   const address = cfg.business_address || "-";
@@ -121,7 +122,7 @@ export default async function HomePage() {
       {/* HEADER */}
       <div className="header-wrap">
         <div className="header-inner">
-          <div className="logo">want<span>some</span></div>
+          <div className="logo">원<span>썸</span></div>
           <nav className="nav-links">
             <a href="#service">서비스</a>
             <a href="#pricing">요금</a>
@@ -137,7 +138,7 @@ export default async function HomePage() {
         <div className="hero-inner">
           <div className="hero-badge">📱 iOS · Android 무료 다운로드</div>
           <h1>내가 <em>원하는 사람</em>과<br />지금 바로 연결</h1>
-          <p>파란불부터 빨간불까지 — 취향에 맞는 크리에이터와<br />1:1 실시간 영상통화를 즐겨보세요.</p>
+          <p>{MODE_LABEL.blue}부터 {MODE_LABEL.red}까지 — 취향에 맞는 크리에이터와<br />1:1 실시간 영상통화를 즐겨보세요.</p>
           <div className="hero-cta">
             <a href="https://apps.apple.com" className="btn-hp">🍎 App Store</a>
             <a href="https://play.google.com" className="btn-hs">🤖 Google Play</a>
@@ -156,14 +157,14 @@ export default async function HomePage() {
       {/* FEATURES */}
       <section className="sec sec-center" id="service">
         <div className="sec-tag">Service</div>
-        <h2 className="sec-title">wantsome이 특별한 이유</h2>
+        <h2 className="sec-title">{SERVICE_NAME}이 특별한 이유</h2>
         <p className="sec-sub">엄격한 신원 인증을 통과한 크리에이터와 안전하고 프라이빗하게 대화하세요.</p>
         <div className="feat-grid">
           {[
             ["🔐","100% 신원 인증","모든 크리에이터는 신분증+CI 본인인증을 통과한 성인만 활동합니다."],
             ["⚡","실시간 매칭","지금 온라인 중인 크리에이터와 즉시 연결. 대기 없이 바로 통화하세요."],
             ["🛡️","화면 캡처 차단","통화 중 화면 캡처와 녹화를 자동으로 차단해 프라이버시를 보호합니다."],
-            ["💎","2가지 모드","일상 대화(파란불)부터 성인 콘텐츠(빨간불)까지, 원하는 모드를 선택하세요."],
+            ["💎","2가지 모드",`일상 대화(${MODE_LABEL.blue})부터 프리미엄 콘텐츠(${MODE_LABEL.red})까지, 원하는 모드를 선택하세요.`],
             ["📅","예약 통화","원하는 크리에이터와 원하는 시간을 미리 예약하고 확정 받으세요."],
             ["⭐","크리에이터 등급","신규→일반→인기→탑 등급으로 검증된 퀄리티를 보장합니다."],
           ].map(([icon,title,desc]) => (
@@ -185,13 +186,13 @@ export default async function HomePage() {
           </div>
           <div className="modes-grid">
             <div className="mode-card mode-blue">
-              <div className="mode-badge mb-blue">🔵 파란불</div>
+              <div className="mode-badge mb-blue">🔵 {MODE_LABEL.blue}</div>
               <div className="mode-title">일상 · 취미 · 대화</div>
               <div className="mode-desc">언어 교환, 게임 파트너, 일상 수다 등 부담 없는 대화 콘텐츠. 누구나 편하게 즐길 수 있는 일반 모드입니다.</div>
             </div>
             <div className="mode-card mode-red">
-              <div className="mode-badge mb-red">🔴 빨간불</div>
-              <div className="mode-title">성인 전용 콘텐츠</div>
+              <div className="mode-badge mb-red">⭐ {MODE_LABEL.red}</div>
+              <div className="mode-title">프리미엄 전용 콘텐츠</div>
               <div className="mode-desc">19세 이상 본인인증 완료 사용자만 이용 가능. 모든 크리에이터의 신원이 철저히 검증됩니다.</div>
             </div>
           </div>
@@ -282,8 +283,8 @@ export default async function HomePage() {
       {/* FOOTER */}
       <footer className="footer">
         <div className="footer-inner">
-          <div className="f-logo">want<span>some</span></div>
-          <div className="f-desc">크리에이터와 실시간 1:1 영상통화 플랫폼<br />본 서비스는 성인 인증이 완료된 이용자만 전체 기능 이용이 가능합니다.</div>
+          <div className="f-logo">원<span>썸</span></div>
+          <div className="f-desc">크리에이터와 팬을 잇는 실시간 1:1 영상통화<br />본 서비스는 만 19세 이상 회원만 전체 기능을 이용할 수 있습니다.</div>
           <div className="f-links">
             <a href="/terms">이용약관</a>
             <a href="/privacy">개인정보처리방침</a>

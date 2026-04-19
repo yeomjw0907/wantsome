@@ -46,7 +46,7 @@
 - **앱 초기화**: 시스템 상태 → 버전 → 온보딩 → 세션 → users/me → 라우팅
 - **온보딩**: 스플래시, 로그인(소셜), 약관, 본인인증(테스트), 역할/모드/프로필, 첫충전 프로모
 - **예외 화면**: 점검, 업데이트 필수, 정지, 미성년자
-- **메인 피드**: 2컬럼 그리드, 파란불/빨간불 탭, CreatorCard, 무한스크롤, Realtime is_online
+- **메인 피드**: 2컬럼 그리드, 스탠다드/프리미엄 탭(blue/red), CreatorCard, 무한스크롤, Realtime is_online
 - **포인트 충전**: 상품 카드, 첫충전 배너·2배, IAP 연동(verify-iap), mock 결제
 - **프로필**: 보유 포인트, 포인트 충전 진입, 닉네임
 - **API 서버**: Next.js 15 — system/status, auth/social-login, verify-identity, users/me, creators/feed, payments/verify-iap, payments/products, users/:id/points
@@ -62,4 +62,4 @@
 
 ---
 
-*원썸 컴퍼니 (WS Company)*
+*주식회사 98점7도 · 원썸(wantsome)*

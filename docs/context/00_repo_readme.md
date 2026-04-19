@@ -96,4 +96,4 @@ docs/                # API·디자인·DB 등 문서
 
 ## 라이선스
 
-Private — 원썸 컴퍼니 (WS Company)
+Private — 주식회사 98점7도 · 서비스명 원썸(wantsome)

@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
+import { formatModeLabel } from "@/constants/branding";
 
 interface CallRecord {
   id: string;
@@ -118,7 +119,7 @@ export default function CallsHistoryScreen() {
                 className="text-xs"
                 style={{ color: item.mode === "blue" ? "#4D9FFF" : "#FF5C7A" }}
               >
-                {item.mode === "blue" ? "파란불" : "빨간불"}
+                {formatModeLabel(item.mode)}
               </Text>
             </View>
           </View>

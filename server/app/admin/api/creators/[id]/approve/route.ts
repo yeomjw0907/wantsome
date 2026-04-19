@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendPushToUser } from "@/lib/push";
+import { MODE_LABEL } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export async function POST(
 
   await sendPushToUser(admin, id, {
     title: "크리에이터 심사가 완료됐습니다 🎉",
-    body: "이제 파란불/빨간불 모드로 통화를 시작하세요!",
+    body: `이제 ${MODE_LABEL.blue}/${MODE_LABEL.red} 모드로 통화를 시작하세요!`,
   });
 
   await admin.from("admin_logs").insert({

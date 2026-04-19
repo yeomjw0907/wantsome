@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
+import { MODE_LABEL } from "@/constants/branding";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePointStore } from "@/stores/usePointStore";
 import CallWaitingModal from "@/components/CallWaitingModal";
@@ -372,13 +373,13 @@ export default function CreatorProfileScreen() {
               {creator.mode_blue && (
                 <View className="bg-blue/30 rounded-full px-2.5 py-1 flex-row items-center gap-1">
                   <View className="w-2 h-2 rounded-full bg-blue-300" />
-                  <Text className="text-white text-xs font-medium">파란불</Text>
+                  <Text className="text-white text-xs font-medium">{MODE_LABEL.blue}</Text>
                 </View>
               )}
               {creator.mode_red && (
                 <View className="bg-red/30 rounded-full px-2.5 py-1 flex-row items-center gap-1">
                   <View className="w-2 h-2 rounded-full bg-red-300" />
-                  <Text className="text-white text-xs font-medium">빨간불</Text>
+                  <Text className="text-white text-xs font-medium">{MODE_LABEL.red}</Text>
                 </View>
               )}
             </View>
@@ -442,7 +443,7 @@ export default function CreatorProfileScreen() {
                     style={{ backgroundColor: callMode === "blue" ? "#4D9FFF" : "#9CA3AF" }}
                   />
                   <Text className={`text-sm font-semibold ${callMode === "blue" ? "text-blue" : "text-gray-500"}`}>
-                    파란불 · 900P/분
+                    {MODE_LABEL.blue} · 900P/분
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -460,7 +461,7 @@ export default function CreatorProfileScreen() {
                     style={{ backgroundColor: callMode === "red" ? "#FF5C7A" : "#9CA3AF" }}
                   />
                   <Text className={`text-sm font-semibold ${callMode === "red" ? "text-red" : "text-gray-500"}`}>
-                    빨간불 · 1,300P/분
+                    {MODE_LABEL.red} · 1,300P/분
                   </Text>
                 </View>
               </TouchableOpacity>

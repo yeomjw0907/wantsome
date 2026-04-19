@@ -26,7 +26,10 @@
     ▼
 [4] Supabase 세션 확인
     │
-    ├─ 없음 → 로그인 화면 (/login)
+    ├─ 없음 → 로그인 화면 (/login) — 연령 확인은 로그인 성공 후에만 진행
+    │
+    ▼
+[4.5] 세션 있음 + age_verified 없음 → 연령 확인 (/age-check)
     │
     ▼
 [5] GET /api/users/me

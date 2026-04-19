@@ -1,5 +1,7 @@
+import { COMPANY_LEGAL_NAME, MODE_LABEL, SERVICE_NAME } from "@/lib/branding";
+
 export const metadata = {
-  title: "이용약관 | wantsome",
+  title: `이용약관 | ${SERVICE_NAME}(wantsome)`,
 };
 
 const tableStyle: React.CSSProperties = { width: "100%", borderCollapse: "collapse", marginBottom: 16, fontSize: 14 };
@@ -22,7 +24,7 @@ export default function TermsPage() {
 
       <section style={secStyle}>
         <h2 style={h2Style}>제1조 (목적)</h2>
-        <p>본 약관은 wantsome(이하 "회사")이 운영하는 wantsome 플랫폼(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+        <p>본 약관은 {COMPANY_LEGAL_NAME}(이하 &quot;회사&quot;)이 운영하는 {SERVICE_NAME}(wantsome) 서비스(이하 &quot;서비스&quot;)의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
       </section>
 
       <section style={secStyle}>
@@ -58,11 +60,11 @@ export default function TermsPage() {
           </thead>
           <tbody>
             <tr>
-              <td style={tdStyle}>영상통화 (블루 모드)</td>
+              <td style={tdStyle}>영상통화 ({MODE_LABEL.blue} 모드)</td>
               <td style={tdStyle}>크리에이터와의 일반 화상통화 서비스. 분당 포인트 차감.</td>
             </tr>
             <tr>
-              <td style={tdStyle}>영상통화 (레드 모드)</td>
+              <td style={tdStyle}>영상통화 ({MODE_LABEL.red} 모드)</td>
               <td style={tdStyle}>크리에이터와의 프리미엄 화상통화 서비스. 분당 포인트 차감. 만 19세 이상 전용.</td>
             </tr>
             <tr>
@@ -215,7 +217,7 @@ export default function TermsPage() {
 
       <div style={{ marginTop: 60, borderTop: "1px solid #E5E7EB", paddingTop: 24, color: "#888", fontSize: 13 }}>
         <p>본 약관은 <strong>2025년 3월 15일</strong>부터 시행됩니다.</p>
-        <p>wantsome | support@wantsome.kr | wantsome.kr</p>
+        <p>{SERVICE_NAME}(wantsome) · {COMPANY_LEGAL_NAME} · support@wantsome.kr · wantsome.kr</p>
       </div>
     </div>
   );

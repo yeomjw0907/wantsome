@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import {
@@ -26,6 +27,12 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { usePointStore } from "@/stores/usePointStore";
 import { PRODUCTS, type ProductId } from "@/constants/products";
 import { apiCall } from "@/lib/api";
+
+/** Expo Go에는 expo-iap 네이티브 모듈이 없음 — 개발 클라이언트/EAS 빌드에서만 인앱결제 */
+function isIapUnavailable(): boolean {
+  if (Platform.OS === "web") return true;
+  return Constants.appOwnership === "expo";
+}
 
 function formatCountdown(ms: number) {
   if (ms <= 0) return "00:00:00";
@@ -71,12 +78,11 @@ export default function ChargeScreen() {
   }, [showFirstChargeBanner, firstChargeDeadline]);
 
   useEffect(() => {
-    if (Platform.OS === "web") return;
+    if (Platform.OS === "web" || isIapUnavailable()) return;
     let mounted = true;
 
     initConnection().catch(() => null);
 
-    // expo-iap는 네이티브 모듈이라 Expo Go에서 사용 불가 — try-catch로 크래시 방지
     let updatedSub: { remove: () => void } | null = null;
     let errorSub: { remove: () => void } | null = null;
 
@@ -129,7 +135,7 @@ export default function ChargeScreen() {
         }
       });
     } catch {
-      // Expo Go 등 네이티브 모듈 미탑재 환경 — 화면 표시는 정상, 구매만 비활성
+      // 네이티브 모듈 미탑재
     }
 
     return () => {
@@ -145,6 +151,14 @@ export default function ChargeScreen() {
         Toast.show({ type: "info", text1: "앱에서만 충전할 수 있습니다." });
         return;
       }
+      if (isIapUnavailable()) {
+        Toast.show({
+          type: "info",
+          text1: "인앱결제 안내",
+          text2: "Expo Go에서는 스토어 결제를 사용할 수 없습니다. EAS로 빌드한 앱에서 테스트해 주세요.",
+        });
+        return;
+      }
       if (!user?.id) {
         Toast.show({ type: "error", text1: "로그인이 필요합니다." });
         return;
@@ -157,6 +171,14 @@ export default function ChargeScreen() {
 
   const executePurchase = useCallback(
     async (productId: ProductId) => {
+      if (isIapUnavailable()) {
+        Toast.show({
+          type: "info",
+          text1: "인앱결제 안내",
+          text2: "Expo Go에서는 스토어 결제를 사용할 수 없습니다. EAS 빌드 앱에서 테스트해 주세요.",
+        });
+        return;
+      }
       const userId = user?.id;
       if (!userId) return;
 
@@ -189,15 +211,17 @@ export default function ChargeScreen() {
 
   return (
     <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center px-4 py-3 border-b border-gray-100">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-10 h-10 items-center justify-center -ml-2"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={24} color="#1B2A4A" />
-        </TouchableOpacity>
-        <Text className="text-navy text-lg font-bold flex-1 text-center -mr-10">
+      <View className="relative flex-row items-center justify-center min-h-[52px] px-4 py-3 border-b border-gray-100">
+        <View className="absolute left-2 z-10">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="w-10 h-10 items-center justify-center"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="chevron-back" size={24} color="#1B2A4A" />
+          </TouchableOpacity>
+        </View>
+        <Text className="text-navy text-lg font-bold text-center px-12" numberOfLines={1}>
           포인트 충전
         </Text>
       </View>
@@ -206,6 +230,18 @@ export default function ChargeScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
+        {Platform.OS !== "web" && isIapUnavailable() ? (
+          <View className="mx-4 mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex-row gap-3 items-start">
+            <Ionicons name="information-circle-outline" size={22} color="#B45309" />
+            <View className="flex-1">
+              <Text className="text-amber-900 font-semibold text-sm">인앱결제 미지원 환경</Text>
+              <Text className="text-amber-800 text-xs mt-1 leading-5">
+                Expo Go에서는 스토어 인앱결제를 사용할 수 없습니다. 실제 결제 테스트는 EAS 빌드(프리뷰/프로덕션) 앱을 설치해 주세요.
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {/* 상단 잔여 포인트 */}
         <View className="px-4 pt-6 pb-4">
           <Text className="text-gray-500 text-sm">보유 포인트</Text>

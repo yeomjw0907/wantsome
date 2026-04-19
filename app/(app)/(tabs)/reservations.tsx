@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
+import { formatModeLabel } from "@/constants/branding";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 interface Reservation {
@@ -105,7 +106,7 @@ function ReservationCard({
             className="text-xs font-medium"
             style={{ color: item.mode === "blue" ? "#4D9FFF" : "#FF5C7A" }}
           >
-            {item.mode === "blue" ? "파란불" : "빨간불"}
+            {formatModeLabel(item.mode)}
           </Text>
         </View>
         <View className="bg-gray-50 rounded-lg px-2.5 py-1">

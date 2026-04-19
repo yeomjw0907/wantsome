@@ -1,88 +1,20 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { useState } from "react";
+import { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
+/**
+ * 온보딩 이용모드 선택은 제거됨. 딥링크·캐시 대비 리다이렉트만 유지.
+ */
 export default function ModeScreen() {
   const router = useRouter();
-  const updateUser = useAuthStore((s) => s.updateUser);
-  const [blue, setBlue] = useState(true);
-  const [red, setRed] = useState(false);
-  const [showRedAgree, setShowRedAgree] = useState(false);
-  const [redAgreed, setRedAgreed] = useState(false);
 
-  const handleNext = () => {
-    if (red && !redAgreed) {
-      setShowRedAgree(true);
-      return;
-    }
-    updateUser({ blue_mode: blue, red_mode: red });
+  useEffect(() => {
     router.replace("/(auth)/profile");
-  };
-
-  const confirmRedAgree = () => {
-    setRedAgreed(true);
-    setShowRedAgree(false);
-  };
+  }, [router]);
 
   return (
-    <View className="flex-1 bg-white px-6 pt-10">
-      <Text className="text-navy text-2xl font-bold mb-2">이용 모드를 선택해 주세요</Text>
-      <Text className="text-gray-500 mb-8">파란불(일반) / 빨간불(프리미엄) 중 이용할 모드를 선택할 수 있어요</Text>
-
-      <TouchableOpacity
-        onPress={() => setBlue(!blue)}
-        className={`flex-row items-center p-4 rounded-2xl mb-3 border-2 ${
-          blue ? "border-blue bg-bluebell" : "border-gray-200 bg-gray-50"
-        }`}
-      >
-        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${blue ? "bg-blue border-blue" : "border-gray-300"}`} />
-        <View>
-          <Text className="text-gray-900 font-semibold">파란불 (일반)</Text>
-          <Text className="text-gray-500 text-sm">900P/분 · 일반 콘텐츠</Text>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => setRed(!red)}
-        className={`flex-row items-center p-4 rounded-2xl mb-8 border-2 ${
-          red ? "border-gold bg-gold-light" : "border-gray-200 bg-gray-50"
-        }`}
-      >
-        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${red ? "bg-gold border-gold" : "border-gray-300"}`} />
-        <View>
-          <Text className="text-gray-900 font-semibold">빨간불 (프리미엄)</Text>
-          <Text className="text-gray-500 text-sm">1,300P/분 · 프리미엄 콘텐츠 (만 19세+)</Text>
-        </View>
-      </TouchableOpacity>
-
-      <PrimaryButton label="다음" onPress={handleNext} />
-
-      {showRedAgree && (
-        <View className="absolute inset-0 bg-navy/80 justify-center px-6">
-          <View className="bg-white rounded-2xl p-6">
-            <Text className="text-navy text-lg font-bold mb-2">프리미엄 서비스 이용 확인</Text>
-            <Text className="text-gray-600 text-sm mb-4">
-              빨간불 모드는 만 19세 이상만 이용할 수 있는 프리미엄 서비스입니다. 이용에 동의하시겠습니까?
-            </Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => setShowRedAgree(false)}
-                className="flex-1 bg-gray-100 h-12 rounded-full items-center justify-center"
-              >
-                <Text className="text-gray-900 font-semibold">취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={confirmRedAgree}
-                className="flex-1 bg-pink h-12 rounded-full items-center justify-center"
-              >
-                <Text className="text-white font-semibold">동의하고 활성화</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
+    <View style={{ flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
+      <ActivityIndicator color="#F43F5E" />
     </View>
   );
 }

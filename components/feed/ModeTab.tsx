@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity } from "react-native";
+import { MODE_LABEL } from "@/constants/branding";
 
 export type FeedMode = "blue" | "red";
 
@@ -8,23 +9,25 @@ interface ModeTabProps {
   canAccessRed: boolean;
 }
 
+/** 활성 탭: 솔리드 배경 + 흰 글자 / 비활성: 연한 회색 배경 — "선택이 더 진하게" 보이도록 */
 export function ModeTab({ mode, onModeChange, canAccessRed }: ModeTabProps) {
   return (
-    <View className="flex-row bg-gray-100 rounded-full p-1">
+    <View className="flex-row bg-gray-100 rounded-full p-1 gap-1">
       <TouchableOpacity
         onPress={() => onModeChange("blue")}
         className="flex-1 py-2.5 rounded-full items-center justify-center"
         style={
           mode === "blue"
-            ? { backgroundColor: "#D1E4F8", borderBottomWidth: 2, borderBottomColor: "#4D9FFF" }
-            : undefined
+            ? { backgroundColor: "#4D9FFF" }
+            : { backgroundColor: "transparent" }
         }
+        activeOpacity={0.85}
       >
         <Text
           className="text-sm font-semibold"
-          style={mode === "blue" ? { color: "#4D9FFF" } : { color: "#8E8EA0" }}
+          style={mode === "blue" ? { color: "#FFFFFF" } : { color: "#8E8EA0" }}
         >
-          파란불
+          {MODE_LABEL.blue}
         </Text>
       </TouchableOpacity>
 
@@ -34,21 +37,22 @@ export function ModeTab({ mode, onModeChange, canAccessRed }: ModeTabProps) {
         className="flex-1 py-2.5 rounded-full items-center justify-center"
         style={
           mode === "red"
-            ? { backgroundColor: "#FFFBEB", borderBottomWidth: 2, borderBottomColor: "#F59E0B" }
-            : undefined
+            ? { backgroundColor: "#FF5C7A" }
+            : { backgroundColor: "transparent" }
         }
+        activeOpacity={0.85}
       >
         <Text
           className="text-sm font-semibold"
           style={
             mode === "red"
-              ? { color: "#F59E0B" }
+              ? { color: "#FFFFFF" }
               : canAccessRed
                 ? { color: "#8E8EA0" }
                 : { color: "#C8C8D8" }
           }
         >
-          빨간불
+          {MODE_LABEL.red}
         </Text>
       </TouchableOpacity>
     </View>

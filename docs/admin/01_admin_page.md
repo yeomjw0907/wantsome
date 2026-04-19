@@ -78,7 +78,7 @@ UPDATE users SET role = 'superadmin' WHERE id = '너의 user_id';
 ### 차트
 - 최근 7일 매출 추이 (Bar)
 - 최근 7일 신규 가입 추이 (Line)
-- 모드별 통화 비율 파란불/빨간불 (Pie)
+- 모드별 통화 비율 스탠다드/프리미엄 (Pie)
 
 ---
 
@@ -92,7 +92,7 @@ UPDATE users SET role = 'superadmin' WHERE id = '너의 user_id';
 ```
 ┌─────────────────────────────┐
 │ 프로필 사진 + 기본정보       │
-│ 신청 모드: 🔵 파란불 🔴 빨간불│
+│ 신청 모드: 🔵 스탠다드 ⭐ 프리미엄│
 │                              │
 │ [신분증 보기] ← private URL  │
 │  └ 신분증 이미지 팝업 표시   │

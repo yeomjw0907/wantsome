@@ -37,7 +37,7 @@
    닉네임 + 인증뱃지(✅) + 등급 표시
 
 2. 모드 뱃지
-   🔵 파란불 / 🔴 빨간불 (보유 모드 모두 표시)
+   🔵 스탠다드 / ⭐ 프리미엄 (보유 모드 모두 표시)
 
 3. 온라인 상태
    초록 점 + "지금 통화 가능" 텍스트
@@ -117,7 +117,7 @@
 
 [settings/index.tsx]
 - 알림 ON/OFF 토글 (Expo Notifications 권한)
-- 파란불/빨간불 모드 설정
+- 스탠다드/프리미엄 모드 설정
 - 차단 목록 관리
 - 고객센터
 - 로그아웃
@@ -138,7 +138,7 @@
 > 약관 하단, 앱스토어 제출, PG사 계약에 필요한 정보
 
 ```
-상호: 원썸 컴퍼니
+상호: 주식회사 98점7도
 대표자: [대표자명 입력]
 사업자등록번호: [등록 후 입력]
 통신판매업신고번호: [신고 후 입력]
@@ -170,7 +170,7 @@ Google Play Console:
 
 ```sql
 INSERT INTO system_config (key, value, updated_at) VALUES
-  ('company_name',     '원썸 컴퍼니',    NOW()),
+  ('company_name',     '주식회사 98점7도',    NOW()),
   ('ceo_name',         '',              NOW()),
   ('business_number',  '',              NOW()),
   ('commerce_number',  '',              NOW()),

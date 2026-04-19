@@ -55,7 +55,7 @@ export type AppInitStatus =
 
 export function useAppInit() {
   const router = useRouter();
-  const { setUser, isOnboarded } = useAuthStore();
+  const { setUser } = useAuthStore();
   const { setPoints, setFirstChargeInfo } = usePointStore();
   const [status, setStatus] = useState<AppInitStatus>("loading");
 
@@ -103,20 +103,20 @@ export function useAppInit() {
           return;
         }
 
-        // [3.5] 연령 인증 여부 (18세 미만 차단 — 앱스토어 심사 필수)
-        const ageVerified = await AsyncStorage.getItem("age_verified");
-        if (!ageVerified) {
-          if (!cancelled) setStatus("age-check");
-          return;
-        }
-
-        // [4] Supabase 세션 확인
+        // [4] Supabase 세션 — 로그인 전에는 연령 게이트를 두지 않음(로그인 직후 연령 확인)
         const {
           data: { session },
         } = await supabase.auth.getSession();
 
         if (!session) {
           if (!cancelled) setStatus("login");
+          return;
+        }
+
+        // [4.5] 로그인된 상태에서만 연령 확인 (재설치·스토리지 삭제 대비)
+        const ageVerified = await AsyncStorage.getItem("age_verified");
+        if (!ageVerified) {
+          if (!cancelled) setStatus("age-check");
           return;
         }
 

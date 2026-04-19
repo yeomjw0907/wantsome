@@ -136,7 +136,7 @@ const handleCharge = async () => {
 |---------|------|------|
 | `PrimaryButton` | components/ui/PrimaryButton.tsx | Pink CTA 버튼 (로딩 상태 포함) |
 | `CreatorCard` | components/CreatorCard.tsx | 피드 카드 |
-| `ModeTab` | components/ModeTab.tsx | 파란불/빨간불 탭 |
+| `ModeTab` | components/ModeTab.tsx | 스탠다드/프리미엄 탭 (내부 blue/red) |
 | `ReportBottomSheet` | components/ReportBottomSheet.tsx | 신고 시트 |
 | `PointBadge` | components/ui/PointBadge.tsx | 포인트 표시 뱃지 |
 

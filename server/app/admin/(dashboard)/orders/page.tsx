@@ -156,7 +156,7 @@ export default function AdminOrdersPage() {
                   </td>
                   <td>
                     <span className="badge badge-gray" style={{ fontSize: 11 }}>
-                      {order.products?.category === "digital" ? "디지털" : order.products?.category === "adult" ? "성인" : "일반"}
+                      {order.products?.category === "digital" ? "디지털" : order.products?.category === "adult" ? "프리미엄" : "일반"}
                     </span>
                   </td>
                   <td style={{ fontSize: 13 }}>{order.quantity}개</td>

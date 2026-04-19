@@ -1,10 +1,10 @@
 /**
- * 성인 인증 화면 — 이중 모드
+ * 연령·본인 확인 화면 — 이중 모드 (fallback 생년월일 / PortOne PASS)
  * - fallback 모드: 생년월일 직접 입력 (PORTONE_API_SECRET 미설정 시)
  * - portone 모드: PASS 본인인증 WebBrowser 플로우 (PORTONE_API_SECRET 설정 시)
  *
  * 마운트 시 GET /api/auth/identity-verification-status 로 모드 결정
- * is_already_verified=true 이면 이 화면 스킵 → /(auth)/role
+ * is_already_verified=true 이면 이 화면 스킵 → /(auth)/profile
  */
 import {
   View,
@@ -16,6 +16,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -41,6 +42,7 @@ interface CreateVerificationResponse {
 
 export default function VerifyScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const updateUser = useAuthStore((s) => s.updateUser);
 
   const [status, setStatus] = useState<"loading" | "fallback" | "portone">("loading");
@@ -64,7 +66,7 @@ export default function VerifyScreen() {
       );
       if (res.is_already_verified) {
         updateUser({ is_verified: true });
-        router.replace("/(auth)/role");
+        router.replace("/(auth)/profile");
         return;
       }
       setStatus(res.mode);
@@ -100,7 +102,7 @@ export default function VerifyScreen() {
         body: JSON.stringify({ fallback: true, birth_date }),
       });
       Toast.show({ type: "success", text1: "연령이 확인되었습니다." });
-      router.replace("/(auth)/role");
+      router.replace("/(auth)/profile");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "오류가 발생했습니다.";
       Toast.show({ type: "error", text1: msg });
@@ -137,7 +139,7 @@ export default function VerifyScreen() {
 
       updateUser({ is_verified: true });
       Toast.show({ type: "success", text1: "본인인증이 완료되었습니다." });
-      router.replace("/(auth)/role");
+      router.replace("/(auth)/profile");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "인증에 실패했습니다.";
       Toast.show({ type: "error", text1: msg });
@@ -149,7 +151,7 @@ export default function VerifyScreen() {
   /* ── 로딩 ── */
   if (status === "loading") {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
+      <View className="flex-1 bg-white items-center justify-center" style={{ paddingTop: insets.top }}>
         <ActivityIndicator color="#F43F5E" size="large" />
       </View>
     );
@@ -186,7 +188,10 @@ export default function VerifyScreen() {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="flex-1 px-6 pt-20 pb-10 justify-center">
+          <View
+            className="flex-1 px-6 pb-10 justify-center"
+            style={{ paddingTop: insets.top + 24 }}
+          >
             <Header />
 
             <Text className="text-gray-600 text-center mb-1 text-sm leading-6">
@@ -277,7 +282,10 @@ export default function VerifyScreen() {
 
   /* ── PortOne PASS UI ── */
   return (
-    <View className="flex-1 bg-white px-6 justify-center">
+    <View
+      className="flex-1 bg-white px-6 justify-center"
+      style={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }}
+    >
       <Header />
 
       <Text className="text-gray-600 text-center mb-8 leading-6">

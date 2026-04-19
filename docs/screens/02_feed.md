@@ -6,7 +6,7 @@
 |------|------|
 | 레이아웃 | 2컬럼 인스타그램형 그리드 |
 | 상단 바 | wantsome 로고 \| 내 포인트 \| 알림 아이콘 |
-| 모드 탭 | 🔵 파란불 / 🔴 빨간불 (빨간불은 is_verified만) |
+| 모드 탭 | 🔵 스탠다드 / ⭐ 프리미엄 (프리미엄은 is_verified 등 조건) |
 | 카드 | 1:1 정사각형, 사진 풀커버, 하단 그라데이션 |
 | 정렬 | 온라인 우선 → 탑 → 인기 → 일반 → 신규 |
 | 페이지네이션 | 무한스크롤 20개씩 |
@@ -25,10 +25,10 @@
 - app/(app)/(tabs)/index.tsx
 
 구현 내용:
-1. ModeTab 컴포넌트 (파란불/빨간불 전환)
-   - 파란불 활성: 배경 #D1E4F8, 텍스트 #4D9FFF, 하단 border 2px
-   - 빨간불 활성: 배경 #FFEEF1, 텍스트 #FF5C7A
-   - 빨간불 탭: users.is_verified=true 이고 red_mode=true 유저만 접근
+1. ModeTab 컴포넌트 (스탠다드/프리미엄 전환, 내부 키 blue/red)
+   - 스탠다드 활성: 배경 #D1E4F8, 텍스트 #4D9FFF, 하단 border 2px
+   - 프리미엄 활성: 배경 #FFEEF1, 텍스트 #FF5C7A
+   - 프리미엄 탭: users.is_verified=true 이고 red_mode=true 유저만 접근
 
 2. CreatorCard 컴포넌트 (components/CreatorCard.tsx)
    - 1:1 aspect ratio, border-radius 16px

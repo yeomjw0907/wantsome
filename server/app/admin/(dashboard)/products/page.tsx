@@ -23,7 +23,7 @@ interface Product {
 const CATEGORY_MAP: Record<string, string> = {
   general: "일반",
   digital: "디지털",
-  adult: "성인",
+  adult: "프리미엄",
 };
 
 const EMPTY_FORM = {

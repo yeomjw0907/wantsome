@@ -63,7 +63,7 @@ const GIFT_ITEMS = [
 
 type GiftItemType = (typeof GIFT_ITEMS)[number];
 
-// ─── GiftParticles: 아프리카TV 별풍선 스타일 이팩트 ──────────────────────────
+// ─── GiftParticles: 선물 이펙트 (별풍선 스타일) ──────────────────────────
 function getGiftConfig(points: number) {
   if (points >= 5000) return { count: 18, size: 42 };
   if (points >= 3000) return { count: 14, size: 36 };

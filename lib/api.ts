@@ -44,6 +44,12 @@ function resolveBaseUrl(): string {
 
 export const BASE_URL = resolveBaseUrl();
 
+let loggedBaseUrl = false;
+if (__DEV__ && !loggedBaseUrl) {
+  loggedBaseUrl = true;
+  console.log("[wantsome api] BASE_URL =", BASE_URL);
+}
+
 export async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
   let accessToken: string | undefined;
 
@@ -61,14 +67,78 @@ export async function apiCall<T>(path: string, options?: RequestInit): Promise<T
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers,
-    ...options,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      headers,
+      ...options,
+    });
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(`[apiCall] network ${path}`, e);
+    }
+    throw new Error("네트워크 연결을 확인해주세요.");
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     const rawMessage = (error as { message?: string }).message;
+    if (__DEV__) {
+      const snippet =
+        typeof error === "object" && error !== null
+          ? JSON.stringify(error).slice(0, 280)
+          : String(error);
+      console.warn(`[apiCall] ${res.status} ${path}`, snippet);
+    }
+    const isAuthError =
+      res.status === 401 &&
+      (!rawMessage || /unauthorized|invalid token|expired token/i.test(rawMessage));
+
+    throw new Error(
+      isAuthError
+        ? "로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해주세요."
+        : rawMessage ?? "서버 오류가 발생했습니다.",
+    );
+  }
+
+  return res.json() as Promise<T>;
+}
+
+/** multipart/form-data (이미지 등). Content-Type을 넣지 않아 RN이 boundary를 붙입니다. */
+export async function uploadFormData<T>(path: string, formData: FormData): Promise<T> {
+  let accessToken: string | undefined;
+  try {
+    const { data } = await supabase.auth.getSession();
+    accessToken = data.session?.access_token;
+  } catch {
+    accessToken = undefined;
+  }
+
+  const headers = new Headers();
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(`[uploadFormData] network ${path}`, e);
+    }
+    throw new Error("네트워크 연결을 확인해주세요.");
+  }
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    const rawMessage = (error as { message?: string }).message;
+    if (__DEV__) {
+      console.warn(`[uploadFormData] ${res.status} ${path}`, rawMessage);
+    }
     const isAuthError =
       res.status === 401 &&
       (!rawMessage || /unauthorized|invalid token|expired token/i.test(rawMessage));

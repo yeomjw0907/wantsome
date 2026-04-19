@@ -1,8 +1,8 @@
 /**
  * 연령 인증 화면
  * - 생년월일 입력 → 만 19세 이상만 서비스 이용 가능
- * - 통과 시 AsyncStorage "age_verified" = "true" 저장 → 로그인 화면으로
- * - 앱스토어 심사 필수 요건 (성인 콘텐츠 플랫폼)
+ * - 통과 시 AsyncStorage "age_verified" = "true" 저장 → 약관(또는 온보딩 다음 단계)
+ * - 앱스토어 심사 시 연령 정책 명시
  */
 import React, { useState } from "react";
 import {
@@ -18,6 +18,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SERVICE_NAME } from "@/constants/branding";
 
 export default function AgeCheckScreen() {
   const router = useRouter();
@@ -55,14 +56,14 @@ export default function AgeCheckScreen() {
     if (age < 19) {
       Alert.alert(
         "이용 불가",
-        "원썸은 만 19세 이상만 이용할 수 있는 성인 서비스입니다.\n\n미성년자의 접근을 허용하지 않습니다.",
+        `${SERVICE_NAME}은(는) 만 19세 이상만 가입·이용할 수 있습니다.\n\n미성년자는 이용할 수 없습니다.`,
         [{ text: "확인" }]
       );
       return;
     }
 
     await AsyncStorage.setItem("age_verified", "true");
-    router.replace("/(auth)/login");
+    router.replace("/(auth)/terms");
   };
 
   return (
@@ -84,8 +85,8 @@ export default function AgeCheckScreen() {
               연령 확인
             </Text>
             <Text className="text-gray-500 text-center mt-2 leading-6">
-              원썸은 <Text className="font-semibold text-pink">만 19세 이상</Text>만{"\n"}
-              이용할 수 있는 성인 서비스입니다.
+              {SERVICE_NAME}은(는) <Text className="font-semibold text-pink">만 19세 이상</Text>만{"\n"}
+              가입·이용할 수 있는 서비스입니다.
             </Text>
           </View>
 

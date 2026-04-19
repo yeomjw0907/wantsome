@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePointStore } from "@/stores/usePointStore";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -15,6 +16,7 @@ function formatCountdown(ms: number): string {
 
 export default function ChargePromoScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const firstChargeDeadline = usePointStore((s) => s.firstChargeDeadline);
   const isFirstCharged = usePointStore((s) => s.isFirstCharged);
   const [remaining, setRemaining] = useState(0);
@@ -42,7 +44,7 @@ export default function ChargePromoScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white px-6 pt-10">
+    <View className="flex-1 bg-white px-6" style={{ paddingTop: insets.top + 16 }}>
       <Text className="text-navy text-2xl font-bold mb-2">첫충전 100% 보너스</Text>
       <Text className="text-gray-500 mb-6">
         가입 후 첫 충전 시 보너스 포인트를 드려요

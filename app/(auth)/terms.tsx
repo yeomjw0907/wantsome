@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
 const TERMS_ITEMS = [
@@ -14,6 +15,7 @@ type TermKey = (typeof TERMS_ITEMS)[number]["key"];
 
 export default function TermsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [agreed, setAgreed] = useState<Record<TermKey, boolean>>({
     terms: false,
     privacy: false,
@@ -45,10 +47,10 @@ export default function TermsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
       <ScrollView
-        className="flex-1 px-6 pt-10"
-        contentContainerStyle={{ paddingBottom: 24 }}
+        className="flex-1 px-6"
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
         <Text className="text-navy text-2xl font-bold mb-6">약관 동의</Text>
@@ -102,7 +104,7 @@ export default function TermsScreen() {
             <ScrollView>
               <Text className="text-gray-600 text-sm">
                 {showDetail === "terms" &&
-                  "서비스 이용약관 전문 (제1조~제7조). 원썸 컴퍼니 wantsome 서비스 이용조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정합니다. 만 19세 이상만 이용 가능합니다."}
+                  "서비스 이용약관 전문 (제1조~제7조). 주식회사 98점7도가 운영하는 원썸(wantsome) 서비스 이용조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정합니다. 만 19세 이상만 이용 가능합니다."}
                 {showDetail === "privacy" &&
                   "개인정보처리방침. 수집 항목: 이름, 생년월일, 휴대폰번호(본인인증 시), 소셜 로그인 정보, 닉네임, 프로필 사진. 보유 기간: 탈퇴 시 삭제, CI 90일 보관."}
                 {showDetail === "age18" &&
@@ -115,7 +117,7 @@ export default function TermsScreen() {
         )}
       </ScrollView>
 
-      <View className="px-4 pb-8 pt-4">
+      <View className="px-4 pt-4" style={{ paddingBottom: Math.max(insets.bottom, 24) }}>
         <PrimaryButton
           label="다음"
           onPress={handleNext}

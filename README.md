@@ -1,6 +1,6 @@
-# wantsome
+# wantsome (원썸)
 
-> 크리에이터와 팬을 연결하는 **성인 영상통화 플랫폼** (만 19세 이상)
+> 크리에이터와 팬이 **1:1 영상통화**로 소통하는 서비스 · 운영: **주식회사 98점7도** (만 19세 이상)
 
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2055-000020?logo=expo)](https://expo.dev)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
@@ -28,7 +28,7 @@
 
 | 구분 | 내용 |
 |------|------|
-| 서비스 | 1:1 영상통화 (블루/레드 모드), 예약, 쇼핑, 포인트 결제 |
+| 서비스 | 1:1 영상통화 (UI: 스탠다드/프리미엄 · 내부 키 blue/red), 예약, 쇼핑, 포인트 결제 |
 | 대상 | 만 19세 이상 성인 |
 | 플랫폼 | iOS + Android (Expo) |
 | 결제 | App Store IAP / Google Play Billing (포인트 방식) |

@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { formatModeLabel } from "@/constants/branding";
 
 interface FeedEmptyStateProps {
   mode: "blue" | "red";
@@ -15,7 +16,7 @@ export function FeedEmptyState({ mode }: FeedEmptyStateProps) {
         <Text className="text-4xl">{isBlue ? "🔵" : "⭐"}</Text>
       </View>
       <Text className="text-navy text-lg font-semibold text-center mb-1">
-        {isBlue ? "파란불" : "빨간불"} 크리에이터를 기다리는 중
+        {formatModeLabel(isBlue ? "blue" : "red")} 크리에이터를 기다리는 중
       </Text>
       <Text className="text-gray-500 text-sm text-center leading-5">
         곧 다양한 크리에이터가 올라올 거예요.{"\n"}

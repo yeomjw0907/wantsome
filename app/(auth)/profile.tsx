@@ -1,12 +1,14 @@
 import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const [nickname, setNickname] = useState(user?.nickname ?? "");
@@ -35,7 +37,7 @@ export default function ProfileSetupScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white px-6 pt-10">
+    <View className="flex-1 bg-white px-6" style={{ paddingTop: insets.top + 16 }}>
       <Text className="text-navy text-2xl font-bold mb-2">프로필 설정</Text>
       <Text className="text-gray-500 mb-8">닉네임과 사진을 설정해 주세요</Text>
 
