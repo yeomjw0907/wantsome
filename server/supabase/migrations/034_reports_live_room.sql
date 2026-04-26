@@ -14,12 +14,15 @@ CREATE INDEX IF NOT EXISTS idx_reports_live_room ON reports(live_room_id)
   WHERE live_room_id IS NOT NULL;
 
 -- 2) LIVE_HARASSMENT 카테고리 추가 (라이브 채팅 욕설/괴롭힘)
-ALTER TABLE reports
-  DROP CONSTRAINT IF EXISTS reports_category_check;
+-- DROP→ADD 사이에 무제약 윈도우가 생기지 않도록 단일 트랜잭션으로 묶음
+BEGIN;
+  ALTER TABLE reports
+    DROP CONSTRAINT IF EXISTS reports_category_check;
 
-ALTER TABLE reports
-  ADD CONSTRAINT reports_category_check
-  CHECK (category IN (
-    'UNDERAGE', 'ILLEGAL_RECORD', 'PROSTITUTION',
-    'HARASSMENT', 'FRAUD', 'LIVE_HARASSMENT', 'SPAM', 'OTHER'
-  ));
+  ALTER TABLE reports
+    ADD CONSTRAINT reports_category_check
+    CHECK (category IN (
+      'UNDERAGE', 'ILLEGAL_RECORD', 'PROSTITUTION',
+      'HARASSMENT', 'FRAUD', 'LIVE_HARASSMENT', 'SPAM', 'OTHER'
+    ));
+COMMIT;

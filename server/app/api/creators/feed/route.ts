@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { getBlockedUserIds, getOptionalUserId } from "@/lib/blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,11 @@ export async function GET(req: NextRequest) {
   }
 
   const admin = createSupabaseAdmin();
+
+  // 차단 필터 — 로그인 사용자가 양방향 차단 관계인 크리에이터는 노출하지 않음 (Apple 2.1 UGC)
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
+  const viewerId = await getOptionalUserId(admin, token);
+  const blockedIds = await getBlockedUserIds(admin, viewerId);
 
   /** 스탠다드: mode_blue 가 NULL(구 데이터)이면 노출. 프리미엄은 mode_red === true 만 */
   let query = admin.from("creators").select(
@@ -42,6 +48,10 @@ export async function GET(req: NextRequest) {
     if (categories.length > 0) {
       query = query.overlaps("categories", categories);
     }
+  }
+
+  if (blockedIds.length > 0) {
+    query = query.not("id", "in", `(${blockedIds.join(",")})`);
   }
 
   const { data: rows, error } = await query

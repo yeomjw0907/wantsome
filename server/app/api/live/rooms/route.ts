@@ -9,6 +9,7 @@ import {
   getLiveHostProfiles,
   type LiveRoomRecord,
 } from "@/lib/live";
+import { getBlockedUserIds, getOptionalUserId } from "@/lib/blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -58,13 +59,25 @@ async function buildRoomSummary(
 
 export async function GET(req: NextRequest) {
   const admin = createSupabaseAdmin();
-  const { data: rooms, error } = await admin
+
+  // 차단 필터 — 양방향 차단 관계 호스트의 라이브룸 제외 (Apple 2.1)
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
+  const viewerId = await getOptionalUserId(admin, token);
+  const blockedIds = await getBlockedUserIds(admin, viewerId);
+
+  let query = admin
     .from("live_rooms")
     .select(`
       id, host_id, title, thumbnail_url, entry_fee_points, viewer_limit,
       planned_duration_min, scheduled_end_at, status, agora_channel, started_at, ended_at, extension_count
     `)
-    .eq("status", "live")
+    .eq("status", "live");
+
+  if (blockedIds.length > 0) {
+    query = query.not("host_id", "in", `(${blockedIds.join(",")})`);
+  }
+
+  const { data: rooms, error } = await query
     .order("started_at", { ascending: false })
     .limit(30);
 

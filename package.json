@@ -7,7 +7,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "apple:oauth-secret": "node scripts/generate-apple-oauth-secret.mjs"
+    "apple:oauth-secret": "node scripts/generate-apple-oauth-secret.mjs",
+    "eas:check-submit": "node scripts/check-eas-submit.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
