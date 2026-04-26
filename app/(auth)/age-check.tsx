@@ -1,8 +1,8 @@
 /**
  * 연령 인증 화면
- * - 생년월일 입력 → 만 19세 이상만 서비스 이용 가능
- * - 통과 시 AsyncStorage "age_verified" = "true" 저장 → 약관(또는 온보딩 다음 단계)
- * - 앱스토어 심사 시 연령 정책 명시
+ * - 생년월일 입력 → 서버 검증 + users.birth_date 저장 → 만 19세 이상만 통과
+ * - 1차 게이트 (self-attest). 2차는 PortOne 본인인증
+ * - 앱스토어/Play 심사 시 연령 정책 명시
  */
 import React, { useState } from "react";
 import {
@@ -19,6 +19,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVICE_NAME } from "@/constants/branding";
+import { apiCall } from "@/lib/api";
 
 export default function AgeCheckScreen() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function AgeCheckScreen() {
   const [month, setMonth] = useState("");
   const [day, setDay] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleConfirm = async () => {
     setError("");
@@ -43,27 +45,39 @@ export default function AgeCheckScreen() {
       return;
     }
 
-    const birthDate = new Date(y, m - 1, d);
-    const today = new Date();
+    const birthDateStr = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-    // 만 19세 계산
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age -= 1;
+    setSubmitting(true);
+    try {
+      // 서버 검증 + users.birth_date 저장 (정통망법/청소년보호법 게이트)
+      await apiCall("/api/auth/age-verify", {
+        method: "POST",
+        body: JSON.stringify({ birth_date: birthDateStr }),
+      });
+
+      await AsyncStorage.setItem("age_verified", "true");
+      router.replace("/(auth)/terms");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+
+      if (msg.includes("UNDERAGE")) {
+        Alert.alert(
+          "이용 불가",
+          `${SERVICE_NAME}은(는) 만 19세 이상만 가입·이용할 수 있습니다.\n\n미성년자는 이용할 수 없습니다.`,
+          [{ text: "확인" }],
+        );
+      } else if (msg.includes("BIRTH_DATE_LOCKED")) {
+        Alert.alert(
+          "확인 필요",
+          "이미 등록된 생년월일과 다릅니다. 변경하려면 본인인증을 진행해주세요.",
+          [{ text: "확인" }],
+        );
+      } else {
+        setError("연령 인증 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      }
+    } finally {
+      setSubmitting(false);
     }
-
-    if (age < 19) {
-      Alert.alert(
-        "이용 불가",
-        `${SERVICE_NAME}은(는) 만 19세 이상만 가입·이용할 수 있습니다.\n\n미성년자는 이용할 수 없습니다.`,
-        [{ text: "확인" }]
-      );
-      return;
-    }
-
-    await AsyncStorage.setItem("age_verified", "true");
-    router.replace("/(auth)/terms");
   };
 
   return (
@@ -142,8 +156,8 @@ export default function AgeCheckScreen() {
           {/* 안내 문구 */}
           <View className="bg-gray-50 rounded-2xl p-4 mb-8">
             <Text className="text-gray-500 text-sm leading-5">
-              • 생년월일은 서버에 저장되지 않으며, 기기에만 보관됩니다.{"\n"}
-              • 허위 입력 시 서비스 이용이 제한될 수 있습니다.{"\n"}
+              • 생년월일은 청소년보호법에 따라 안전하게 보관됩니다.{"\n"}
+              • 허위 입력 시 서비스 이용이 제한되며, 본인인증 단계에서 추가 검증됩니다.{"\n"}
               • 만 19세 미만은 법적으로 이용이 불가합니다.
             </Text>
           </View>
@@ -153,9 +167,11 @@ export default function AgeCheckScreen() {
             className="h-[56px] bg-pink rounded-full items-center justify-center"
             onPress={handleConfirm}
             activeOpacity={0.85}
+            disabled={submitting}
+            style={{ opacity: submitting ? 0.6 : 1 }}
           >
             <Text className="text-white text-base font-bold">
-              확인 및 계속하기
+              {submitting ? "확인 중..." : "확인 및 계속하기"}
             </Text>
           </TouchableOpacity>
         </View>

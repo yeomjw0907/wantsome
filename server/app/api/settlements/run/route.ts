@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { assertCronSecret } from "@/lib/cronAuth";
 
 export const dynamic = "force-dynamic";
 
 const WITHHOLDING_RATE = 0.033;  // 원천징수 3.3%
 const DEFAULT_SETTLEMENT_RATE = 0.35;  // 정산 정책 v1: 사용자 결제 P × 0.35 (Apple 30% 후 net 50/50)
 
-// Vercel Cron: 매월 15일 09:00 실행
+// Vercel Cron: 매월 15일 00:00 UTC (= KST 09:00) 실행
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  const unauthorized = assertCronSecret(req);
+  if (unauthorized) return unauthorized;
 
   const admin = createSupabaseAdmin();
   const now = new Date();

@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendPushToUsers } from "@/lib/push";
+import { assertCronSecret } from "@/lib/cronAuth";
 
 export const dynamic = "force-dynamic";
 
-// Vercel Cron: 매 분 실행
+// Vercel Cron: 매일 23:00 UTC (= KST 08:00) 실행
 // 10분 후 예약 있는 소비자 + 크리에이터에게 알림
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  const unauthorized = assertCronSecret(req);
+  if (unauthorized) return unauthorized;
 
   const admin = createSupabaseAdmin();
 

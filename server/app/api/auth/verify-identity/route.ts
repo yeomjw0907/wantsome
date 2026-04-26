@@ -1,195 +1,162 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { calcAgeKST } from "@/lib/ageGate";
 
 export const dynamic = "force-dynamic";
 
 interface Body {
   /** PortOne 인증 완료 후 받는 ID */
   identityVerificationId?: string;
-  /** fallback 모드: 생년월일 직접 입력 (PORTONE_API_SECRET 미설정 시만 허용) */
-  fallback?: boolean;
-  birth_date?: string;
-  /** 레거시 호환 — Authorization 헤더로 대체 */
-  userId?: string;
 }
 
+/**
+ * 본인인증 검증 + 19세 게이트 + CI 블랙리스트/중복 확인
+ *
+ * 보안 정책 (fail-closed):
+ *  - PORTONE_API_SECRET 미설정 시 즉시 500 (운영 안전)
+ *  - userId는 Authorization Bearer 토큰에서만 추출 (body.userId 무시 — IDOR 방어)
+ *  - "test-portone-id" 등 임의 식별자 무조건 거절
+ *  - fallback 모드(클라가 birth_date 직접 입력) 제거 (위조 위험)
+ *
+ * 호출처: app/(auth)/age-check.tsx + app/(auth)/phone-verify.tsx
+ */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Body;
-    const supabase = createSupabaseAdmin();
-
-    // 1. Authorization 헤더에서 유저 ID 추출 (우선)
-    let userId = body.userId ?? null;
-    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (token) {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser(token);
-      if (!error && user) userId = user.id;
-    }
-
-    if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. Fallback 모드 — 생년월일 직접 입력
-    //    (PORTONE_API_SECRET이 없을 때만 허용, 보안 게이트)
-    if (body.fallback && !process.env.PORTONE_API_SECRET) {
-      const { birth_date } = body;
-      if (!birth_date) {
-        return NextResponse.json(
-          { message: "birth_date가 필요합니다." },
-          { status: 400 }
-        );
-      }
-
-      const age = getAge(birth_date);
-      if (age < 19) {
-        return NextResponse.json(
-          { error: "UNDERAGE", message: "만 19세 이상만 이용 가능합니다." },
-          { status: 403 }
-        );
-      }
-
-      const { error } = await supabase
-        .from("users")
-        .update({ birth_date })
-        .eq("id", userId);
-
-      if (error) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        success: true,
-        is_adult: true,
-        verified_name: null,
-      });
-    }
-
-    // 3. PortOne / 테스트 모드
-    const { identityVerificationId } = body;
-    if (!identityVerificationId) {
+    // 1) PORTONE_API_SECRET 검증 — 미설정 시 fail-closed
+    const portoneSecret = process.env.PORTONE_API_SECRET;
+    if (!portoneSecret) {
+      console.error("[verify-identity] PORTONE_API_SECRET not configured");
       return NextResponse.json(
-        { message: "identityVerificationId가 필요합니다." },
-        { status: 400 }
+        { message: "Server misconfigured: identity verification unavailable" },
+        { status: 500 },
       );
     }
 
-    // 개발 테스트 또는 PortOne 미설정 시 자동 통과
-    if (
-      identityVerificationId === "test-portone-id" ||
-      !process.env.PORTONE_API_SECRET
-    ) {
-      const { error } = await supabase
-        .from("users")
-        .update({
-          is_verified: true,
-          verified_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
+    const supabase = createSupabaseAdmin();
 
-      if (error) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
-      }
-      return NextResponse.json({
-        success: true,
-        is_adult: true,
-        verified_name: "테스트",
-      });
+    // 2) Authorization 토큰에서만 userId 추출 (body.userId IDOR 방어)
+    const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? null;
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json({ message: "Invalid or expired token" }, { status: 401 });
+    }
+    const userId = user.id;
+
+    // 3) Body 검증
+    const body = (await req.json()) as Body;
+    const identityVerificationId = body.identityVerificationId;
+    if (!identityVerificationId || typeof identityVerificationId !== "string") {
+      return NextResponse.json(
+        { message: "identityVerificationId가 필요합니다." },
+        { status: 400 },
+      );
+    }
+    // 임의 테스트 식별자 거절 (프로덕션 안전)
+    // PortOne v2 ID는 보통 nanoid/UUID-like 20자 이상이라 16자 미만 거절
+    if (identityVerificationId === "test-portone-id" || identityVerificationId.length < 16) {
+      return NextResponse.json({ message: "Invalid identityVerificationId" }, { status: 400 });
     }
 
-    // 4. PortOne v2 API 검증
+    // 4) PortOne v2 API 검증
     const portoneRes = await fetch(
-      `https://api.portone.io/identity-verifications/${identityVerificationId}`,
+      `https://api.portone.io/identity-verifications/${encodeURIComponent(identityVerificationId)}`,
       {
-        headers: {
-          Authorization: `PortOne ${process.env.PORTONE_API_SECRET}`,
-        },
-      }
+        headers: { Authorization: `PortOne ${portoneSecret}` },
+      },
     );
 
     if (!portoneRes.ok) {
+      const detail = await portoneRes.text().catch(() => "");
       return NextResponse.json(
-        { message: "PortOne 인증 실패" },
-        { status: 400 }
+        { message: "PortOne 인증 실패", detail: detail.slice(0, 200) },
+        { status: 400 },
       );
     }
 
     const portone = (await portoneRes.json()) as {
+      status?: string;
       birthDate?: string;
       name?: string;
       ci?: string;
     };
 
+    // 5) PortOne status 검증 — VERIFIED 외 거절 (status 누락도 거절)
+    if (portone.status !== "VERIFIED") {
+      return NextResponse.json(
+        { message: `PortOne status not VERIFIED: ${portone.status ?? "missing"}` },
+        { status: 400 },
+      );
+    }
+
     const birthDate = portone.birthDate;
     if (!birthDate) {
       return NextResponse.json(
         { message: "생년월일 정보를 가져올 수 없습니다." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // 5. 나이 확인 — 만 19세 이상 (한국 청소년보호법)
-    const age = getAge(birthDate);
-    if (age < 19) {
+    // 6) 만 19세 게이트 (한국 청소년보호법) — KST 기준
+    const age = calcAgeKST(birthDate);
+    if (Number.isNaN(age) || age < 19) {
       return NextResponse.json(
         { error: "UNDERAGE", message: "만 19세 이상만 이용 가능합니다." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    const ci = portone.ci;
-
+    // 7) CI 블랙리스트 + 중복 확인 (CI 있을 때만)
+    const ci = portone.ci ?? null;
     if (ci) {
-      // 6. CI 블랙리스트 확인
       const { data: banned } = await supabase
         .from("ci_blacklist")
         .select("id")
         .eq("ci", ci)
         .maybeSingle();
-
       if (banned) {
         return NextResponse.json(
           { error: "BANNED", message: "이용이 제한된 계정입니다." },
-          { status: 403 }
+          { status: 403 },
         );
       }
 
-      // 7. CI 중복 확인 — 동일인 다른 계정 방지
       const { data: existingCi } = await supabase
         .from("users")
         .select("id")
         .eq("ci", ci)
         .neq("id", userId)
         .maybeSingle();
-
       if (existingCi) {
         return NextResponse.json(
           {
             error: "DUPLICATE_CI",
             message: "이미 가입된 계정이 있습니다. 기존 계정으로 로그인해주세요.",
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
     }
 
-    // 8. 인증 완료 저장
-    const { error } = await supabase
+    // 8) 인증 완료 저장 (service_role 사용 → 트리거 우회 OK)
+    const { error: updateErr } = await supabase
       .from("users")
       .update({
         is_verified: true,
-        ci: ci ?? null,
+        ci,
         birth_date: birthDate,
         verified_name: portone.name ?? null,
         verified_at: new Date().toISOString(),
       })
       .eq("id", userId);
 
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
+    if (updateErr) {
+      return NextResponse.json({ message: updateErr.message }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -197,16 +164,10 @@ export async function POST(req: NextRequest) {
       is_adult: true,
       verified_name: portone.name ?? "",
     });
-  } catch {
+  } catch (err) {
+    console.error("[verify-identity] unexpected error:", err);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
 
-function getAge(birthDate: string): number {
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+// getAge는 server/lib/ageGate.ts (calcAgeKST) 공유 헬퍼 사용

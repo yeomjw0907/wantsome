@@ -4,9 +4,35 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-// 계좌번호 AES-256-GCM 암호화
+/**
+ * 계좌번호 AES-256-GCM 암호화
+ *
+ * ⚠️ ACCOUNT_ENCRYPT_KEY 환경변수 미설정 시 throw (fail-closed)
+ *    기존: 미설정 시 "0".repeat(64) zero-key 사용 → 누구나 복호화 가능
+ *    변경: 시작 시점에 발견되어 운영 즉시 알림
+ *
+ * 키 생성: openssl rand -hex 32  (32 bytes = 64 hex chars)
+ */
+function getEncryptKey(): Buffer {
+  const hex = process.env.ACCOUNT_ENCRYPT_KEY;
+  if (!hex || hex.length !== 64 || !/^[0-9a-fA-F]+$/.test(hex)) {
+    throw new Error(
+      "ACCOUNT_ENCRYPT_KEY missing or invalid (expected 64 hex chars = 32 bytes for AES-256)",
+    );
+  }
+  // 약한 키 거절 — distinct char count 8 미만이면 low-entropy
+  // 단순 반복 (0+, f+ 등) 또는 짧은 반복 패턴 모두 거절
+  const distinctChars = new Set(hex.toLowerCase()).size;
+  if (distinctChars < 8) {
+    throw new Error(
+      `ACCOUNT_ENCRYPT_KEY is too weak (only ${distinctChars} distinct chars; need >= 8)`,
+    );
+  }
+  return Buffer.from(hex, "hex");
+}
+
 function encryptAccount(plain: string): string {
-  const key = Buffer.from(process.env.ACCOUNT_ENCRYPT_KEY ?? "0".repeat(64), "hex");
+  const key = getEncryptKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   const enc = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
@@ -38,8 +64,17 @@ export async function POST(req: NextRequest) {
 
   const admin = createSupabaseAdmin();
 
-  // 계좌번호 암호화
-  const encryptedAccount = encryptAccount(body.accountNumber);
+  // 계좌번호 암호화 (ACCOUNT_ENCRYPT_KEY 미설정 시 throw → 500)
+  let encryptedAccount: string;
+  try {
+    encryptedAccount = encryptAccount(body.accountNumber);
+  } catch (err) {
+    console.error("[creators/register] encrypt key error:", err);
+    return NextResponse.json(
+      { message: "Server misconfigured: account encryption unavailable" },
+      { status: 500 },
+    );
+  }
 
   // creator_profiles 최종 등록
   const { error } = await admin

@@ -12,14 +12,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendPushToUser } from "@/lib/push";
+import { assertCronSecret } from "@/lib/cronAuth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  const unauthorized = assertCronSecret(req);
+  if (unauthorized) return unauthorized;
 
   const admin = createSupabaseAdmin();
   const now = new Date();
