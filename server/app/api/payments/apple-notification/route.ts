@@ -5,20 +5,42 @@
  * 에 본 엔드포인트 URL 등록:
  *   https://api.wantsome.kr/api/payments/apple-notification
  *
- * 처리 범위 (현재 PR):
- *  - signedPayload JWS 검증
- *  - notificationType / transactionId 추출
- *  - point_charges.status 마크 (REFUND, REVOKE, CONSUMPTION_REQUEST 등)
- *  - admin_logs 기록
+ * 보안 정책 (fail-closed):
+ *  - APPLE_ROOT_CAS_PEM 환경변수에 Apple Root CA 인증서들 concat 시
+ *    SignedDataVerifier로 정식 서명 검증
+ *  - 미설정 시: payload 디코드까진 하지만 point_charges.status 마킹은 skip
+ *    + admin_logs에 'APPLE_NOTIFICATION_UNVERIFIED' 기록 (위조 가능 입력은 신뢰 X)
  *
- * 자동 포인트 회수 (사용 안 한 잔액 차감)는 별도 PR에서 구현.
- * 현재는 status 마크 + 운영 알림으로만 처리 (사용자 자금 보호는 출시 후 모니터링 + CS 처리).
+ * 자동 포인트 회수 (사용 안 한 잔액 차감)는 별도 PR.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+
+// 동적 import — 라이브러리 미설치 환경에서도 모듈 로드는 가능하게
+type AppleLib = typeof import("@apple/app-store-server-library");
+let _appleLib: AppleLib | null = null;
+async function loadAppleLib(): Promise<AppleLib | null> {
+  if (_appleLib) return _appleLib;
+  try {
+    _appleLib = await import("@apple/app-store-server-library");
+    return _appleLib;
+  } catch {
+    return null;
+  }
+}
+
+/** Apple Root CA 인증서를 환경변수에서 로드 (PEM 형식 concat) */
+function loadAppleRootCAs(): Buffer[] | null {
+  const pemBundle = process.env.APPLE_ROOT_CAS_PEM;
+  if (!pemBundle) return null;
+  // -----BEGIN CERTIFICATE----- ... -----END CERTIFICATE----- 단위로 분리
+  const matches = pemBundle.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g);
+  if (!matches || matches.length === 0) return null;
+  return matches.map((pem) => Buffer.from(pem, "utf8"));
+}
 
 type AppleNotificationPayload = {
   notificationType?: string;
@@ -52,19 +74,51 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Missing signedPayload" }, { status: 400 });
   }
 
-  // JWS payload 디코드 (서명 검증은 후속 PR — 현재는 received-only)
-  // ⚠️ 향후 SignedDataVerifier로 정식 검증 추가 필수
-  const notification = decodeJwsPayload<AppleNotificationPayload>(signedPayload);
+  // ────────────────────────────────────────────────────────────
+  // 1) Apple Root CA로 SignedDataVerifier 정식 검증 시도
+  // 2) 실패/미설정 → unverified 모드 (status 마킹 안 함)
+  // ────────────────────────────────────────────────────────────
+  let verifiedNotification: AppleNotificationPayload | null = null;
+  let verified = false;
+  let verifyError: string | null = null;
+
+  const rootCAs = loadAppleRootCAs();
+  const lib = await loadAppleLib();
+  const expectedBundleId = process.env.APPLE_BUNDLE_ID;
+  const envName = (process.env.APPLE_ENVIRONMENT || "Production").toLowerCase();
+
+  if (rootCAs && lib && expectedBundleId) {
+    try {
+      const env = envName === "sandbox" ? lib.Environment.SANDBOX : lib.Environment.PRODUCTION;
+      const verifier = new lib.SignedDataVerifier(
+        rootCAs,
+        true, // enableOnlineChecks (OCSP)
+        env,
+        expectedBundleId,
+        undefined,
+      );
+      verifiedNotification = (await (verifier as unknown as {
+        verifyAndDecodeNotification: (p: string) => Promise<AppleNotificationPayload>;
+      }).verifyAndDecodeNotification(signedPayload));
+      verified = true;
+    } catch (err) {
+      verifyError = (err as Error).message;
+    }
+  }
+
+  // 검증 실패 또는 cert 미설정 시 payload 디코드 fallback (마킹은 skip)
+  const notification =
+    verifiedNotification ?? decodeJwsPayload<AppleNotificationPayload>(signedPayload);
+
   if (!notification) {
     return NextResponse.json({ message: "Invalid notification JWS" }, { status: 400 });
   }
 
-  const expectedBundleId = process.env.APPLE_BUNDLE_ID;
   if (expectedBundleId && notification.data?.bundleId !== expectedBundleId) {
     return NextResponse.json({ message: "bundleId mismatch" }, { status: 400 });
   }
 
-  // signedTransactionInfo도 JWS — payload 디코드
+  // signedTransactionInfo도 JWS (위 verifier 결과의 transaction info는 이미 검증됨)
   const txInfo = notification.data?.signedTransactionInfo
     ? decodeJwsPayload<AppleTransactionPayload>(notification.data.signedTransactionInfo)
     : null;
@@ -76,10 +130,9 @@ export async function POST(req: NextRequest) {
 
   const admin = createSupabaseAdmin();
 
-  // 환불·취소·만료 류 status 마크
-  // ⚠️ 컬럼명: 002 스키마에서 `iap_receipt` (017 RPC가 p_purchase_token을 이 컬럼에 저장)
+  // 환불·취소·만료 류 status 마크 — 검증된 webhook에 한해서만
   // 멱등성: 이미 REFUNDED 상태인 row는 재마킹 안 함 (webhook 반복 POST 방어)
-  if (transactionId && isRefundOrRevoke(notificationType, subtype)) {
+  if (verified && transactionId && isRefundOrRevoke(notificationType, subtype)) {
     await admin
       .from("point_charges")
       .update({ status: "REFUNDED" })
@@ -87,14 +140,16 @@ export async function POST(req: NextRequest) {
       .neq("status", "REFUNDED");
   }
 
-  // 운영 로그
+  // 운영 로그 (verified / unverified 구분)
   await admin
     .from("admin_logs")
     .insert({
-      action: "APPLE_NOTIFICATION",
+      action: verified ? "APPLE_NOTIFICATION" : "APPLE_NOTIFICATION_UNVERIFIED",
       target_type: "iap",
       target_id: transactionId,
       detail: {
+        verified,
+        verifyError,
         notificationType,
         subtype,
         transactionId,
