@@ -77,11 +77,14 @@ export async function POST(req: NextRequest) {
   const admin = createSupabaseAdmin();
 
   // 환불·취소·만료 류 status 마크
+  // ⚠️ 컬럼명: 002 스키마에서 `iap_receipt` (017 RPC가 p_purchase_token을 이 컬럼에 저장)
+  // 멱등성: 이미 REFUNDED 상태인 row는 재마킹 안 함 (webhook 반복 POST 방어)
   if (transactionId && isRefundOrRevoke(notificationType, subtype)) {
     await admin
       .from("point_charges")
       .update({ status: "REFUNDED" })
-      .eq("purchase_token", transactionId);
+      .eq("iap_receipt", transactionId)
+      .neq("status", "REFUNDED");
   }
 
   // 운영 로그

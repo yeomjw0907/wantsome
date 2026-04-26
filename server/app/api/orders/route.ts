@@ -110,9 +110,26 @@ export async function POST(req: NextRequest) {
   });
   if (pointError || !pointRows?.[0]?.success) {
     // 재고 롤백 (atomic — increment_stock RPC, 무제한 -1은 자동 무시)
-    await admin.rpc("increment_stock", { p_product_id: product_id, p_quantity: quantity });
+    // 롤백 RPC 실패는 critical: 운영 알림 + admin_logs 로깅 필요
+    const { error: rollbackErr } = await admin.rpc("increment_stock", {
+      p_product_id: product_id,
+      p_quantity: quantity,
+    });
+    if (rollbackErr) {
+      // 재고 영구 소멸 위험 — 운영 즉시 확인용 로그
+      await admin
+        .from("admin_logs")
+        .insert({
+          action: "STOCK_ROLLBACK_FAILED",
+          target_type: "product",
+          target_id: product_id,
+          detail: { quantity, error: rollbackErr.message, user_id: authUser.id },
+        })
+        .then(null, () => null);
+    }
     return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
   }
+  const newBalanceAfterDeduct = pointRows[0].new_balance as number;
 
   // ③ 주문 INSERT
   const { data: order, error: orderError } = await admin
@@ -128,9 +145,29 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (orderError || !order) {
-    // 포인트·재고 양쪽 atomic 롤백
-    await admin.rpc("add_points", { p_user_id: authUser.id, p_amount: totalPrice });
-    await admin.rpc("increment_stock", { p_product_id: product_id, p_quantity: quantity });
+    // 포인트·재고 양쪽 atomic 롤백 — 실패 시 운영 알림
+    const [pointRb, stockRb] = await Promise.all([
+      admin.rpc("add_points", { p_user_id: authUser.id, p_amount: totalPrice }),
+      admin.rpc("increment_stock", { p_product_id: product_id, p_quantity: quantity }),
+    ]);
+    if (pointRb.error || stockRb.error) {
+      await admin
+        .from("admin_logs")
+        .insert({
+          action: "ORDER_ROLLBACK_PARTIAL",
+          target_type: "order_attempt",
+          target_id: product_id,
+          detail: {
+            user_id: authUser.id,
+            quantity,
+            totalPrice,
+            point_rollback_error: pointRb.error?.message ?? null,
+            stock_rollback_error: stockRb.error?.message ?? null,
+            order_error: orderError?.message ?? "no order returned",
+          },
+        })
+        .then(null, () => null);
+    }
     return NextResponse.json({ message: "주문 생성에 실패했습니다." }, { status: 500 });
   }
 
@@ -142,7 +179,7 @@ export async function POST(req: NextRequest) {
     {
       order_id: order.id,
       points_used: totalPrice,
-      remaining_points: Math.max(0, (userRow.points ?? 0) - totalPrice),
+      remaining_points: newBalanceAfterDeduct,
     },
     { status: 201 },
   );

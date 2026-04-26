@@ -108,11 +108,14 @@ export async function POST(req: NextRequest) {
     action = "GOOGLE_RTDN_CANCELED";
   }
 
+  // ⚠️ 컬럼명: 002 스키마에서 `iap_receipt` (017 RPC가 p_purchase_token을 이 컬럼에 저장)
+  // 멱등성: 이미 REFUNDED 상태인 row는 재마킹 안 함 (Pub/Sub at-least-once 방어)
   if (purchaseTokenForRefund) {
     await admin
       .from("point_charges")
       .update({ status: "REFUNDED" })
-      .eq("purchase_token", purchaseTokenForRefund);
+      .eq("iap_receipt", purchaseTokenForRefund)
+      .neq("status", "REFUNDED");
   }
 
   // 운영 로그

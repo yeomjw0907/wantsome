@@ -131,3 +131,20 @@ $$;
 REVOKE EXECUTE ON FUNCTION try_deduct_points(UUID, INTEGER)    FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION try_decrement_stock(UUID, INTEGER)  FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION increment_stock(UUID, INTEGER)      FROM PUBLIC;
+
+-- ────────────────────────────────────────────────────────────
+-- 4) 기존 RPC 함수의 search_path 명시 (Phase 10 advisor 'function_search_path_mutable')
+--    - 새로 추가된 try_* 함수는 위에서 이미 SET search_path 적용
+--    - 결제 critical RPC만 본 PR에서 처리. 나머지 (live_join_deduct_points 등)는 PR-2에서 일괄
+-- ────────────────────────────────────────────────────────────
+ALTER FUNCTION verify_iap_charge(UUID, TEXT, INTEGER, INTEGER, INTEGER, BOOLEAN, TEXT, TEXT, TEXT)
+  SET search_path = public, pg_temp;
+
+ALTER FUNCTION end_call_atomic(UUID, TIMESTAMPTZ, INTEGER, INTEGER, UUID, UUID)
+  SET search_path = public, pg_temp;
+
+ALTER FUNCTION deduct_points(UUID, INTEGER, TEXT)
+  SET search_path = public, pg_temp;
+
+ALTER FUNCTION add_points(UUID, INTEGER, TEXT)
+  SET search_path = public, pg_temp;
