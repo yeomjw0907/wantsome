@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { usePreventScreenCapture } from "expo-screen-capture";
 import Toast from "react-native-toast-message";
 import { uploadFormData } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -31,6 +32,9 @@ const BENEFITS = [
 ];
 
 export default function IdCardScreen() {
+  // PR-9: 신분증(주민등록증·운전면허증) 이미지 화면 노출 — 스크린샷/녹화 차단 (PII 유출 방지)
+  usePreventScreenCapture();
+
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuthStore();
