@@ -18,16 +18,12 @@ import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { GIFTS } from "@/constants/gifts";
 
-// GIFT_ITEMS와 동일한 정의
-const GIFT_TIERS: Record<number, { emoji: string; label: string }> = {
-  100:  { emoji: "💗", label: "하트" },
-  300:  { emoji: "🌹", label: "장미" },
-  500:  { emoji: "💝", label: "선물" },
-  1000: { emoji: "💎", label: "다이아" },
-  3000: { emoji: "👑", label: "왕관" },
-  5000: { emoji: "🌟", label: "스타" },
-};
+// constants/gifts.ts에서 자동 생성 — 단일 source of truth
+const GIFT_TIERS: Record<number, { emoji: string; label: string }> = Object.fromEntries(
+  GIFTS.map((g) => [g.amount, { emoji: g.emoji, label: g.label }]),
+);
 
 interface SentGift {
   id: string;

@@ -17,6 +17,7 @@ import Toast from "react-native-toast-message";
 import { apiCall } from "@/lib/api";
 import { usePointStore } from "@/stores/usePointStore";
 import { ProductDetailSheet, type ProductDetail } from "@/components/shop/ProductDetailSheet";
+import { GOODS_ENABLED } from "@/constants/features";
 
 const PAGE_SIZE = 20;
 
@@ -173,6 +174,23 @@ function ProductCard({
 export default function ShopScreen() {
   const insets = useSafeAreaInsets();
   const { points, deductPoints } = usePointStore();
+
+  // PR-8 가격 정책 v1: 굿즈는 v1 출시 시 OFF (D+14에 시범 ON 예정).
+  // 환경변수 EXPO_PUBLIC_GOODS_ENABLED=true로 활성화.
+  if (!GOODS_ENABLED) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "white", paddingTop: insets.top, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <Ionicons name="storefront-outline" size={56} color="#D1D5DB" />
+        <Text style={{ marginTop: 16, color: "#1B2A4A", fontSize: 18, fontWeight: "700" }}>
+          굿즈 마켓 준비 중
+        </Text>
+        <Text style={{ marginTop: 8, color: "#6B7280", fontSize: 14, textAlign: "center", lineHeight: 22 }}>
+          크리에이터 굿즈와 디지털 콘텐츠 마켓을 준비 중입니다.{"\n"}
+          출시 후 단계적으로 오픈됩니다.
+        </Text>
+      </View>
+    );
+  }
 
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [page, setPage] = useState(1);

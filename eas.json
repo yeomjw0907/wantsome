@@ -17,7 +17,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
-        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51",
+        "EXPO_PUBLIC_GOODS_ENABLED": "false"
       }
     },
     "preview": {
@@ -30,7 +31,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://api.wantsome.kr",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
-        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51",
+        "EXPO_PUBLIC_GOODS_ENABLED": "false"
       }
     },
     "staging": {
@@ -40,7 +42,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://api-staging.wantsome.kr",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
-        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51",
+        "EXPO_PUBLIC_GOODS_ENABLED": "false"
       }
     },
     "production": {
@@ -57,7 +60,8 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://api.wantsome.kr",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ftnfdtvaxsvosdyjdxfq.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0bmZkdHZheHN2b3NkeWpkeGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMTk4ODQsImV4cCI6MjA4ODg5NTg4NH0.n8qj6SRVQ9ZUgaOwVrU1gxSciCSUsgtYXEzP4mofPig",
-        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51"
+        "EXPO_PUBLIC_AGORA_APP_ID": "da018cafb8f6474597d9caa388ddcf51",
+        "EXPO_PUBLIC_GOODS_ENABLED": "false"
       }
     }
   },
