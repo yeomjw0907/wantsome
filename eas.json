@@ -46,6 +46,7 @@
     "production": {
       "distribution": "store",
       "channel": "production",
+      "credentialsSource": "remote",
       "android": {
         "buildType": "app-bundle"
       },
