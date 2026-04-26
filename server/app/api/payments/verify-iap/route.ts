@@ -103,7 +103,11 @@ export async function POST(req: NextRequest) {
   const isFirst =
     !isFirstCharged && firstChargeDeadline != null && firstChargeDeadline > new Date();
 
-  const pointsToAdd = isFirst ? product.points * 2 : product.points;
+  // 첫충전 보너스: 1.5배 (정책 v1, 기존 2배에서 축소)
+  // - 정산율 0.35로 변경 후 흑자 확인되지만 큰 패키지에서 마진 박빙
+  // - 24h deadline (phone-login)과 결합해 conversion 효과 최대화
+  // pointsToAdd가 정수가 되도록 floor 사용
+  const pointsToAdd = isFirst ? Math.floor(product.points * 1.5) : product.points;
   const bonusPoints = Math.floor(product.points * product.bonus);
 
   // point_charges 기록 + users.points 업데이트를 단일 DB 트랜잭션으로 처리
