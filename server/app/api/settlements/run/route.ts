@@ -4,7 +4,7 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 
 const WITHHOLDING_RATE = 0.033;  // 원천징수 3.3%
-const DEFAULT_SETTLEMENT_RATE = 0.55;  // 최소 보장 정산율 (신규)
+const DEFAULT_SETTLEMENT_RATE = 0.35;  // 정산 정책 v1: 사용자 결제 P × 0.35 (Apple 30% 후 net 50/50)
 
 // Vercel Cron: 매월 15일 09:00 실행
 export async function GET(req: NextRequest) {
