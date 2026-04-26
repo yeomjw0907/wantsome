@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
           .eq("id", session.creator_id)
           .single();
 
-        const creatorEarning = Math.floor(points_charged * (creator?.settlement_rate ?? 0.5));
+        const creatorEarning = Math.floor(points_charged * (creator?.settlement_rate ?? 0.35));
 
         await Promise.all([
           admin.from("creators").update({
@@ -141,14 +141,22 @@ export async function POST(req: NextRequest) {
 
         ended++;
       } else {
-        // 포인트 정상 → 1분치 차감
-        await admin
-          .from("users")
-          .update({ points: consumer.points - per_min_rate })
-          .eq("id", session.consumer_id);
+        // 포인트 정상 → 1분치 atomic 차감 (race condition 방어)
+        // try_deduct_points: 잔액 충분 시 차감 + true, 부족하면 변경 X + false
+        const { data: deductRows } = await admin.rpc("try_deduct_points", {
+          p_user_id: session.consumer_id,
+          p_amount: per_min_rate,
+        });
+
+        if (!deductRows || !deductRows[0]?.success) {
+          // 동시 차감(선물 등)으로 인한 미세한 race로 부족해진 경우
+          // → 다음 tick에서 insufficient 분기로 종료 처리됨, 이번엔 skip
+          continue;
+        }
+
+        const remainingAfterDeduct = deductRows[0].new_balance;
 
         // ③ low_points 경고: 잔액이 2분치 미만이고 아직 경고 안 보냈으면
-        const remainingAfterDeduct = consumer.points - per_min_rate;
         if (remainingAfterDeduct < per_min_rate * 2 && !session.low_points_warned) {
           await admin
             .from("call_sessions")

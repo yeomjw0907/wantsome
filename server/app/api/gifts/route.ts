@@ -82,14 +82,19 @@ export async function POST(req: NextRequest) {
 
     creatorId = creatorId ?? session.creator_id;
 
-    const { error: deductErr } = await admin
-      .from("users")
-      .update({ points: currentPoints - amount })
-      .eq("id", user.id);
+    // atomic 차감 (race condition 방어)
+    const { data: deductRows, error: deductErr } = await admin.rpc("try_deduct_points", {
+      p_user_id: user.id,
+      p_amount: amount,
+    });
 
     if (deductErr) {
       return NextResponse.json({ message: deductErr.message }, { status: 500 });
     }
+    if (!deductRows?.[0]?.success) {
+      return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
+    }
+    const remainingPoints = deductRows[0].new_balance;
 
     const { data: gift, error: giftErr } = await admin
       .from("gifts")
@@ -124,7 +129,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       gift,
-      remaining_points: currentPoints - amount,
+      remaining_points: remainingPoints,
     });
   }
 
@@ -154,14 +159,19 @@ export async function POST(req: NextRequest) {
 
   creatorId = room.host_id;
 
-  const { error: deductErr } = await admin
-    .from("users")
-    .update({ points: currentPoints - amount })
-    .eq("id", user.id);
+  // atomic 차감 (race condition 방어)
+  const { data: liveDeductRows, error: deductErr } = await admin.rpc("try_deduct_points", {
+    p_user_id: user.id,
+    p_amount: amount,
+  });
 
   if (deductErr) {
     return NextResponse.json({ message: deductErr.message }, { status: 500 });
   }
+  if (!liveDeductRows?.[0]?.success) {
+    return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
+  }
+  const liveRemainingPoints = liveDeductRows[0].new_balance;
 
   const { data: gift, error: giftErr } = await admin
     .from("gifts")
@@ -192,7 +202,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     gift,
-    remaining_points: currentPoints - amount,
+    remaining_points: liveRemainingPoints,
   });
 }
 

@@ -156,14 +156,24 @@ export async function POST(req: NextRequest) {
     .select("points, nickname")
     .eq("id", authUser.id)
     .single();
-  if (!sender || sender.points < unlockCost) {
+  if (!sender) {
+    return NextResponse.json({ message: "Sender not found" }, { status: 404 });
+  }
+
+  // atomic 차감 (race condition 방어)
+  const { data: deductRows, error: deductErr } = await admin.rpc("try_deduct_points", {
+    p_user_id: authUser.id,
+    p_amount: unlockCost,
+  });
+  if (deductErr) {
+    return NextResponse.json({ message: deductErr.message }, { status: 500 });
+  }
+  if (!deductRows?.[0]?.success) {
     return NextResponse.json(
       { message: `Insufficient points. Need ${unlockCost}P` },
       { status: 400 }
     );
   }
-
-  await admin.from("users").update({ points: sender.points - unlockCost }).eq("id", authUser.id);
 
   const { data: conversation, error: conversationErr } = await admin
     .from("conversations")
@@ -180,7 +190,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (conversationErr || !conversation) {
-    await admin.from("users").update({ points: sender.points }).eq("id", authUser.id);
+    // 차감 롤백: add_points로 원래 액수 복구 (race-safe)
+    await admin.rpc("add_points", { p_user_id: authUser.id, p_amount: unlockCost });
     return NextResponse.json({ message: "Failed to create conversation" }, { status: 500 });
   }
 

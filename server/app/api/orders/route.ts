@@ -84,26 +84,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "상품을 찾을 수 없습니다." }, { status: 404 });
   }
 
+  // 사전 검증 (UX용 — 실제 atomic 차감은 RPC가 보장)
   if (product.stock !== -1 && product.stock < quantity) {
     return NextResponse.json({ message: "재고가 부족합니다." }, { status: 409 });
   }
 
   const totalPrice = product.price * quantity;
 
-  const { data: userRow } = await admin.from("users").select("points").eq("id", authUser.id).single();
-  if (!userRow || (userRow.points ?? 0) < totalPrice) {
+  // ① atomic 재고 차감 (race 방어 — 음수 재고 방지)
+  const { data: stockRows, error: stockErr } = await admin.rpc("try_decrement_stock", {
+    p_product_id: product_id,
+    p_quantity: quantity,
+  });
+  if (stockErr) {
+    return NextResponse.json({ message: "재고 차감에 실패했습니다." }, { status: 500 });
+  }
+  if (!stockRows?.[0]?.success) {
+    return NextResponse.json({ message: "재고가 부족합니다." }, { status: 409 });
+  }
+
+  // ② atomic 포인트 차감
+  const { data: pointRows, error: pointError } = await admin.rpc("try_deduct_points", {
+    p_user_id: authUser.id,
+    p_amount: totalPrice,
+  });
+  if (pointError || !pointRows?.[0]?.success) {
+    // 재고 롤백 (atomic — increment_stock RPC, 무제한 -1은 자동 무시)
+    await admin.rpc("increment_stock", { p_product_id: product_id, p_quantity: quantity });
     return NextResponse.json({ message: "포인트가 부족합니다." }, { status: 402 });
   }
 
-  const { error: pointError } = await admin
-    .from("users")
-    .update({ points: (userRow.points ?? 0) - totalPrice })
-    .eq("id", authUser.id);
-
-  if (pointError) {
-    return NextResponse.json({ message: "포인트 차감에 실패했습니다." }, { status: 500 });
-  }
-
+  // ③ 주문 INSERT
   const { data: order, error: orderError } = await admin
     .from("orders")
     .insert({
@@ -117,23 +128,15 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (orderError || !order) {
-    await admin.from("users").update({ points: userRow.points }).eq("id", authUser.id);
+    // 포인트·재고 양쪽 atomic 롤백
+    await admin.rpc("add_points", { p_user_id: authUser.id, p_amount: totalPrice });
+    await admin.rpc("increment_stock", { p_product_id: product_id, p_quantity: quantity });
     return NextResponse.json({ message: "주문 생성에 실패했습니다." }, { status: 500 });
   }
 
+  // ④ sold_count 갱신 (재고와 분리 — race 무관)
   const nextSoldCount = (product.sold_count ?? 0) + quantity;
-
-  if (product.stock !== -1) {
-    await admin
-      .from("products")
-      .update({
-        stock: product.stock - quantity,
-        sold_count: nextSoldCount,
-      })
-      .eq("id", product_id);
-  } else {
-    await admin.from("products").update({ sold_count: nextSoldCount }).eq("id", product_id);
-  }
+  await admin.from("products").update({ sold_count: nextSoldCount }).eq("id", product_id);
 
   return NextResponse.json(
     {
