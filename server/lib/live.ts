@@ -1,6 +1,9 @@
 import { createSupabaseAdmin, createSupabaseClient } from "@/lib/supabase";
 
-export const LIVE_ENTRY_FEE_POINTS = 50000;
+// 정책 v1 (2026-04-26): 50,000P → 5,000P
+// 실제 운영값은 system_config.live_entry_fee_points 키로 어드민이 조정 가능
+// (getLiveConfig() 가 DB 값 우선, fallback이 본 상수)
+export const LIVE_ENTRY_FEE_POINTS = 5000;
 export const LIVE_VIEWER_LIMIT = 10;
 export const LIVE_JOIN_ACK_TIMEOUT_SEC = 10;
 export const LIVE_MAX_EXTENSION_COUNT = 2;
