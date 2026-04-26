@@ -178,7 +178,7 @@ export default function PrivacyPage() {
             </tr>
             <tr>
               <td style={tdStyle}>Expo (Expo, Inc.)</td>
-              <td style={tdStyle}>푸시 알림 발송 (Expo Push Notification Service)</td>
+              <td style={tdStyle}>푸시 알림 발송 (Expo Push Notification Service). Expo는 발송을 위해 Apple APNs(iOS) / Google FCM(Android)에 토큰을 재위탁합니다.</td>
               <td style={tdStyle}>회원 탈퇴 또는 푸시 토큰 폐기 시까지</td>
             </tr>
           </tbody>

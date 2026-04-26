@@ -351,7 +351,10 @@ export default function ChargeScreen() {
             transparent
             animationType="fade"
             statusBarTranslucent
-            onRequestClose={() => setPendingProductId(null)}
+            onRequestClose={() => {
+              setPendingProductId(null);
+              setRefundDisclosureAccepted(false);
+            }}
           >
             <View
               style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
