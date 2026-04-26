@@ -3,6 +3,47 @@ import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
+/** GET — 본인이 차단한 사용자 목록 (Apple 2.1 UGC 차단 UI 필수) */
+export async function GET(req: NextRequest) {
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
+  if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+  const supabase = createSupabaseClient(token);
+  const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !authUser) {
+    return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+  }
+
+  const admin = createSupabaseAdmin();
+
+  const { data, error } = await admin
+    .from("user_blocks")
+    .select(
+      "blocked_user_id, created_at, users:blocked_user_id (id, nickname, profile_img)",
+    )
+    .eq("user_id", authUser.id)
+    .order("created_at", { ascending: false });
+
+  if (error && error.code !== "42P01") {
+    return NextResponse.json({ message: "차단 목록 조회 실패" }, { status: 500 });
+  }
+
+  type Row = {
+    blocked_user_id: string;
+    created_at: string;
+    users: { id: string; nickname: string | null; profile_img: string | null } | null;
+  };
+
+  const blocks = ((data as unknown as Row[]) ?? []).map((row) => ({
+    user_id: row.blocked_user_id,
+    blocked_at: row.created_at,
+    nickname: row.users?.nickname ?? "사용자",
+    profile_img: row.users?.profile_img ?? null,
+  }));
+
+  return NextResponse.json({ blocks });
+}
+
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
   if (!token) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

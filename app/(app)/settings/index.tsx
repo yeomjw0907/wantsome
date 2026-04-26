@@ -145,7 +145,7 @@ export default function SettingsScreen() {
             icon="ban-outline"
             iconColor="#8E8EA0"
             label="차단 목록"
-            onPress={() => Toast.show({ type: "info", text1: "차단 목록 기능은 곧 추가됩니다." })}
+            onPress={() => router.push("/(app)/settings/blocks" as never)}
           />
         </View>
 
