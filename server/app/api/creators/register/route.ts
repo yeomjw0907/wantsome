@@ -20,9 +20,13 @@ function getEncryptKey(): Buffer {
       "ACCOUNT_ENCRYPT_KEY missing or invalid (expected 64 hex chars = 32 bytes for AES-256)",
     );
   }
-  // 약한 키 거절 (모두 0, 모두 f 등)
-  if (/^(0+|f+|F+)$/.test(hex)) {
-    throw new Error("ACCOUNT_ENCRYPT_KEY is too weak (all-same chars)");
+  // 약한 키 거절 — distinct char count 8 미만이면 low-entropy
+  // 단순 반복 (0+, f+ 등) 또는 짧은 반복 패턴 모두 거절
+  const distinctChars = new Set(hex.toLowerCase()).size;
+  if (distinctChars < 8) {
+    throw new Error(
+      `ACCOUNT_ENCRYPT_KEY is too weak (only ${distinctChars} distinct chars; need >= 8)`,
+    );
   }
   return Buffer.from(hex, "hex");
 }

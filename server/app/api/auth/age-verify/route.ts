@@ -13,6 +13,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { calcAgeKST } from "@/lib/ageGate";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const age = calcAge(birth_date);
+  const age = calcAgeKST(birth_date);
   if (Number.isNaN(age) || age < 0 || age > 130) {
     return NextResponse.json(
       { message: "Invalid birth_date" },
@@ -96,12 +97,4 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-function calcAge(birthDate: string): number {
-  const today = new Date();
-  const birth = new Date(birthDate);
-  if (Number.isNaN(birth.getTime())) return Number.NaN;
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+// calcAgeKST는 server/lib/ageGate.ts 공유 헬퍼 사용

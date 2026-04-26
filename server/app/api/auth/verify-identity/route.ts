@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { calcAgeKST } from "@/lib/ageGate";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
       );
     }
     // 임의 테스트 식별자 거절 (프로덕션 안전)
-    if (identityVerificationId === "test-portone-id" || identityVerificationId.length < 8) {
+    // PortOne v2 ID는 보통 nanoid/UUID-like 20자 이상이라 16자 미만 거절
+    if (identityVerificationId === "test-portone-id" || identityVerificationId.length < 16) {
       return NextResponse.json({ message: "Invalid identityVerificationId" }, { status: 400 });
     }
 
@@ -84,10 +86,10 @@ export async function POST(req: NextRequest) {
       ci?: string;
     };
 
-    // 5) PortOne status 검증 (VERIFIED 외 거절)
-    if (portone.status && portone.status !== "VERIFIED") {
+    // 5) PortOne status 검증 — VERIFIED 외 거절 (status 누락도 거절)
+    if (portone.status !== "VERIFIED") {
       return NextResponse.json(
-        { message: `PortOne status not VERIFIED: ${portone.status}` },
+        { message: `PortOne status not VERIFIED: ${portone.status ?? "missing"}` },
         { status: 400 },
       );
     }
@@ -100,9 +102,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6) 만 19세 게이트 (한국 청소년보호법)
-    const age = getAge(birthDate);
-    if (age < 19) {
+    // 6) 만 19세 게이트 (한국 청소년보호법) — KST 기준
+    const age = calcAgeKST(birthDate);
+    if (Number.isNaN(age) || age < 19) {
       return NextResponse.json(
         { error: "UNDERAGE", message: "만 19세 이상만 이용 가능합니다." },
         { status: 403 },
@@ -168,11 +170,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function getAge(birthDate: string): number {
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+// getAge는 server/lib/ageGate.ts (calcAgeKST) 공유 헬퍼 사용
