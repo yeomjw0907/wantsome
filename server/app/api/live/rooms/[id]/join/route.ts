@@ -3,6 +3,7 @@ import { AGORA_APP_ID, generateAgoraToken, isAgoraConfigured } from "@/lib/agora
 import { mapLiveJoinError } from "@/lib/liveRuntime";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, getLiveConfig, isAdminRole } from "@/lib/live";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,13 @@ export async function POST(
   if (!user) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
 
   const admin = createSupabaseAdmin();
+
+  // 라이브 입장 게이트: 19세+ + 미정지 (시청자는 본인인증 옵션 — 라이브는 17+ 콘텐츠라 강제하지 않음)
+  // 어드민은 게이트 우회
+  if (!isAdminRole(user.role)) {
+    const gateReject = await assertUserGate(admin, user.id);
+    if (gateReject) return gateReject;
+  }
   const [roomRes, config] = await Promise.all([
     admin
       .from("live_rooms")

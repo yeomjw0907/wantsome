@@ -8,6 +8,7 @@ import {
   getRequestedConversationTarget,
   resolvePostCallConversationParticipants,
 } from "@/lib/conversations";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,10 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createSupabaseAdmin();
+
+  // 게이트: 19세+ + 미정지 (DM unlock도 19세+ 강제)
+  const gateReject = await assertUserGate(admin, authUser.id);
+  if (gateReject) return gateReject;
 
   let creatorId = body.creator_id ?? null;
   let consumerId: string | null = null;
