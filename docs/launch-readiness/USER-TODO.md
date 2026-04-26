@@ -8,40 +8,23 @@
 
 ## 🔴 PR-1 머지 직후 즉시 (출시 차단 위험)
 
-### 1. Supabase Vault에 CRON_SECRET 등록 [쉬움 / 5분 / **필수**]
-pg_cron이 server API 호출 시 인증에 사용.
+### 1. CRON_SECRET 생성 + Vercel 환경변수 등록 [쉬움 / 3분 / **필수**]
+Vercel cron이 server API 호출 시 Authorization 헤더로 사용.
 
 **작업**:
-1. Vercel 환경변수에 `CRON_SECRET` 등록 (이미 server에서 읽고 있음)
-   - 값 생성: `openssl rand -hex 32` 또는 임의 long string
-2. Supabase Studio → SQL Editor 에서 실행:
-   ```sql
-   select vault.create_secret('YOUR_CRON_SECRET_VALUE_HERE', 'cron_secret');
-   ```
-3. 등록 확인:
-   ```sql
-   select id, name, created_at from vault.secrets where name = 'cron_secret';
-   ```
+1. 값 생성: `openssl rand -hex 32` (또는 임의 long string)
+2. Vercel Dashboard → Project → Settings → Environment Variables → `CRON_SECRET` 등록
+3. (옵션) Supabase Vault에도 동일 값 — pg_cron 사용 시에만 필요. **Vercel cron 사용 시 불필요**
 
-⚠️ 두 곳(Vercel env + Supabase Vault)에 **동일한 값**을 넣어야 함.
+> 📌 **Vercel Pro 사용 결정 (2026-04-26)**: pg_cron 마이그레이션은 보존되지만 활성화하지 않음. Vercel cron 사용.
 
 ---
 
-### 2. pg_cron Job 7개 등록 [쉬움 / 10분 / **필수**]
-[server/supabase/migrations/024_pg_cron_http_setup.sql](../../server/supabase/migrations/024_pg_cron_http_setup.sql) 의 주석 처리된 SQL 7개를 SQL Editor에서 순서대로 실행.
+### 2. ~~pg_cron Job 등록~~ [Vercel cron 사용 시 SKIP]
+PR-2 commit 7에서 `server/vercel.json`에 cron 7개 정의 복원.
+**별도 작업 없음** — Vercel 배포 시 자동 등록·실행.
 
-**검증**:
-```sql
-select jobname, schedule, active from cron.job order by jobname;
--- 7개 row 나와야 함
-
--- 1분 후 첫 실행 결과 확인:
-select jobname, status, return_message, start_time
-from cron.job_run_details
-order by start_time desc limit 10;
-```
-
-⚠️ 도메인 `api.wantsome.kr`이 아직 연결 전이면 SQL의 URL을 임시로 Vercel 기본 URL(`*.vercel.app`)로 변경 후, 도메인 연결 시 다시 갱신.
+(참고) pg_cron으로 다시 가려면 [024 마이그레이션 SQL](../../server/supabase/migrations/024_pg_cron_http_setup.sql) + [Vault setup](#) 활성화.
 
 ---
 
@@ -314,8 +297,8 @@ PR-1·PR-2만으로는 출시 불가. 다음 PR들도 처리 필요:
 ## 📋 진행 체크리스트 (요약)
 
 ### Week 1 (PR-1 머지 직후)
-- [ ] CRON_SECRET 생성 + Vercel + Vault
-- [ ] pg_cron job 7개 등록
+- [ ] CRON_SECRET 생성 + Vercel 환경변수 (Vault는 옵션)
+- [ ] ~~pg_cron job 7개 등록~~ → Vercel cron 자동 (PR-2 c7)
 - [ ] Apple Developer 가입 + API Key + APNs Key
 - [ ] Google Play Console + Firebase + Pub/Sub
 - [ ] Apple Root CA 다운 + PEM 변환
