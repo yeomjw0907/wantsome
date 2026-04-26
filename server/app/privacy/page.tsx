@@ -14,7 +14,7 @@ export default function PrivacyPage() {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 24px", fontFamily: "sans-serif", lineHeight: 1.9, color: "#1a1a1a" }}>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 6 }}>개인정보처리방침</h1>
-      <p style={{ color: "#888", marginBottom: 24, fontSize: 14 }}>시행일: 2025년 3월 15일 | 최종 수정일: 2025년 3월 15일</p>
+      <p style={{ color: "#888", marginBottom: 24, fontSize: 14 }}>시행일: 2026년 4월 27일 | 최종 수정일: 2026년 4월 27일</p>
 
       <div style={{ background: "#FFF5F7", border: "1px solid #FECDD3", borderRadius: 8, padding: "12px 16px", marginBottom: 32, fontSize: 14, color: "#BE123C" }}>
         ⚠️ wantsome 서비스는 <strong>만 19세 이상만</strong> 이용할 수 있습니다. 본 방침은 크리에이터 영상통화 서비스 운영에 관한 개인정보 처리 방침입니다.
@@ -166,8 +166,26 @@ export default function PrivacyPage() {
               <td style={tdStyle}>서버 호스팅 및 CDN</td>
               <td style={tdStyle}>서비스 이용 기간</td>
             </tr>
+            <tr>
+              <td style={tdStyle}>주식회사 코리아포트원 (PortOne)</td>
+              <td style={tdStyle}>굿즈(실물) 결제 처리, 본인인증(PASS) 중개</td>
+              <td style={tdStyle}>「전자상거래 등에서의 소비자보호에 관한 법률」에 따른 5년</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>Slack Technologies, LLC</td>
+              <td style={tdStyle}>운영자 알림 (정산 요약·신고 알림 — 개인 식별정보 포함되지 않음)</td>
+              <td style={tdStyle}>알림 처리 후 30일</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>Expo (Expo, Inc.)</td>
+              <td style={tdStyle}>푸시 알림 발송 (Expo Push Notification Service). Expo는 발송을 위해 Apple APNs(iOS) / Google FCM(Android)에 토큰을 재위탁합니다.</td>
+              <td style={tdStyle}>회원 탈퇴 또는 푸시 토큰 폐기 시까지</td>
+            </tr>
           </tbody>
         </table>
+        <p style={{ fontSize: 13, color: "#6B7280", marginTop: 8 }}>
+          위탁업무의 내용이나 수탁자가 변경될 경우 본 처리방침을 통해 지체 없이 공지합니다.
+        </p>
       </section>
 
       <section style={secStyle}>
@@ -223,7 +241,7 @@ export default function PrivacyPage() {
       </section>
 
       <div style={{ marginTop: 60, borderTop: "1px solid #E5E7EB", paddingTop: 24, color: "#888", fontSize: 13 }}>
-        <p>본 개인정보처리방침은 <strong>2025년 3월 15일</strong>부터 시행됩니다.</p>
+        <p>본 개인정보처리방침은 <strong>2026년 4월 27일</strong>부터 시행됩니다.</p>
         <p>wantsome | privacy@wantsome.kr | wantsome.kr</p>
       </div>
     </div>

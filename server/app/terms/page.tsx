@@ -16,7 +16,7 @@ export default function TermsPage() {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 24px", fontFamily: "sans-serif", lineHeight: 1.9, color: "#1a1a1a" }}>
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 6 }}>서비스 이용약관</h1>
-      <p style={{ color: "#888", marginBottom: 24, fontSize: 14 }}>시행일: 2025년 3월 15일 | 최종 수정일: 2025년 3월 15일</p>
+      <p style={{ color: "#888", marginBottom: 24, fontSize: 14 }}>시행일: 2026년 4월 27일 | 최종 수정일: 2026년 4월 27일</p>
 
       <div style={{ background: "#FFF5F7", border: "1px solid #FECDD3", borderRadius: 8, padding: "12px 16px", marginBottom: 32, fontSize: 14, color: "#BE123C" }}>
         ⚠️ 본 서비스는 <strong>만 19세 이상 성인만</strong> 이용할 수 있습니다. 미성년자의 이용을 엄격히 금지합니다.
@@ -99,18 +99,62 @@ export default function TermsPage() {
           <li style={liStyle}>잔여 포인트가 부족한 경우 통화가 자동으로 종료됩니다.</li>
         </ul>
 
-        <p style={{ fontWeight: 600, marginBottom: 8, marginTop: 16 }}>다. 환불 정책</p>
-        <div style={{ background: "#FFF5F7", border: "1px solid #FECDD3", borderRadius: 8, padding: "12px 16px", fontSize: 14, color: "#BE123C" }}>
-          ⚠️ <strong>사용된 포인트는 환불되지 않습니다.</strong> 미사용 포인트의 환불은 관련 법령(콘텐츠이용자보호지침) 및 앱스토어 정책에 따라 처리됩니다.
-          iOS: Apple 환불 정책 적용 | Android: Google Play 환불 정책 적용
-        </div>
+        <p style={{ fontWeight: 600, marginBottom: 8, marginTop: 16 }}>다. 환불 정책 (전자상거래법 제17조 준수)</p>
+        <p style={{ marginBottom: 8 }}>
+          포인트 충전은 디지털콘텐츠 거래에 해당하며, <strong>「전자상거래 등에서의 소비자보호에 관한 법률」 제17조</strong>의 청약철회 규정에 따라 다음과 같이 처리합니다.
+        </p>
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={thStyle}>구분</th>
+              <th style={thStyle}>처리 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={tdStyle}>미사용 포인트 (충전 후 7일 이내)</td>
+              <td style={tdStyle}><strong>100% 환불</strong> — 청약철회 7일 (전상법 17조 1항)</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>미사용 포인트 (충전 후 7일 초과)</td>
+              <td style={tdStyle}>결제대행사 수수료(결제금액의 10%)를 제외하고 환불 — 콘텐츠이용자보호지침 적용</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>일부 사용 포인트의 잔여분</td>
+              <td style={tdStyle}>잔여 미사용 포인트에 한해 환불 신청 가능 (수수료 10% 적용)</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>이미 사용된 포인트 (통화·라이브 입장·선물·굿즈 결제 등)</td>
+              <td style={tdStyle}>
+                <strong>환불 불가</strong> — 전상법 제17조 2항 5호 "디지털콘텐츠 제공 개시" 사유.
+                결제 직전 별도 동의 수령. 단 회사 귀책 사유(시스템 장애 등)로 통화가 비정상 종료된 경우 그 시간만큼은 환불 처리.
+              </td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>보너스 포인트</td>
+              <td style={tdStyle}>이벤트/프로모션으로 무상 지급된 보너스 포인트는 환불 대상에서 제외. 차감 순서: 충전 포인트 우선 → 보너스 포인트.</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>부정 이용</td>
+              <td style={tdStyle}>약관 위반·부정 결제·계정 제재 시 잔여 포인트 환불이 제한될 수 있습니다.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style={{ marginBottom: 8, marginTop: 12, fontSize: 13, color: "#6B7280" }}>
+          <strong>환불 처리 기간:</strong> 환불 신청 접수 후 영업일 기준 3일 이내 (전상법 제17조 6항).
+          App Store / Google Play 인앱 결제분의 결제 취소는 각 스토어 정책에 따라 처리되며, 회사는 환불 승인 후 포인트 회수 및 후속 정산을 처리합니다.
+        </p>
+        <p style={{ marginBottom: 8, fontSize: 13, color: "#6B7280" }}>
+          <strong>환불 신청:</strong> 앱 내 [설정 → 고객센터] 또는 cs@wantsome.kr.
+        </p>
       </section>
 
       <section style={secStyle}>
         <h2 style={h2Style}>제6조 (크리에이터 정책)</h2>
         <ul style={ulStyle}>
           <li style={liStyle}>크리에이터는 만 19세 이상이어야 하며, 본인 인증이 완료된 경우에만 활동 가능합니다.</li>
-          <li style={liStyle}>크리에이터는 서비스 내 통화 수익의 일부를 정산받습니다. 정산율은 별도 크리에이터 정책에 따릅니다.</li>
+          <li style={liStyle}>크리에이터는 서비스 내 통화·라이브 수익에 대해 회사가 정한 정산율(기본 35%, 등급별 별도)로 정산받습니다.</li>
+          <li style={liStyle}><strong>원천징수:</strong> 회사는 「소득세법」에 따라 정산금에서 사업소득세 3% + 지방소득세 0.3% (합계 3.3%)를 원천징수한 후 지급합니다. 크리에이터는 매년 5월 종합소득세 신고 의무가 있습니다.</li>
           <li style={liStyle}>크리에이터는 실제 본인이 서비스를 제공해야 하며, 타인을 대리로 내세우는 행위는 금지됩니다.</li>
           <li style={liStyle}>불법·유해 콘텐츠 제공 시 즉시 계정이 정지되며 법적 책임을 질 수 있습니다.</li>
         </ul>
@@ -212,12 +256,12 @@ export default function TermsPage() {
 
       <section style={secStyle}>
         <h2 style={h2Style}>제14조 (준거법 및 관할법원)</h2>
-        <p>본 약관에서 발생하는 분쟁은 대한민국 법률을 준거법으로 하며, 소송이 제기될 경우 회사 소재지를 관할하는 법원을 전속 관할 법원으로 합니다.</p>
+        <p>본 약관에서 발생하는 분쟁은 대한민국 법률을 준거법으로 합니다. 분쟁에 관한 소송의 관할은 「민사소송법」의 관할 규정에 따릅니다. 회사는 「약관의 규제에 관한 법률」 제14조에 따라 소비자에게 부당하게 불리한 재판관할 합의를 하지 않습니다.</p>
       </section>
 
       <div style={{ marginTop: 60, borderTop: "1px solid #E5E7EB", paddingTop: 24, color: "#888", fontSize: 13 }}>
-        <p>본 약관은 <strong>2025년 3월 15일</strong>부터 시행됩니다.</p>
-        <p>{SERVICE_NAME}(wantsome) · {COMPANY_LEGAL_NAME} · support@wantsome.kr · wantsome.kr</p>
+        <p>본 약관은 <strong>2026년 4월 27일</strong>부터 시행됩니다.</p>
+        <p>{SERVICE_NAME}(wantsome) · {COMPANY_LEGAL_NAME} · cs@wantsome.kr · wantsome.kr</p>
       </div>
     </div>
   );
