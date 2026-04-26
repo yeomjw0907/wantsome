@@ -10,6 +10,8 @@ type ReportCategory =
   | "PROSTITUTION"
   | "HARASSMENT"
   | "FRAUD"
+  | "LIVE_HARASSMENT"
+  | "SPAM"
   | "OTHER";
 
 const CRITICAL_CATEGORIES: ReportCategory[] = [
@@ -51,18 +53,20 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as {
     target_id: string;
     call_session_id?: string | null;
+    live_room_id?: string | null;
     category: ReportCategory;
     description?: string | null;
   };
 
-  const { target_id, call_session_id, category, description } = body;
+  const { target_id, call_session_id, live_room_id, category, description } = body;
 
   if (!target_id || !category) {
     return NextResponse.json({ message: "target_id, category 필수" }, { status: 400 });
   }
 
   const validCategories: ReportCategory[] = [
-    "UNDERAGE", "ILLEGAL_RECORD", "PROSTITUTION", "HARASSMENT", "FRAUD", "OTHER",
+    "UNDERAGE", "ILLEGAL_RECORD", "PROSTITUTION", "HARASSMENT",
+    "FRAUD", "LIVE_HARASSMENT", "SPAM", "OTHER",
   ];
   if (!validCategories.includes(category)) {
     return NextResponse.json({ message: "유효하지 않은 신고 카테고리" }, { status: 400 });
@@ -82,6 +86,7 @@ export async function POST(req: NextRequest) {
       reporter_id: authUser.id,
       target_id,
       call_session_id: call_session_id ?? null,
+      live_room_id: live_room_id ?? null,
       category,
       description: description ?? null,
       status: "PENDING",
