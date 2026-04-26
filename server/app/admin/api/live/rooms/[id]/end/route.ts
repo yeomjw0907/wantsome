@@ -23,12 +23,23 @@ export async function POST(
 
   const now = new Date().toISOString();
 
+  // 1) 라이브 종료 마크
   await admin.from("live_rooms").update({
     status: "ended",
     ended_at: now,
   }).eq("id", id);
 
+  // 2) 시청자 입장료 환불 (atomic RPC) — 강제 종료라 시청자 죄 없음, 전액 환불
+  const { data: refundResult } = await admin
+    .rpc("live_refund_viewers", { p_room_id: id })
+    .single() as unknown as {
+      data: { refunded_count: number; total_refunded: number } | null;
+    };
+
+  // 3) 호스트 상태 해제
   await admin.from("creators").update({ is_live_now: false }).eq("id", roomRes.data.host_id);
+
+  // 4) 환불 안 된 참가자 left 마크
   await admin
     .from("live_room_participants")
     .update({
@@ -38,6 +49,7 @@ export async function POST(
     .eq("room_id", id)
     .eq("status", "joined");
 
+  // 5) 모더레이션 로그
   await admin.from("live_moderation_actions").insert({
     room_id: id,
     target_user_id: roomRes.data.host_id,
@@ -47,5 +59,10 @@ export async function POST(
     reason: "관리자 강제 종료",
   });
 
-  return NextResponse.json({ success: true, ended_at: now });
+  return NextResponse.json({
+    success: true,
+    ended_at: now,
+    refunded_count: refundResult?.refunded_count ?? 0,
+    total_refunded: refundResult?.total_refunded ?? 0,
+  });
 }

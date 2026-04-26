@@ -29,17 +29,36 @@ export async function POST(
   }
 
   const endedAt = new Date().toISOString();
+
+  // 1) 라이브 종료 마크
   await admin.from("live_rooms").update({
     status: "ended",
     ended_at: endedAt,
   }).eq("id", id);
 
+  // 2) 시청자 입장료 환불 (atomic RPC) — joined viewer의 paid_points 만큼 복구
+  //    refund_status가 'none'인 row만 처리 (멱등)
+  const { data: refundResult } = await admin
+    .rpc("live_refund_viewers", { p_room_id: id })
+    .single() as unknown as {
+      data: { refunded_count: number; total_refunded: number } | null;
+    };
+
+  // 3) 호스트 라이브 상태 해제
   await admin.from("creators").update({ is_live_now: false }).eq("id", user.id);
+
+  // 4) 환불 안 된 (호스트 등) 참가자 left 마크
+  //    RPC가 refund 처리한 viewer는 이미 status='left'로 변경됨
   await admin
     .from("live_room_participants")
     .update({ status: "left", left_at: endedAt })
     .eq("room_id", id)
     .eq("status", "joined");
 
-  return NextResponse.json({ success: true, ended_at: endedAt });
+  return NextResponse.json({
+    success: true,
+    ended_at: endedAt,
+    refunded_count: refundResult?.refunded_count ?? 0,
+    total_refunded: refundResult?.total_refunded ?? 0,
+  });
 }
