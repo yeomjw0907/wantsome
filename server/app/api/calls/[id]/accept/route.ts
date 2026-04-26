@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 import { generateAgoraToken, makeChannelName, AGORA_APP_ID } from "@/lib/agora";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,11 @@ export async function POST(
   }
 
   const admin = createSupabaseAdmin();
+
+  // 통화 수락 게이트 (크리에이터 측): 19세+ + 미정지 + PortOne 본인인증 강제
+  // 크리에이터가 정지 또는 미인증이면 통화 자체 차단
+  const gateReject = await assertUserGate(admin, authUser.id, { requireVerified: true });
+  if (gateReject) return gateReject;
 
   // 세션 조회 (크리에이터 본인 확인)
   const { data: session } = await admin

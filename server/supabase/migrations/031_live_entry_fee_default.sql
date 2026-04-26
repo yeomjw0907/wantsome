@@ -11,10 +11,15 @@
 --   1) lib/live.ts 상수 변경 (코드 PR-4 c3 commit)
 --   2) system_config.live_entry_fee_points = '5000' 등록 (DB가 truth source)
 
+-- 두 단계로 명확하게 처리:
+--   1) row 미존재 시 INSERT (key 없음 → '5000' 등록)
+--   2) value가 '50000' 또는 '' 인 row만 '5000'으로 갱신
+--      (이미 운영자가 다른 값으로 설정했다면 보존 — 명확)
 INSERT INTO system_config (key, value, updated_at)
 VALUES ('live_entry_fee_points', '5000', NOW())
-ON CONFLICT (key) DO UPDATE
-  SET value = '5000',
-      updated_at = NOW()
-  WHERE system_config.value IN ('50000', '');
--- WHERE 조건: 이미 운영자가 다른 값으로 설정했다면 그 값 보존
+ON CONFLICT (key) DO NOTHING;
+
+UPDATE system_config
+SET value = '5000', updated_at = NOW()
+WHERE key = 'live_entry_fee_points'
+  AND value IN ('50000', '');
