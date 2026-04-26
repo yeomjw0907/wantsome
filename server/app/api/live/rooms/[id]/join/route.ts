@@ -49,9 +49,14 @@ export async function POST(
   }
 
   const uid = Math.floor(Math.random() * 100000) + 1;
-  const agoraToken = await generateAgoraToken(room.agora_channel, uid, "subscriber");
-  if (!agoraToken) {
-    return NextResponse.json({ message: "Agora 토큰 생성에 실패했습니다." }, { status: 500 });
+  let agoraToken: string;
+  try {
+    agoraToken = await generateAgoraToken(room.agora_channel, uid, "subscriber");
+  } catch (err) {
+    return NextResponse.json(
+      { message: "Agora 토큰 생성 실패", detail: (err as Error).message },
+      { status: 500 },
+    );
   }
 
   const isAdmin = isAdminRole(user.role);

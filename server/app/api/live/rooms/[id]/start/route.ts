@@ -42,9 +42,14 @@ export async function POST(
 
   const channelName = room.agora_channel || makeLiveChannelName(id);
   const uid = Math.floor(Math.random() * 100000) + 1;
-  const agoraToken = await generateAgoraToken(channelName, uid, "publisher");
-  if (!agoraToken) {
-    return NextResponse.json({ message: "Agora 토큰 생성에 실패했습니다." }, { status: 500 });
+  let agoraToken: string;
+  try {
+    agoraToken = await generateAgoraToken(channelName, uid, "publisher");
+  } catch (err) {
+    return NextResponse.json(
+      { message: "Agora 토큰 생성 실패", detail: (err as Error).message },
+      { status: 500 },
+    );
   }
 
   const now = new Date().toISOString();

@@ -73,8 +73,17 @@ export interface LiveHostProfile {
   thumbnail_fallback_url: string | null;
 }
 
+/**
+ * 라이브룸 Agora 채널명 — roomId 전체(32자) + 랜덤 salt(8자)
+ * 결정적 부분은 DB 조회용, salt는 외부 추측 방어 (외부 publisher 진입 차단)
+ */
 export function makeLiveChannelName(roomId: string): string {
-  return `live_${roomId.replace(/-/g, "").slice(0, 12)}`;
+  // crypto는 server lib에서만 사용. circular import 회피 위해 dynamic require
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { randomBytes } = require("crypto");
+  const id = roomId.replace(/-/g, "");
+  const salt = randomBytes(4).toString("hex");
+  return `live_${id}_${salt}`;
 }
 
 export function buildScheduledEndAt(plannedDurationMin: number): string {

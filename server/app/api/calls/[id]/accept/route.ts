@@ -37,10 +37,18 @@ export async function POST(
     return NextResponse.json({ message: "이미 처리된 세션입니다" }, { status: 400 });
   }
 
-  // Agora 채널 + 토큰 생성
+  // Agora 채널 + 토큰 생성 (cert 미설정 시 500)
   const channelName = makeChannelName(sessionId);
   const uid = Math.floor(Math.random() * 100000);
-  const agoraToken = await generateAgoraToken(channelName, uid);
+  let agoraToken: string;
+  try {
+    agoraToken = await generateAgoraToken(channelName, uid);
+  } catch (err) {
+    return NextResponse.json(
+      { message: "Agora 토큰 생성 실패", detail: (err as Error).message },
+      { status: 500 },
+    );
+  }
 
   // 세션 상태 → active
   await admin
