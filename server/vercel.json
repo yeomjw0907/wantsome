@@ -1,3 +1,11 @@
 {
-  "_comment": "Cron 정의는 Supabase pg_cron으로 이전됨 (server/supabase/migrations/024_pg_cron_http_setup.sql). Vercel Hobby 플랜에서 분당 cron 불가 회피."
+  "crons": [
+    { "path": "/api/calls/tick", "schedule": "* * * * *" },
+    { "path": "/api/live/tick", "schedule": "* * * * *" },
+    { "path": "/api/settlements/run", "schedule": "0 0 15 * *" },
+    { "path": "/api/creators/update-grades", "schedule": "0 0 1 * *" },
+    { "path": "/api/reports/daily-summary", "schedule": "0 0 * * *" },
+    { "path": "/api/reservations/remind", "schedule": "0 23 * * *" },
+    { "path": "/api/reservations/noshow", "schedule": "0 19 * * *" }
+  ]
 }

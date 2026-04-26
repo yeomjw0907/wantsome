@@ -8,40 +8,23 @@
 
 ## 🔴 PR-1 머지 직후 즉시 (출시 차단 위험)
 
-### 1. Supabase Vault에 CRON_SECRET 등록 [쉬움 / 5분 / **필수**]
-pg_cron이 server API 호출 시 인증에 사용.
+### 1. CRON_SECRET 생성 + Vercel 환경변수 등록 [쉬움 / 3분 / **필수**]
+Vercel cron이 server API 호출 시 Authorization 헤더로 사용.
 
 **작업**:
-1. Vercel 환경변수에 `CRON_SECRET` 등록 (이미 server에서 읽고 있음)
-   - 값 생성: `openssl rand -hex 32` 또는 임의 long string
-2. Supabase Studio → SQL Editor 에서 실행:
-   ```sql
-   select vault.create_secret('YOUR_CRON_SECRET_VALUE_HERE', 'cron_secret');
-   ```
-3. 등록 확인:
-   ```sql
-   select id, name, created_at from vault.secrets where name = 'cron_secret';
-   ```
+1. 값 생성: `openssl rand -hex 32` (또는 임의 long string)
+2. Vercel Dashboard → Project → Settings → Environment Variables → `CRON_SECRET` 등록
+3. (옵션) Supabase Vault에도 동일 값 — pg_cron 사용 시에만 필요. **Vercel cron 사용 시 불필요**
 
-⚠️ 두 곳(Vercel env + Supabase Vault)에 **동일한 값**을 넣어야 함.
+> 📌 **Vercel Pro 사용 결정 (2026-04-26)**: pg_cron 마이그레이션은 보존되지만 활성화하지 않음. Vercel cron 사용.
 
 ---
 
-### 2. pg_cron Job 7개 등록 [쉬움 / 10분 / **필수**]
-[server/supabase/migrations/024_pg_cron_http_setup.sql](../../server/supabase/migrations/024_pg_cron_http_setup.sql) 의 주석 처리된 SQL 7개를 SQL Editor에서 순서대로 실행.
+### 2. ~~pg_cron Job 등록~~ [Vercel cron 사용 시 SKIP]
+PR-2 commit 7에서 `server/vercel.json`에 cron 7개 정의 복원.
+**별도 작업 없음** — Vercel 배포 시 자동 등록·실행.
 
-**검증**:
-```sql
-select jobname, schedule, active from cron.job order by jobname;
--- 7개 row 나와야 함
-
--- 1분 후 첫 실행 결과 확인:
-select jobname, status, return_message, start_time
-from cron.job_run_details
-order by start_time desc limit 10;
-```
-
-⚠️ 도메인 `api.wantsome.kr`이 아직 연결 전이면 SQL의 URL을 임시로 Vercel 기본 URL(`*.vercel.app`)로 변경 후, 도메인 연결 시 다시 갱신.
+(참고) pg_cron으로 다시 가려면 [024 마이그레이션 SQL](../../server/supabase/migrations/024_pg_cron_http_setup.sql) + [Vault setup](#) 활성화.
 
 ---
 
@@ -265,9 +248,42 @@ update system_config set value = '500' where key = 'dm_unlock_points';
 
 ---
 
-### 16. PR-2 ~ PR-9 진행 [큰 작업]
-PR-1만으로는 출시 불가. 다음 PR들도 처리 필요:
-- [PR-2 RLS·DB 보안](99-action-plan.md#pr-2-rls-전면-정비-critical-r1r8) — RLS 셀프 변조 등
+### 17. Supabase Studio에서 만든 함수의 search_path 설정 [쉬움 / 5분]
+PR-2 029 마이그레이션은 repo에 SQL 정의가 있는 함수만 처리.
+Supabase Studio에서 직접 생성된 함수는 시그니처를 모르므로 사용자가 직접:
+
+Studio → SQL Editor 에서 시그니처 조회:
+```sql
+select proname, pg_get_function_arguments(oid) as args
+from pg_proc
+where proname in ('handle_new_user', 'update_creator_avg_rating', 'live_join_deduct_points')
+  and pronamespace = 'public'::regnamespace;
+```
+
+각 함수에 대해 search_path 명시:
+```sql
+ALTER FUNCTION handle_new_user(<위에서 본 args>) SET search_path = public, pg_temp;
+ALTER FUNCTION update_creator_avg_rating(<args>) SET search_path = public, pg_temp;
+ALTER FUNCTION live_join_deduct_points(<args>) SET search_path = public, pg_temp;
+```
+
+검증: Phase 10 advisor 재실행해서 'function_search_path_mutable' 0건 확인.
+
+### 18. Storage 버킷 listing 비활성 [쉬움 / 10분]
+Phase 10 advisor의 'public_bucket_allows_listing' 3건 fix.
+대상 버킷: `live-thumbnails`, `post-images`, `profiles`
+
+Supabase Studio → Storage → 각 버킷 → Policies:
+- 기존 정책 (예: "live_thumbnails_public_read") 유지하되
+- LIST 권한은 service_role만 가능하도록 정책 수정
+  또는 버킷을 private으로 변경 + signed URL 사용
+
+권장: 단순 fix는 버킷 자체를 private으로 변경 후 클라가 signed URL 사용.
+영향 범위가 클 경우 별도 PR로 처리.
+
+### 19. PR-3 ~ PR-9 진행 [큰 작업]
+PR-1·PR-2만으로는 출시 불가. 다음 PR들도 처리 필요:
+- ~~[PR-2 RLS·DB 보안](99-action-plan.md#pr-2-rls-전면-정비-critical-r1r8)~~ — DONE (R1·R2·R3·R5 + RPC search_path)
 - [PR-3 인증·본인인증](99-action-plan.md#pr-3-인증본인인증-critical-a1a4) — verify-identity 백도어 제거
 - [PR-4 라이브룸 보안](99-action-plan.md#pr-4-라이브룸-보안-critical-l1l4--i3--live-high) — Agora 채널·신고
 - [PR-5 iOS](99-action-plan.md#pr-5-ios-compliance-critical-i1-i2-i4) — Privacy Manifest 등
@@ -281,8 +297,8 @@ PR-1만으로는 출시 불가. 다음 PR들도 처리 필요:
 ## 📋 진행 체크리스트 (요약)
 
 ### Week 1 (PR-1 머지 직후)
-- [ ] CRON_SECRET 생성 + Vercel + Vault
-- [ ] pg_cron job 7개 등록
+- [ ] CRON_SECRET 생성 + Vercel 환경변수 (Vault는 옵션)
+- [ ] ~~pg_cron job 7개 등록~~ → Vercel cron 자동 (PR-2 c7)
 - [ ] Apple Developer 가입 + API Key + APNs Key
 - [ ] Google Play Console + Firebase + Pub/Sub
 - [ ] Apple Root CA 다운 + PEM 변환

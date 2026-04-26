@@ -7,6 +7,11 @@ import { createSupabaseAdmin } from "@/lib/supabase";
  * @param limit    윈도우 내 최대 허용 횟수
  * @param windowSec 윈도우 크기 (초)
  * @returns true = 허용, false = 차단
+ *
+ * 정책: fail-closed
+ *  - DB 오류 / 예외 → false (차단)
+ *  - 결제·인증 등 critical 경로에서 fail-open이면 무제한 호출 가능 (자금 손실)
+ *  - 운영 모니터링: rate_limits 테이블 INSERT 실패율 알림
  */
 export async function checkRateLimit(
   key: string,
@@ -20,10 +25,14 @@ export async function checkRateLimit(
       p_limit: limit,
       p_window_seconds: windowSec,
     });
-    if (error) return true; // DB 오류 시 fail-open (서비스 우선)
+    if (error) {
+      console.error("[rateLimit] check_rate_limit RPC error:", error);
+      return false; // fail-closed
+    }
     return data === true;
-  } catch {
-    return true; // 예외 시에도 fail-open
+  } catch (err) {
+    console.error("[rateLimit] check_rate_limit exception:", err);
+    return false; // fail-closed
   }
 }
 
