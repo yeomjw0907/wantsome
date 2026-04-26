@@ -40,9 +40,10 @@ export async function POST(
   const points_charged = minutes * session.per_min_rate;
 
   // 크리에이터 정산율 + 소비자 통계 병렬 조회
+  // monthly_minutes는 read-then-write로 lost-update 위험이 있어 add_creator_minutes RPC로 atomic 처리
   type ConsumerStatsRow = { total_calls: number | null; avg_call_duration_sec: number | null };
   const [creatorRes, consumerRes] = await Promise.all([
-    admin.from("creators").select("settlement_rate, monthly_minutes").eq("id", session.creator_id).single(),
+    admin.from("creators").select("settlement_rate").eq("id", session.creator_id).single(),
     admin.from("users").select("total_calls, avg_call_duration_sec").eq("id", session.consumer_id).single() as unknown as Promise<{ data: ConsumerStatsRow | null }>,
   ]);
   const creator = creatorRes.data;
@@ -71,11 +72,15 @@ export async function POST(
 
   // 이하 비핵심 업데이트 — 실패해도 세션/포인트는 이미 원자적으로 처리됨
   await Promise.all([
-    // 크리에이터 is_busy 해제 + monthly_minutes 누적
-    admin.from("creators").update({
-      is_busy: false,
-      monthly_minutes: (creator?.monthly_minutes ?? 0) + minutes,
-    }).eq("id", session.creator_id),
+    // is_busy 해제와 monthly_minutes 누적 분리 (atomic UPDATE로 lost-update 방지)
+    admin.from("creators").update({ is_busy: false }).eq("id", session.creator_id),
+
+    minutes > 0
+      ? admin.rpc("add_creator_minutes", {
+          p_creator_id: session.creator_id,
+          p_minutes: minutes,
+        })
+      : Promise.resolve(),
 
     // 소비자 통화 통계 업데이트
     consumerRow ? (() => {

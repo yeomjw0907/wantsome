@@ -192,10 +192,12 @@ export async function POST(req: NextRequest) {
 }
 
 function isRefundOrRevoke(type: string, subtype: string | null): boolean {
+  // https://developer.apple.com/documentation/appstoreservernotifications/notificationtype
   if (type === "REFUND") return true;
   if (type === "REVOKE") return true;
   if (type === "DID_FAIL_TO_RENEW") return false;
-  if (type === "CONSUMPTION_REQUEST") return true;
+  // CONSUMPTION_REQUEST는 환불 알림이 아니라 Apple이 판매자에게 사용 데이터 제공을 요청하는 알림.
+  // 별도 응답 API(sendConsumptionInformation)로 처리해야 하며, 여기서 REFUNDED 마킹하면 안 됨.
   if (type === "EXPIRED" && subtype === "VOLUNTARY") return true;
   return false;
 }
