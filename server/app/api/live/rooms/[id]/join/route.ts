@@ -3,6 +3,7 @@ import { AGORA_APP_ID, generateAgoraToken, isAgoraConfigured } from "@/lib/agora
 import { mapLiveJoinError } from "@/lib/liveRuntime";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, getLiveConfig, isAdminRole } from "@/lib/live";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,13 @@ export async function POST(
   if (!user) return NextResponse.json({ message: "Invalid token" }, { status: 401 });
 
   const admin = createSupabaseAdmin();
+
+  // 라이브 입장 게이트: 19세+ + 미정지 (시청자는 본인인증 옵션 — 라이브는 17+ 콘텐츠라 강제하지 않음)
+  // 어드민은 게이트 우회
+  if (!isAdminRole(user.role)) {
+    const gateReject = await assertUserGate(admin, user.id);
+    if (gateReject) return gateReject;
+  }
   const [roomRes, config] = await Promise.all([
     admin
       .from("live_rooms")
@@ -49,9 +57,14 @@ export async function POST(
   }
 
   const uid = Math.floor(Math.random() * 100000) + 1;
-  const agoraToken = await generateAgoraToken(room.agora_channel, uid, "subscriber");
-  if (!agoraToken) {
-    return NextResponse.json({ message: "Agora 토큰 생성에 실패했습니다." }, { status: 500 });
+  let agoraToken: string;
+  try {
+    agoraToken = await generateAgoraToken(room.agora_channel, uid, "subscriber");
+  } catch (err) {
+    return NextResponse.json(
+      { message: "Agora 토큰 생성 실패", detail: (err as Error).message },
+      { status: 500 },
+    );
   }
 
   const isAdmin = isAdminRole(user.role);

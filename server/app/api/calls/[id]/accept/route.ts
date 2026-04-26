@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseClient, createSupabaseAdmin } from "@/lib/supabase";
 import { generateAgoraToken, makeChannelName, AGORA_APP_ID } from "@/lib/agora";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,11 @@ export async function POST(
 
   const admin = createSupabaseAdmin();
 
+  // 통화 수락 게이트 (크리에이터 측): 19세+ + 미정지 + PortOne 본인인증 강제
+  // 크리에이터가 정지 또는 미인증이면 통화 자체 차단
+  const gateReject = await assertUserGate(admin, authUser.id, { requireVerified: true });
+  if (gateReject) return gateReject;
+
   // 세션 조회 (크리에이터 본인 확인)
   const { data: session } = await admin
     .from("call_sessions")
@@ -37,10 +43,18 @@ export async function POST(
     return NextResponse.json({ message: "이미 처리된 세션입니다" }, { status: 400 });
   }
 
-  // Agora 채널 + 토큰 생성
+  // Agora 채널 + 토큰 생성 (cert 미설정 시 500)
   const channelName = makeChannelName(sessionId);
   const uid = Math.floor(Math.random() * 100000);
-  const agoraToken = await generateAgoraToken(channelName, uid);
+  let agoraToken: string;
+  try {
+    agoraToken = await generateAgoraToken(channelName, uid);
+  } catch (err) {
+    return NextResponse.json(
+      { message: "Agora 토큰 생성 실패", detail: (err as Error).message },
+      { status: 500 },
+    );
+  }
 
   // 세션 상태 → active
   await admin

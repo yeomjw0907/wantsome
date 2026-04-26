@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin, createSupabaseClient } from "@/lib/supabase";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,10 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createSupabaseAdmin();
+
+  // 게이트: 19세+ + 미정지 (선물은 본인인증 옵션 없음)
+  const gateReject = await assertUserGate(admin, user.id);
+  if (gateReject) return gateReject;
   const { data: userRow } = await admin
     .from("users")
     .select("points, nickname")

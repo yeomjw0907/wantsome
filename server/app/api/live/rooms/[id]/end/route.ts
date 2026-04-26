@@ -28,18 +28,29 @@ export async function POST(
     return NextResponse.json({ message: "이미 종료된 라이브입니다." }, { status: 400 });
   }
 
-  const endedAt = new Date().toISOString();
-  await admin.from("live_rooms").update({
-    status: "ended",
-    ended_at: endedAt,
-  }).eq("id", id);
+  // status 마크 + 환불 + audit + 남은 참가자 left 마크를 단일 RPC 안에서 처리
+  // (race-safe: ended 마크 후에는 join 거절되므로 환불 빈틈 없음)
+  const { data: endResult, error: endErr } = await admin
+    .rpc("live_end_with_refund", { p_room_id: id, p_actor_id: user.id })
+    .single() as unknown as {
+      data: { prev_status: string; refunded_count: number; total_refunded: number } | null;
+      error: { message: string } | null;
+    };
 
+  if (endErr || !endResult) {
+    return NextResponse.json(
+      { message: "라이브 종료 처리 실패", detail: endErr?.message ?? "unknown" },
+      { status: 500 },
+    );
+  }
+
+  // 호스트 라이브 상태 해제 (RPC 외부 — creators 테이블)
   await admin.from("creators").update({ is_live_now: false }).eq("id", user.id);
-  await admin
-    .from("live_room_participants")
-    .update({ status: "left", left_at: endedAt })
-    .eq("room_id", id)
-    .eq("status", "joined");
 
-  return NextResponse.json({ success: true, ended_at: endedAt });
+  return NextResponse.json({
+    success: true,
+    ended_at: new Date().toISOString(),
+    refunded_count: endResult.refunded_count,
+    total_refunded: endResult.total_refunded,
+  });
 }

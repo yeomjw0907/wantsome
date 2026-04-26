@@ -2,12 +2,14 @@
  * Agora RTC 토큰 생성 유틸
  * 환경변수: AGORA_APP_ID, AGORA_APP_CERTIFICATE
  *
- * agora-token 패키지가 없을 때는 임시 토큰(null)을 반환합니다.
- * 실제 운영 전 반드시 Agora Console에서 App ID/Certificate를 발급하고
- * 서버 환경변수에 등록하세요.
+ * 보안 정책 (fail-closed):
+ *  - AGORA_APP_ID 또는 AGORA_APP_CERTIFICATE 미설정 시 throw
+ *  - 채널명을 sessionId/roomId 전체(32자) 사용 — 외부 추측 어려움
+ *    + DB에 agora_channel 컬럼 저장된 값을 신뢰 (DB가 truth source)
  */
 
 import { logger } from "@/lib/logger";
+import { randomBytes } from "crypto";
 
 const AGORA_APP_ID = process.env.AGORA_APP_ID ?? "";
 const AGORA_APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE ?? "";
@@ -18,24 +20,30 @@ export function isAgoraConfigured() {
   return Boolean(AGORA_APP_ID && AGORA_APP_CERTIFICATE);
 }
 
-/** Agora 채널명 생성: call_{sessionId 앞 8자리} */
+/**
+ * Agora 채널명 생성 — sessionId 전체(32자) + 랜덤 salt(8자)
+ * 결정적 부분은 DB 조회용, salt는 외부 추측 방어
+ * 형식: call_<sessionId 32자>_<salt 8자> (총 47자, Agora 64자 한도 내)
+ */
 export function makeChannelName(sessionId: string): string {
-  return `call_${sessionId.replace(/-/g, "").slice(0, 12)}`;
+  const id = sessionId.replace(/-/g, "");
+  const salt = randomBytes(4).toString("hex"); // 8 hex chars
+  return `call_${id}_${salt}`;
 }
 
 /**
  * 서버사이드 Agora RTC 토큰 생성 (1시간 유효)
- * Certificate가 없으면 null 반환 (개발용 no-token 모드)
+ *
+ * fail-closed: cert 미설정 시 throw — 호출처가 try/catch로 500 반환
  */
 export async function generateAgoraToken(
   channelName: string,
   uid: number,
   role: AgoraTokenRole = "publisher"
-): Promise<string | null> {
-  if (!AGORA_APP_CERTIFICATE) {
-    // 개발 환경: App Certificate 없이 Agora 테스트 (보안 취약 — 운영 금지)
-    logger.warn("Agora no-token mode: AGORA_APP_CERTIFICATE not set");
-    return null;
+): Promise<string> {
+  if (!AGORA_APP_ID || !AGORA_APP_CERTIFICATE) {
+    logger.error("Agora not configured: AGORA_APP_ID/AGORA_APP_CERTIFICATE missing");
+    throw new Error("Agora not configured");
   }
 
   try {
@@ -52,9 +60,9 @@ export async function generateAgoraToken(
       expireTime
     ) as string;
     return token;
-  } catch {
-    logger.error("Agora token build failed: agora-token package error");
-    return null;
+  } catch (err) {
+    logger.error("Agora token build failed", { error: (err as Error).message });
+    throw new Error("Agora token build failed");
   }
 }
 

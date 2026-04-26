@@ -3,6 +3,7 @@ import { createSupabaseAdmin, createSupabaseClient } from "@/lib/supabase";
 import { sendPushToUser } from "@/lib/push";
 import { checkRateLimit, rateLimitExceeded } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,10 @@ export async function POST(req: NextRequest) {
 
   const perMinRate = PER_MIN_RATE[mode];
   const admin = createSupabaseAdmin();
+
+  // 통화 시작 게이트: 19세+ + 미정지 + PortOne 본인인증 완료
+  const gateReject = await assertUserGate(admin, authUser.id, { requireVerified: true });
+  if (gateReject) return gateReject;
 
   const { data: consumer } = await admin
     .from("users")

@@ -21,23 +21,25 @@ export async function POST(
     return NextResponse.json({ message: "라이브를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  const now = new Date().toISOString();
+  // status 마크 + 환불 + audit + left 마크를 단일 RPC 안에서 처리 (race-safe)
+  const { data: endResult, error: endErr } = await admin
+    .rpc("live_end_with_refund", { p_room_id: id, p_actor_id: adminUser.id })
+    .single() as unknown as {
+      data: { prev_status: string; refunded_count: number; total_refunded: number } | null;
+      error: { message: string } | null;
+    };
 
-  await admin.from("live_rooms").update({
-    status: "ended",
-    ended_at: now,
-  }).eq("id", id);
+  if (endErr || !endResult) {
+    return NextResponse.json(
+      { message: "라이브 강제 종료 실패", detail: endErr?.message ?? "unknown" },
+      { status: 500 },
+    );
+  }
 
+  // 호스트 상태 해제
   await admin.from("creators").update({ is_live_now: false }).eq("id", roomRes.data.host_id);
-  await admin
-    .from("live_room_participants")
-    .update({
-      status: "left",
-      left_at: now,
-    })
-    .eq("room_id", id)
-    .eq("status", "joined");
 
+  // 모더레이션 로그 (RPC 안 audit과 별개 — 관리자 액션 추적)
   await admin.from("live_moderation_actions").insert({
     room_id: id,
     target_user_id: roomRes.data.host_id,
@@ -47,5 +49,10 @@ export async function POST(
     reason: "관리자 강제 종료",
   });
 
-  return NextResponse.json({ success: true, ended_at: now });
+  return NextResponse.json({
+    success: true,
+    ended_at: new Date().toISOString(),
+    refunded_count: endResult.refunded_count,
+    total_refunded: endResult.total_refunded,
+  });
 }

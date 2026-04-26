@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AGORA_APP_ID, generateAgoraToken, isAgoraConfigured } from "@/lib/agora";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, makeLiveChannelName } from "@/lib/live";
+import { assertUserGate } from "@/lib/userGate";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +41,20 @@ export async function POST(
     return NextResponse.json({ message: "Agora 설정이 완료되지 않았습니다." }, { status: 500 });
   }
 
+  // 라이브 시작 게이트 (호스트): 19세+ + 미정지 + PortOne 본인인증 완료 (크리에이터)
+  const gateReject = await assertUserGate(admin, user.id, { requireVerified: true });
+  if (gateReject) return gateReject;
+
   const channelName = room.agora_channel || makeLiveChannelName(id);
   const uid = Math.floor(Math.random() * 100000) + 1;
-  const agoraToken = await generateAgoraToken(channelName, uid, "publisher");
-  if (!agoraToken) {
-    return NextResponse.json({ message: "Agora 토큰 생성에 실패했습니다." }, { status: 500 });
+  let agoraToken: string;
+  try {
+    agoraToken = await generateAgoraToken(channelName, uid, "publisher");
+  } catch (err) {
+    return NextResponse.json(
+      { message: "Agora 토큰 생성 실패", detail: (err as Error).message },
+      { status: 500 },
+    );
   }
 
   const now = new Date().toISOString();
