@@ -1,0 +1,122 @@
+-- 024_pg_cron_http_setup.sql
+--
+-- Vercel cron → Supabase pg_cron 마이그레이션
+-- (Vercel Hobby 플랜에서 분당 cron 불가 → pg_cron으로 우회)
+--
+-- 본 마이그레이션은 extension 활성화만 수행.
+-- 실제 cron job 등록은 secret 의존성 때문에 별도 SQL을 사용자가 실행.
+-- USER-TODO.md의 "pg_cron Setup" 섹션 참조.
+
+-- ────────────────────────────────────────────────────────────
+-- 1) Extension 활성화 (Supabase 무료 플랜에서도 사용 가능)
+-- ────────────────────────────────────────────────────────────
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- pg_cron은 기본적으로 postgres 데이터베이스에만 설치됨 — Supabase는 정상
+-- pg_net은 별도 schema(net)에 설치됨
+
+-- ────────────────────────────────────────────────────────────
+-- 2) cron job 등록은 사용자가 Vault에 CRON_SECRET 추가 후 실행
+-- ────────────────────────────────────────────────────────────
+-- 다음 SQL을 Supabase Studio → SQL Editor 에서 실행:
+--
+-- /* 0) Vault에 cron secret 저장 (한 번만) */
+-- select vault.create_secret('YOUR_CRON_SECRET_VALUE', 'cron_secret');
+--
+-- /* 1) calls/tick — 매 분 (분당 차감, 가장 critical) */
+-- select cron.schedule(
+--   'wantsome-calls-tick',
+--   '* * * * *',
+--   $$
+--   select net.http_post(
+--     url := 'https://api.wantsome.kr/api/calls/tick',
+--     headers := jsonb_build_object(
+--       'Content-Type', 'application/json',
+--       'Authorization', 'Bearer ' || (
+--         select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret'
+--       )
+--     ),
+--     body := '{}'::jsonb,
+--     timeout_milliseconds := 30000
+--   );
+--   $$
+-- );
+--
+-- /* 2) live/tick — 매 분 (5분이었지만 분당 권장 — 환불 ACK timeout 정확도) */
+-- select cron.schedule(
+--   'wantsome-live-tick', '* * * * *',
+--   $$ select net.http_post(
+--     url := 'https://api.wantsome.kr/api/live/tick',
+--     headers := jsonb_build_object('Authorization', 'Bearer ' ||
+--       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+--     timeout_milliseconds := 30000
+--   ); $$
+-- );
+--
+-- /* 3) settlements/run — 매월 15일 09:00 KST = 00:00 UTC */
+-- select cron.schedule(
+--   'wantsome-settlements-run', '0 0 15 * *',
+--   $$ select net.http_post(
+--     url := 'https://api.wantsome.kr/api/settlements/run',
+--     headers := jsonb_build_object('Authorization', 'Bearer ' ||
+--       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+--     timeout_milliseconds := 60000
+--   ); $$
+-- );
+--
+-- /* 4) creators/update-grades — 매월 1일 00:00 KST = 전월 15:00 UTC */
+-- select cron.schedule(
+--   'wantsome-creator-grades', '0 15 30 * *',
+--   $$ select net.http_post(
+--     url := 'https://api.wantsome.kr/api/creators/update-grades',
+--     headers := jsonb_build_object('Authorization', 'Bearer ' ||
+--       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+--     timeout_milliseconds := 60000
+--   ); $$
+-- );
+--
+-- /* 5) reports/daily-summary — 매일 09:00 KST = 00:00 UTC */
+-- select cron.schedule(
+--   'wantsome-reports-summary', '0 0 * * *',
+--   $$ select net.http_post(
+--     url := 'https://api.wantsome.kr/api/reports/daily-summary',
+--     headers := jsonb_build_object('Authorization', 'Bearer ' ||
+--       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+--     timeout_milliseconds := 60000
+--   ); $$
+-- );
+--
+-- /* 6) reservations/remind — 매일 08:00 KST = 23:00 UTC (전날) */
+-- select cron.schedule(
+--   'wantsome-reservations-remind', '0 23 * * *',
+--   $$ select net.http_post(
+--     url := 'https://api.wantsome.kr/api/reservations/remind',
+--     headers := jsonb_build_object('Authorization', 'Bearer ' ||
+--       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+--     timeout_milliseconds := 60000
+--   ); $$
+-- );
+--
+-- /* 7) reservations/noshow — 매일 04:00 KST = 19:00 UTC (전날) */
+-- select cron.schedule(
+--   'wantsome-reservations-noshow', '0 19 * * *',
+--   $$ select net.http_post(
+--     url := 'https://api.wantsome.kr/api/reservations/noshow',
+--     headers := jsonb_build_object('Authorization', 'Bearer ' ||
+--       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+--     timeout_milliseconds := 60000
+--   ); $$
+-- );
+
+-- ────────────────────────────────────────────────────────────
+-- 등록된 cron job 확인:
+--   select * from cron.job;
+-- 실행 결과 확인:
+--   select * from cron.job_run_details order by start_time desc limit 20;
+-- pg_net 호출 결과 확인:
+--   select * from net._http_response order by created desc limit 20;
+--
+-- 삭제 (필요 시):
+--   select cron.unschedule('wantsome-calls-tick');
+-- ────────────────────────────────────────────────────────────
