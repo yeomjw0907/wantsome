@@ -85,7 +85,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "본인 통화에서만 선물을 보낼 수 있습니다." }, { status: 403 });
     }
 
-    creatorId = creatorId ?? session.creator_id;
+    // 클라이언트가 to_creator_id를 보내더라도 항상 서버 검증된 session.creator_id를 사용
+    // (임의 user를 to_creator_id로 지정해 정산 왜곡·spoofed signal 발송 방지)
+    creatorId = session.creator_id;
 
     // atomic 차감 (race condition 방어)
     const { data: deductRows, error: deductErr } = await admin.rpc("try_deduct_points", {
