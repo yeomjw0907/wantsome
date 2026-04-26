@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
   const targetMonth = now.getMonth() === 0 ? 12 : now.getMonth();
   const period = `${targetYear}-${String(targetMonth).padStart(2, "0")}`;
   const periodStart = `${period}-01T00:00:00Z`;
-  const periodEnd = `${targetYear}-${String(targetMonth + 1 > 12 ? 1 : targetMonth + 1).padStart(2, "0")}-01T00:00:00Z`;
+  // periodEnd: 다음 월 1일. 12월 → 다음 해 1월로 연도 정정 (PR-1 AI 리뷰 fix)
+  const nextYear = targetMonth === 12 ? targetYear + 1 : targetYear;
+  const nextMonth = targetMonth === 12 ? 1 : targetMonth + 1;
+  const periodEnd = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01T00:00:00Z`;
 
   // 승인된 크리에이터 + 개인별 정산율 조회
   const { data: creators, error: creatorErr } = await admin
@@ -50,7 +53,8 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    // 해당 월 종료된 통화 수익 합산
+    // ── 매출 합산 (3개 채널) ───────────────────────────────────────
+    // 1) 영상통화: call_sessions.points_charged (status='ended')
     const { data: sessions } = await admin
       .from("call_sessions")
       .select("points_charged")
@@ -59,7 +63,39 @@ export async function GET(req: NextRequest) {
       .gte("ended_at", periodStart)
       .lt("ended_at", periodEnd);
 
-    const totalPoints = (sessions ?? []).reduce((sum, s) => sum + (s.points_charged ?? 0), 0);
+    const callPoints = (sessions ?? []).reduce((sum, s) => sum + (s.points_charged ?? 0), 0);
+
+    // 2) 라이브 입장료: live_room_participants.paid_points
+    //    refund_status != 'refunded' + room.host_id = creator + room.status='ended' + ended_at in period
+    const { data: liveParticipants } = await admin
+      .from("live_room_participants")
+      .select("paid_points, role, refund_status, live_rooms!inner(host_id, status, ended_at)")
+      .eq("live_rooms.host_id", creator.user_id)
+      .eq("live_rooms.status", "ended")
+      .gte("live_rooms.ended_at", periodStart)
+      .lt("live_rooms.ended_at", periodEnd)
+      .eq("role", "viewer")
+      .neq("refund_status", "refunded");
+
+    const livePoints = (liveParticipants ?? []).reduce(
+      (sum, p) => sum + ((p as unknown as { paid_points: number }).paid_points ?? 0),
+      0,
+    );
+
+    // 3) 선물: gifts.amount (to_creator_id = creator)
+    const { data: gifts } = await admin
+      .from("gifts")
+      .select("amount")
+      .eq("to_creator_id", creator.user_id)
+      .gte("created_at", periodStart)
+      .lt("created_at", periodEnd);
+
+    const giftPoints = (gifts ?? []).reduce(
+      (sum, g) => sum + ((g as unknown as { amount: number }).amount ?? 0),
+      0,
+    );
+
+    const totalPoints = callPoints + livePoints + giftPoints;
 
     if (totalPoints === 0) {
       skipped++;
@@ -90,7 +126,11 @@ export async function GET(req: NextRequest) {
 
     if (!insertErr) {
       processed++;
-      slackLines.push(`• ${creator.user_id.slice(0, 8)}… → ${netAmount.toLocaleString()}원 (세전: ${settlementAmount.toLocaleString()}원)`);
+      slackLines.push(
+        `• ${creator.user_id.slice(0, 8)}… → ${netAmount.toLocaleString()}원 ` +
+        `(세전: ${settlementAmount.toLocaleString()}원, ` +
+        `통화: ${callPoints.toLocaleString()}P / 라이브: ${livePoints.toLocaleString()}P / 선물: ${giftPoints.toLocaleString()}P)`,
+      );
     }
   }
 
