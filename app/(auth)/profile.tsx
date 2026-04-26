@@ -33,7 +33,9 @@ export default function ProfileSetupScreen() {
   const handleNext = () => {
     const name = nickname.trim() || "유저";
     updateUser({ nickname: name, profile_img: profileUri });
-    router.replace("/(auth)/charge-promo");
+    // 첫충전 보너스 이벤트 비활성 (정책 변경, 2026-04-26)
+    // charge-promo 화면 자체는 보존 — 향후 이벤트 재개 시 router.replace("/(auth)/charge-promo") 복원
+    router.replace("/(app)/(tabs)");
   };
 
   return (
