@@ -45,11 +45,9 @@ export async function POST(req: NextRequest) {
       .single();
 
     const is_new = !existing;
-    // 첫충전 보너스 deadline: 가입 후 24시간 (정책 v1, 기존 72h에서 단축)
-    // 24h가 conversion 효과 최대 + 1.5배 보너스의 마진 보호
-    const first_charge_deadline = is_new
-      ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      : null;
+    // 첫충전 보너스 이벤트 비활성 (정책 변경, 2026-04-26)
+    // 코드/DB 컬럼은 보존 — 향후 이벤트 재개 시 deadline 세팅 복원
+    const first_charge_deadline: string | null = null;
 
     const DUPLICATE_PHONE = {
       error: "DUPLICATE_PHONE",

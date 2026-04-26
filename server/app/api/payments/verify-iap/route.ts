@@ -122,18 +122,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "User not found" }, { status: 404 });
   }
 
-  const isFirstCharged = userRow.is_first_charged ?? false;
-  const firstChargeDeadline = userRow.first_charge_deadline
-    ? new Date(userRow.first_charge_deadline)
-    : null;
-  const isFirst =
-    !isFirstCharged && firstChargeDeadline != null && firstChargeDeadline > new Date();
-
-  // 첫충전 보너스: 1.5배 (정책 v1, 기존 2배에서 축소)
-  // - 정산율 0.35로 변경 후 흑자 확인되지만 큰 패키지에서 마진 박빙
-  // - 24h deadline (phone-login)과 결합해 conversion 효과 최대화
-  // pointsToAdd가 정수가 되도록 floor 사용
-  const pointsToAdd = isFirst ? Math.floor(product.points * 1.5) : product.points;
+  // 첫충전 보너스 이벤트 비활성 (정책 변경, 2026-04-26)
+  // is_first_charged / first_charge_deadline 컬럼은 보존 — 향후 이벤트 재개 시 분기 복원
+  const isFirst = false;
+  const pointsToAdd = product.points;
   const bonusPoints = Math.floor(product.points * product.bonus);
 
   // point_charges 기록 + users.points 업데이트를 단일 DB 트랜잭션으로 처리
