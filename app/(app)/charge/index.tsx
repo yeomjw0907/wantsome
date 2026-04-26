@@ -60,6 +60,7 @@ export default function ChargeScreen() {
   const [countdown, setCountdown] = useState("");
   const [chargingProductId, setChargingProductId] = useState<ProductId | null>(null);
   const [pendingProductId, setPendingProductId] = useState<ProductId | null>(null);
+  const [refundDisclosureAccepted, setRefundDisclosureAccepted] = useState(false);
   const pendingPurchaseRef = useRef<{ productId: ProductId; userId: string } | null>(null);
   const showFirstChargeBanner =
     !isFirstCharged &&
@@ -164,6 +165,7 @@ export default function ChargeScreen() {
         return;
       }
       // 구매 동의 확인 모달 표시
+      setRefundDisclosureAccepted(false);
       setPendingProductId(productId);
     },
     [user?.id]
@@ -379,26 +381,70 @@ export default function ChargeScreen() {
                   </View>
                 </View>
 
-                {/* 환불 안내 */}
-                <View style={{ backgroundColor: "#FFF5F7", borderRadius: 12, padding: 12, marginBottom: 24 }}>
+                {/* 환불 안내 + 청약철회 동의 (전상법 17조 2항 5호) */}
+                <View style={{ backgroundColor: "#FFF5F7", borderRadius: 12, padding: 12, marginBottom: 12 }}>
                   <Text style={{ color: "#BE123C", fontSize: 12, lineHeight: 18 }}>
-                    ⚠️ 구매한 포인트는 관계 법령에 따라 환불되지 않습니다.{"\n"}
-                    결제 전 상품 정보를 충분히 확인해주세요.
+                    충전한 포인트 중 <Text style={{ fontWeight: "700" }}>(i) 미사용분</Text>은 7일 내 100% 환불됩니다.{"\n"}
+                    <Text style={{ fontWeight: "700" }}>(ii) 통화·라이브 등 디지털콘텐츠 제공이 개시된 부분</Text>은 「전자상거래법」 제17조 2항 5호에 따라 청약철회가 제한됩니다.
                   </Text>
                 </View>
+
+                {/* 별도 동의 체크박스 (전상법 17조 6항 — 청약철회 제한 사실의 명확한 표시) */}
+                <TouchableOpacity
+                  onPress={() => setRefundDisclosureAccepted((v) => !v)}
+                  style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 16 }}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 4,
+                      borderWidth: 1.5,
+                      borderColor: refundDisclosureAccepted ? "#F43F5E" : "#9CA3AF",
+                      backgroundColor: refundDisclosureAccepted ? "#F43F5E" : "transparent",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: 2,
+                    }}
+                  >
+                    {refundDisclosureAccepted && <Ionicons name="checkmark" size={14} color="white" />}
+                  </View>
+                  <Text style={{ flex: 1, color: "#374151", fontSize: 13, lineHeight: 18 }}>
+                    위 환불·청약철회 제한 안내를 확인하였으며, 이에 <Text style={{ fontWeight: "700" }}>동의합니다</Text>. (필수)
+                  </Text>
+                </TouchableOpacity>
 
                 {/* 버튼 */}
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <TouchableOpacity
-                    onPress={() => setPendingProductId(null)}
+                    onPress={() => {
+                      setPendingProductId(null);
+                      setRefundDisclosureAccepted(false);
+                    }}
                     style={{ flex: 1, height: 50, borderRadius: 25, borderWidth: 1.5, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center" }}
                     activeOpacity={0.8}
                   >
                     <Text style={{ color: "#6B7280", fontWeight: "600", fontSize: 15 }}>취소</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => executePurchase(pendingProductId)}
-                    style={{ flex: 1, height: 50, borderRadius: 25, backgroundColor: "#F43F5E", alignItems: "center", justifyContent: "center" }}
+                    onPress={() => {
+                      if (!refundDisclosureAccepted) {
+                        Toast.show({ type: "error", text1: "환불·청약철회 제한 안내에 동의해 주세요." });
+                        return;
+                      }
+                      executePurchase(pendingProductId);
+                    }}
+                    disabled={!refundDisclosureAccepted}
+                    style={{
+                      flex: 1,
+                      height: 50,
+                      borderRadius: 25,
+                      backgroundColor: refundDisclosureAccepted ? "#F43F5E" : "#FECDD3",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: refundDisclosureAccepted ? 1 : 0.7,
+                    }}
                     activeOpacity={0.85}
                   >
                     <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>동의하고 구매</Text>
