@@ -47,7 +47,8 @@ type SessionState = {
   agoraAppId: string;
 };
 
-const GIFT_OPTIONS = [100, 300, 500, 1000, 3000, 5000] as const;
+// 선물 단가 — constants/gifts.ts (단일 source of truth)
+import { GIFT_AMOUNTS as GIFT_OPTIONS } from "@/constants/gifts";
 
 function formatRemaining(iso: string) {
   const diff = new Date(iso).getTime() - Date.now();

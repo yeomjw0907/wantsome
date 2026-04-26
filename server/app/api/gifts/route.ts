@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin, createSupabaseClient } from "@/lib/supabase";
 import { assertUserGate } from "@/lib/userGate";
+import { GIFT_AMOUNTS, isValidGiftAmount } from "@/constants/gifts";
 
 export const dynamic = "force-dynamic";
-
-const GIFT_OPTIONS = [100, 300, 500, 1000, 3000, 5000] as const;
 
 type GiftPayload = {
   call_session_id?: string | null;
@@ -13,10 +12,6 @@ type GiftPayload = {
   amount: number;
   message?: string;
 };
-
-function isValidGiftAmount(amount: number) {
-  return GIFT_OPTIONS.includes(amount as (typeof GIFT_OPTIONS)[number]);
-}
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? null;
@@ -47,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
   if (!amount || !isValidGiftAmount(amount)) {
     return NextResponse.json(
-      { message: `선물 금액은 ${GIFT_OPTIONS.join("/")} 중 하나여야 합니다.` },
+      { message: `선물 금액은 ${GIFT_AMOUNTS.join("/")} 중 하나여야 합니다.` },
       { status: 400 },
     );
   }

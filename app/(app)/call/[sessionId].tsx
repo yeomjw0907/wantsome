@@ -50,16 +50,10 @@ import { useCallStore } from "@/stores/useCallStore";
 import { usePointStore } from "@/stores/usePointStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import ReportBottomSheet from "@/components/ReportBottomSheet";
+import { GIFTS } from "@/constants/gifts";
 
-// ─── 선물 아이템 정의 ────────────────────────────────────────────────────────
-const GIFT_ITEMS = [
-  { name: "하트",     emoji: "💗", points: 100  },
-  { name: "별빛",     emoji: "⭐", points: 300  },
-  { name: "장미",     emoji: "🌹", points: 500  },
-  { name: "다이아",   emoji: "💎", points: 1000 },
-  { name: "왕관",     emoji: "👑", points: 3000 },
-  { name: "슈퍼스타", emoji: "🌟", points: 5000 },
-] as const;
+// ─── 선물 아이템 정의 — constants/gifts.ts (단일 source of truth) 어댑팅 ──
+const GIFT_ITEMS = GIFTS.map((g) => ({ name: g.label, emoji: g.emoji, points: g.amount }));
 
 type GiftItemType = (typeof GIFT_ITEMS)[number];
 
