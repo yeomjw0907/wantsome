@@ -8,13 +8,12 @@
  *     - Authentication: 서비스 계정 + OIDC token (audience = endpoint URL)
  *  3) Play Console → 앱 → Monetize setup → RTDN 에 topic 등록
  *
- * 보안 정책 (fail-closed):
- *  - GOOGLE_RTDN_AUDIENCE 환경변수 설정 시
- *    OAuth2Client.verifyIdToken(audience)로 정식 OIDC 검증
- *  - 미설정 시: payload 디코드까진 하지만 point_charges.status 마킹은 skip
- *    + admin_logs에 'GOOGLE_RTDN_UNVERIFIED' 기록 (위조 가능 입력은 신뢰 X)
- *
- * 자동 포인트 회수는 별도 PR.
+ * 보안 정책 (FAIL-CLOSED — 재검수 결과 반영):
+ *  - GOOGLE_RTDN_AUDIENCE 미설정 / google-auth-library 미설치 → 503
+ *  - OIDC 토큰 누락 / 서명 검증 실패 / issuer/email 불일치 → 401
+ *  - Pub/Sub은 401/503 반환 시 자동 재시도하므로 안전
+ *  - 검증 통과 시에만 payload 디코드 + 환불 마킹 + admin_logs 기록
+ *    (admin_logs.target_id가 attacker-controlled 입력으로 오염되는 것 방지)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -70,51 +69,58 @@ type RtdnPayload = {
 };
 
 export async function POST(req: NextRequest) {
+  const expectedAudience = process.env.GOOGLE_RTDN_AUDIENCE;
+  const expectedSenderEmail = process.env.GOOGLE_RTDN_SENDER_EMAIL; // optional
+  const lib = await loadGoogleAuth();
+
   // ────────────────────────────────────────────────────────────
-  // 1) Pub/Sub OIDC token 검증 (Authorization: Bearer <JWT>)
-  // 2) 검증 실패 / audience 미설정 → unverified 모드 (status 마킹 skip)
+  // FAIL-CLOSED 1단계: env/lib 미설정이면 즉시 503
+  // ────────────────────────────────────────────────────────────
+  if (!expectedAudience || !lib) {
+    return NextResponse.json(
+      { message: "Webhook OIDC verification not configured" },
+      { status: 503 },
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // FAIL-CLOSED 2단계: OIDC 토큰 검증 실패하면 401 (디코드·DB 쓰기 안 함)
   // ────────────────────────────────────────────────────────────
   const authHeader = req.headers.get("authorization");
   const oidcToken = authHeader?.replace(/^Bearer\s+/i, "") ?? null;
-  const expectedAudience = process.env.GOOGLE_RTDN_AUDIENCE;
-  const expectedSenderEmail = process.env.GOOGLE_RTDN_SENDER_EMAIL; // optional
-
-  let verified = false;
-  let verifyError: string | null = null;
-
-  if (oidcToken && expectedAudience) {
-    const lib = await loadGoogleAuth();
-    if (!lib) {
-      verifyError = "google-auth-library not installed";
-    } else {
-      try {
-        const oauth = new lib.OAuth2Client();
-        const ticket = await oauth.verifyIdToken({
-          idToken: oidcToken,
-          audience: expectedAudience,
-        });
-        const payload = ticket.getPayload();
-        if (!payload) {
-          verifyError = "Empty OIDC payload";
-        } else if (payload.iss !== "https://accounts.google.com" && payload.iss !== "accounts.google.com") {
-          verifyError = `Invalid issuer: ${payload.iss}`;
-        } else if (expectedSenderEmail && payload.email !== expectedSenderEmail) {
-          verifyError = `Unexpected sender: ${payload.email}`;
-        } else if (!payload.email_verified) {
-          verifyError = "Sender email not verified";
-        } else {
-          verified = true;
-        }
-      } catch (err) {
-        verifyError = `OIDC verify error: ${(err as Error).message}`;
-      }
-    }
-  } else if (!oidcToken) {
-    verifyError = "Missing Authorization Bearer token";
-  } else {
-    verifyError = "GOOGLE_RTDN_AUDIENCE not configured";
+  if (!oidcToken) {
+    return NextResponse.json({ message: "Missing Authorization Bearer token" }, { status: 401 });
   }
 
+  try {
+    const oauth = new lib.OAuth2Client();
+    const ticket = await oauth.verifyIdToken({
+      idToken: oidcToken,
+      audience: expectedAudience,
+    });
+    const payload = ticket.getPayload();
+    if (!payload) {
+      return NextResponse.json({ message: "Empty OIDC payload" }, { status: 401 });
+    }
+    if (payload.iss !== "https://accounts.google.com" && payload.iss !== "accounts.google.com") {
+      return NextResponse.json({ message: `Invalid issuer: ${payload.iss}` }, { status: 401 });
+    }
+    if (expectedSenderEmail && payload.email !== expectedSenderEmail) {
+      return NextResponse.json({ message: "Unexpected sender" }, { status: 401 });
+    }
+    if (!payload.email_verified) {
+      return NextResponse.json({ message: "Sender email not verified" }, { status: 401 });
+    }
+  } catch (err) {
+    return NextResponse.json(
+      { message: `OIDC verify error: ${(err as Error).message}` },
+      { status: 401 },
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 검증 통과 — 이제 payload 디코드 + DB 쓰기
+  // ────────────────────────────────────────────────────────────
   let envelope: PubSubEnvelope;
   try {
     envelope = await req.json();
@@ -148,7 +154,6 @@ export async function POST(req: NextRequest) {
 
   const admin = createSupabaseAdmin();
 
-  // 환불 알림: voidedPurchaseNotification 또는 oneTimeProductNotification.notificationType=2 (CANCELED)
   let purchaseTokenForRefund: string | null = null;
   let action = "GOOGLE_RTDN";
 
@@ -163,27 +168,35 @@ export async function POST(req: NextRequest) {
     action = "GOOGLE_RTDN_CANCELED";
   }
 
-  // 컬럼명: 002 스키마에서 `iap_receipt`
-  // 멱등성: 이미 REFUNDED 상태인 row는 재마킹 안 함 (Pub/Sub at-least-once 방어)
-  // 검증되지 않은 webhook은 status 마킹 안 함 (외부 위조 방어)
-  if (verified && purchaseTokenForRefund) {
-    await admin
+  if (purchaseTokenForRefund) {
+    const { data: updated, error: updErr } = await admin
       .from("point_charges")
       .update({ status: "REFUNDED" })
       .eq("iap_receipt", purchaseTokenForRefund)
-      .neq("status", "REFUNDED");
+      .neq("status", "REFUNDED")
+      .select("id");
+
+    if (updErr || !updated || updated.length === 0) {
+      await admin
+        .from("admin_logs")
+        .insert({
+          action: "GOOGLE_REFUND_NO_MATCH",
+          target_type: "iap",
+          target_id: purchaseTokenForRefund,
+          detail: { action, packageName: payload.packageName },
+        })
+        .then(null, () => null);
+    }
   }
 
-  // 운영 로그 (verified / unverified 구분)
   await admin
     .from("admin_logs")
     .insert({
-      action: verified ? action : `${action}_UNVERIFIED`,
+      action,
       target_type: "iap",
       target_id: purchaseTokenForRefund,
       detail: {
-        verified,
-        verifyError,
+        verified: true,
         packageName: payload.packageName,
         eventTimeMillis: payload.eventTimeMillis,
         oneTimeProductNotification: payload.oneTimeProductNotification,

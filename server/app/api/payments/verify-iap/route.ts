@@ -98,6 +98,13 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (existingCharge) {
+    // 동일 idempotency_key를 다른 user가 재사용 → 다른 사람의 잔액·첫충전 상태 노출 방지
+    if (existingCharge.user_id !== authUser.id) {
+      return NextResponse.json(
+        { message: "idempotency_key already used by another user" },
+        { status: 409 },
+      );
+    }
     const { data: userRow } = await admin
       .from("users")
       .select("points, is_first_charged")

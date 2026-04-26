@@ -107,17 +107,23 @@ export async function POST(req: NextRequest) {
         // 비핵심 업데이트 — 실패해도 세션/포인트는 이미 원자적으로 처리됨
         const { data: creator } = await admin
           .from("creators")
-          .select("monthly_minutes, settlement_rate")
+          .select("settlement_rate")
           .eq("id", session.creator_id)
           .single();
 
         const creatorEarning = Math.floor(points_charged * (creator?.settlement_rate ?? 0.35));
 
+        // is_busy 해제와 monthly_minutes 증가 분리:
+        // monthly_minutes는 add_creator_minutes RPC로 atomic UPDATE (lost-update 방지)
         await Promise.all([
-          admin.from("creators").update({
-            is_busy: false,
-            monthly_minutes: (creator?.monthly_minutes ?? 0) + minutes,
-          }).eq("id", session.creator_id),
+          admin.from("creators").update({ is_busy: false }).eq("id", session.creator_id),
+
+          minutes > 0
+            ? admin.rpc("add_creator_minutes", {
+                p_creator_id: session.creator_id,
+                p_minutes: minutes,
+              })
+            : Promise.resolve(),
 
           admin.from("call_signals").insert([
             {
