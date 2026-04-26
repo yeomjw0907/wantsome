@@ -145,7 +145,15 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_CAMERA",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "googleServicesFile": "./google-services.json"
     },
@@ -172,7 +180,23 @@
         }
       ],
       "expo-font",
-      "expo-iap"
+      "expo-iap",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 24,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": false
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
