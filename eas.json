@@ -46,9 +46,12 @@
     "production": {
       "distribution": "store",
       "channel": "production",
-      "credentialsSource": "remote",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "credentialsSource": "remote"
+      },
+      "ios": {
+        "credentialsSource": "remote"
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://api.wantsome.kr",

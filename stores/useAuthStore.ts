@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { secureStorage } from "@/lib/secureStorage";
 import { supabase } from "@/lib/supabase";
-import { apiCall } from "@/lib/api";
+import { deleteOwnPushToken } from "@/lib/push";
 import { useCreatorStore } from "@/stores/useCreatorStore";
 import { usePointStore } from "@/stores/usePointStore";
 
@@ -42,7 +42,9 @@ export const useAuthStore = create<AuthStore>()(
       logout: async () => {
         // 푸시 토큰 정리 — 다음 사용자에게 이전 사용자 알림 가는 것 방지.
         // signOut 전에 호출 (인증 토큰 유효한 상태에서 서버 정리).
-        await apiCall("/api/push/register", { method: "DELETE" }).catch(() => null);
+        // 실패는 logout 흐름을 막지 않음 (오프라인 logout 케이스). 다음 로그인 시
+        // /api/push/register POST가 device_id 단위 upsert로 덮어씀.
+        await deleteOwnPushToken();
         await supabase.auth.signOut().catch(() => null);
         usePointStore.getState().reset();
         useCreatorStore.getState().reset();
