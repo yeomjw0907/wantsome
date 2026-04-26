@@ -265,9 +265,42 @@ update system_config set value = '500' where key = 'dm_unlock_points';
 
 ---
 
-### 16. PR-2 ~ PR-9 진행 [큰 작업]
-PR-1만으로는 출시 불가. 다음 PR들도 처리 필요:
-- [PR-2 RLS·DB 보안](99-action-plan.md#pr-2-rls-전면-정비-critical-r1r8) — RLS 셀프 변조 등
+### 17. Supabase Studio에서 만든 함수의 search_path 설정 [쉬움 / 5분]
+PR-2 029 마이그레이션은 repo에 SQL 정의가 있는 함수만 처리.
+Supabase Studio에서 직접 생성된 함수는 시그니처를 모르므로 사용자가 직접:
+
+Studio → SQL Editor 에서 시그니처 조회:
+```sql
+select proname, pg_get_function_arguments(oid) as args
+from pg_proc
+where proname in ('handle_new_user', 'update_creator_avg_rating', 'live_join_deduct_points')
+  and pronamespace = 'public'::regnamespace;
+```
+
+각 함수에 대해 search_path 명시:
+```sql
+ALTER FUNCTION handle_new_user(<위에서 본 args>) SET search_path = public, pg_temp;
+ALTER FUNCTION update_creator_avg_rating(<args>) SET search_path = public, pg_temp;
+ALTER FUNCTION live_join_deduct_points(<args>) SET search_path = public, pg_temp;
+```
+
+검증: Phase 10 advisor 재실행해서 'function_search_path_mutable' 0건 확인.
+
+### 18. Storage 버킷 listing 비활성 [쉬움 / 10분]
+Phase 10 advisor의 'public_bucket_allows_listing' 3건 fix.
+대상 버킷: `live-thumbnails`, `post-images`, `profiles`
+
+Supabase Studio → Storage → 각 버킷 → Policies:
+- 기존 정책 (예: "live_thumbnails_public_read") 유지하되
+- LIST 권한은 service_role만 가능하도록 정책 수정
+  또는 버킷을 private으로 변경 + signed URL 사용
+
+권장: 단순 fix는 버킷 자체를 private으로 변경 후 클라가 signed URL 사용.
+영향 범위가 클 경우 별도 PR로 처리.
+
+### 19. PR-3 ~ PR-9 진행 [큰 작업]
+PR-1·PR-2만으로는 출시 불가. 다음 PR들도 처리 필요:
+- ~~[PR-2 RLS·DB 보안](99-action-plan.md#pr-2-rls-전면-정비-critical-r1r8)~~ — DONE (R1·R2·R3·R5 + RPC search_path)
 - [PR-3 인증·본인인증](99-action-plan.md#pr-3-인증본인인증-critical-a1a4) — verify-identity 백도어 제거
 - [PR-4 라이브룸 보안](99-action-plan.md#pr-4-라이브룸-보안-critical-l1l4--i3--live-high) — Agora 채널·신고
 - [PR-5 iOS](99-action-plan.md#pr-5-ios-compliance-critical-i1-i2-i4) — Privacy Manifest 등
