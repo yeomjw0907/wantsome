@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -84,6 +85,7 @@ function formatCountdown(iso: string) {
 
 export default function LiveTabScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const isCreatorUser = user?.role === "creator" || user?.role === "both";
 
@@ -298,7 +300,7 @@ export default function LiveTabScreen() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8F8FA" }}>
+    <View style={{ flex: 1, backgroundColor: "#F8F8FA", paddingTop: insets.top }}>
       <FlatList
         data={rooms}
         keyExtractor={(item) => item.id}

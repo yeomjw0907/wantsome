@@ -1,5 +1,26 @@
 import Constants from "expo-constants";
+import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
+
+let authRedirectInFlight = false;
+
+async function handleAuthExpired() {
+  if (authRedirectInFlight) return;
+  authRedirectInFlight = true;
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // ignore
+  }
+  try {
+    router.replace("/(auth)/login");
+  } catch {
+    // ignore
+  }
+  setTimeout(() => {
+    authRedirectInFlight = false;
+  }, 1500);
+}
 
 function isLoopbackApiUrl(url: string): boolean {
   return /localhost|127\.0\.0\.1/i.test(url);
@@ -94,6 +115,10 @@ export async function apiCall<T>(path: string, options?: RequestInit): Promise<T
       res.status === 401 &&
       (!rawMessage || /unauthorized|invalid token|expired token/i.test(rawMessage));
 
+    if (isAuthError) {
+      void handleAuthExpired();
+    }
+
     throw new Error(
       isAuthError
         ? "로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해주세요."
@@ -142,6 +167,10 @@ export async function uploadFormData<T>(path: string, formData: FormData): Promi
     const isAuthError =
       res.status === 401 &&
       (!rawMessage || /unauthorized|invalid token|expired token/i.test(rawMessage));
+
+    if (isAuthError) {
+      void handleAuthExpired();
+    }
 
     throw new Error(
       isAuthError

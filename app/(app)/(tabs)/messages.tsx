@@ -5,12 +5,12 @@ import {
   FlatList,
   Image,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -423,6 +423,7 @@ function ReservationSubTab({
 
 export default function MessagesTab() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const myCreatorProfile = useCreatorStore((state) => state.myProfile);
   const isCreatorView = !!myCreatorProfile;
@@ -468,7 +469,7 @@ export default function MessagesTab() {
   }, [loadConversations, user?.id]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>메시지</Text>
       </View>
@@ -523,7 +524,7 @@ export default function MessagesTab() {
       ) : (
         <ReservationSubTab userId={user?.id} isCreatorView={isCreatorView} />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
