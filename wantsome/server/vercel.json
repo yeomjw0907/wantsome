@@ -1,0 +1,10 @@
+{
+  "crons": [
+    { "path": "/api/calls/tick", "schedule": "0 3 * * *" },
+    { "path": "/api/settlements/run", "schedule": "0 9 15 * *" },
+    { "path": "/api/creators/update-grades", "schedule": "0 0 1 * *" },
+    { "path": "/api/reports/daily-summary", "schedule": "0 9 * * *" },
+    { "path": "/api/reservations/remind", "schedule": "0 8 * * *" },
+    { "path": "/api/reservations/noshow", "schedule": "0 4 * * *" }
+  ]
+}

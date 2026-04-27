@@ -1,0 +1,7 @@
+{
+  "name": "react-native-reanimated",
+  "version": "3.0.0-stub",
+  "description": "Stub for react-native-css-interop CSS animation support. This project does not use react-native-reanimated animations.",
+  "main": "index.js",
+  "module": "index.js"
+}

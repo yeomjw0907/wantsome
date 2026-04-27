@@ -1,0 +1,51 @@
+# wantsome 프로젝트 규칙
+# 코드 작성 전 반드시 @docs/ 파일을 참조하세요.
+
+## 핵심 문서 참조 순서
+1. @docs/context/01_project_overview.md   → 기술스택, 폴더구조, 환경변수
+2. @docs/context/02_business_rules.md     → 과금/정산/포인트 모든 수치
+3. @docs/design/01_design_system.md       → 컬러, 타이포, 컴포넌트 스펙
+4. @docs/database/*.sql.md                → DB 스키마 (화면별 필요한 것만)
+5. @docs/api/*.md                         → API 엔드포인트
+6. @docs/screens/*.md                     → 화면별 스펙 + 프롬프트
+
+## 기술 스택
+- React Native (Expo SDK 51+) + Expo Router
+- Next.js 15 App Router (API 서버, 별도 repo)
+- Supabase (PostgreSQL + Realtime + Auth + Storage)
+- Agora RTC SDK (agora-react-native-rtc)
+- PortOne V2 (본인인증 + 계좌실명조회)
+- expo-in-app-purchases (IAP)
+- Zustand (상태관리)
+- NativeWind (스타일링)
+
+## 디자인 토큰
+Navy:            #1B2A4A   (텍스트, 헤더)
+Pink:            #FF6B9D   (CTA 버튼 — 메인 포인트)
+Bluebell:        #D1E4F8   (파란불 배경/뱃지 전용 — 버튼/텍스트 사용 금지)
+Blue Accent:     #4D9FFF   (파란불 아이콘, 강조)
+Red Accent:      #FF5C7A   (빨간불 아이콘)
+Red Light:       #FFEEF1   (빨간불 배경)
+White:           #FFFFFF
+Gray-50:         #F8F8FA
+Gray-100:        #F0F0F5
+Gray-900:        #1A1A2E
+Gray-500:        #8E8EA0
+
+폰트: Pretendard
+버튼: Primary(Pink, h-52, rounded-full) / Secondary(테두리 Pink) / Ghost(Gray-100)
+
+## 코딩 규칙
+- TypeScript 필수, any 사용 금지
+- 과금 로직은 반드시 서버사이드 — 클라이언트에서 포인트 직접 차감 절대 금지
+- 영수증 검증은 반드시 서버사이드 (Apple/Google 공식 API)
+- Supabase RLS 모든 테이블 활성화
+- CI 값 클라이언트 노출 금지
+- 계좌번호 AES-256 암호화 저장
+- 신분증: private bucket (관리자만 접근)
+- API Route마다 인증 미들웨어 적용
+- 이중 충전 방지: idempotency_key 필수
+
+## 분당 단가 (절대 변경 금지)
+파란불: 900P/분
+빨간불: 1,300P/분
