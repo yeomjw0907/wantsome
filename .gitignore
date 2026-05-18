@@ -36,6 +36,12 @@ yarn-error.*
 .env
 server/.env
 
+# Service account / private keys (never commit)
+google-service-account*.json
+*-service-account*.json
+AppleRootCA-*.pem
+AppleRootCA-*.escaped.txt
+
 # typescript
 *.tsbuildinfo
 
@@ -46,3 +52,6 @@ server/.env
 # Next.js build output
 server/.next/
 .next/
+
+# Claude Code local settings
+.claude/settings.local.json
