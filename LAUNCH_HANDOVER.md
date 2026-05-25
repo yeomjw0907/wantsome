@@ -92,3 +92,49 @@ git push
 - **ASC localization 저장 실패 = display name에 이모지** 들어가면 에러. 평문만.
 - **삭제된 IAP product ID는 Apple이 영구 점유** → `_v2` 접미사 사용중.
 - Apple 계정 잠김(-20209) 이력 → iforgot로 해제 완료.
+
+---
+
+# ═══ DAY 2 UPDATE (2026-05-26) ═══
+
+## 오늘 추가로 끝낸 것
+- **Vercel 환경변수 9개 입력 완료** (Apple 6 + Google 3, 값 sha256 검증). 보류: GOOGLE_RTDN_AUDIENCE, PORTONE 3종.
+- **서버 배포 성공 (commit 0684c93, READY)** — 아래 3개가 프로덕션(api.wantsome.kr)에 반영됨:
+  1. `verify-identity` 생년월일 **폴백 복구** (PortOne 미설정 시) — 연령확인 막힘 해결
+  2. `apple.ts` Sandbox/Production 폴백 (IAP 심사 대응)
+  3. env 9개
+- **연령확인 정상 작동 확인** (아이폰 TestFlight에서 생년월일 → 통과 ✓)
+- **TestFlight 내부 테스터 그룹 "Internal Testers" 생성 + 본인(yeomjw0907@naver.com) 추가** → 아이폰에서 원썸 설치/실행 가능
+- **스크린샷 4장 확보**: 홈, 마이페이지(프로필), 포인트 충전, 구매확인 다이얼로그 (실제 iOS 화면)
+
+## 오늘 발견한 이슈 / 함정
+- **package.json & package-lock.json 에 trailing NUL 바이트** 가 붙어 Vercel 빌드가 1차 실패했음(JSON parse error). → NUL 제거 후 재배포로 해결(0684c93). **이 작업 마운트는 파일 쓸 때 가끔 꼬리에 \x00 을 붙이므로, 파일 수정 후 반드시 `python -c "json.load(...)"` 또는 NUL 검사로 검증할 것.**
+- **카카오 로그인 KOE004 (앱 관리자 설정 오류)** — 카카오 개발자 콘솔 설정 문제. 애플/구글 로그인은 정상이라 급하진 않음. 카카오 콘솔에서 카카오로그인 활성화 / 플랫폼(iOS 번들ID kr.wantsome.app) 등록 / 앱키 일치 확인 필요.
+- 영상통화·라이브 화면 스크린샷은 실제 송출 크리에이터가 있어야 캡처 가능 → **이번 제출엔 제외**, 업데이트로 추후 추가.
+
+## 내일(3일차) 바로 할 일 — 우선순위
+1. **스크린샷 4장을 `C:\dev\wantsome\screenshots\` 에 넣기** (아이폰→PC: 카카오톡 나와의 채팅 / 케이블 등). 파일 준비되면 Claude가 App Store 사이즈(6.9" 1290×2796)로 가공.
+2. **ASC 등록정보 작성**: 앱 부제/설명/키워드/지원URL/개인정보처리방침URL/카테고리/연령등급 + **스크린샷 업로드**.
+3. **Privacy Nutrition Label 게시**.
+4. **IAP 6개** (체험권4000/스몰6600/미디엄18600/라지32000/프리미엄60000/VIP100000) 메타데이터 + 심사용 스크린샷 첨부, "심사 준비 완료".
+5. **빌드 선택** (Build 1) + Export compliance(이미 처리) → **심사 제출**.
+6. **App Store Server Notifications V2 URL 등록 확인**: https://api.wantsome.kr/api/payments/apple-notification
+7. (여유되면) **카카오 KOE004** 카카오 콘솔에서 수정.
+
+## 진행률 (대략)
+- iOS 심사 제출까지: ~80% (스크린샷 업로드 + 등록문구 + Privacy + IAP첨부 + 제출만 남음)
+- 백엔드/서버: ~95% (PortOne 본인인증 전환 + GCP RTDN만 남음, 둘 다 외부 승인 대기)
+- Android: ~20% (Play 본인확인 + 14일 비공개 테스트, 2주+)
+- PG(다날) 승인: 접수완료, 심사대기 ~30일
+- **전체 종합 ≈ 60%**
+
+## 커밋/배포 상태
+- 최신 커밋: `0684c93` (origin/main, Vercel READY)
+- 미커밋 변경: 없음 (working tree clean 예상). screenshots/ 폴더는 비어있음(.gitignore 아님 — 스크린샷 넣으면 커밋 주의).
+
+## Google Play 신원확인 (추가 메모 — 2026-05-26)
+- **Google Play 개발자 신원확인 계정: `yeomjw097@tcsa.co.kr`** (원썸컴퍼니 / account 8590258685249335838) 로 진행.
+- **본인확인(개발자 identity verification) 현재 진행 중 (대기 상태)** — 통과해야 Android 앱 등록/제출 가능. (Android는 이후 14일 비공개 테스트까지 있어 2주+ 소요.)
+
+## 작업 환경 메모
+- **내일은 노트북으로 진행할 수도 있음.** 노트북이면: ① repo `git clone` 또는 `git pull` 로 최신화(이 .md 포함), ② 브라우저에 Apple(App Store Connect)·Vercel·Google·카카오 로그인, ③ 스크린샷 파일을 `screenshots\` 에 두기. (비밀키 secrets/ 는 gitignore라 노트북엔 따로 옮겨야 함 — 단, iOS 심사 제출엔 비밀키 불필요. Android eas submit 때만 google-service-account.json 필요.)
