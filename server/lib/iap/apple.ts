@@ -57,26 +57,39 @@ export async function verifyAppleTransaction(
   }
 
   const { AppStoreServerAPIClient, Environment } = lib;
-  const env = envName === "sandbox" ? Environment.SANDBOX : Environment.PRODUCTION;
 
-  try {
-    // .p8 PEM은 \n 이스케이프되어 들어올 수 있으니 복원
-    const normalizedKey = privateKey.replace(/\\n/g, "\n");
+  // .p8 PEM은 \n 이스케이프되어 들어올 수 있으니 복원
+  const normalizedKey = privateKey.replace(/\\n/g, "\n");
+  // 가드 통과 후 좁혀진 타입을 클로저에서도 유지하기 위해 const로 캡처
+  const kid = keyId;
+  const iss = issuerId;
+  const bid = bundleId;
 
-    const client = new AppStoreServerAPIClient(
-      normalizedKey,
-      keyId,
-      issuerId,
-      bundleId,
-      env,
-    );
+  // App Review는 항상 Sandbox 환경에서 결제를 테스트하고, 실제 운영은 Production이다.
+  // 설정된 환경을 먼저 조회하고, 트랜잭션을 못 찾으면 반대 환경으로 폴백한다.
+  const primaryEnv = envName === "sandbox" ? Environment.SANDBOX : Environment.PRODUCTION;
+  const altEnv = primaryEnv === Environment.PRODUCTION ? Environment.SANDBOX : Environment.PRODUCTION;
 
-    // Apple API 호출 — 응답 자체가 Apple 서버에서 TLS로 직접 옴
+  const fetchSignedTx = async (apiEnv: typeof primaryEnv): Promise<string | undefined> => {
+    const client = new AppStoreServerAPIClient(normalizedKey, kid, iss, bid, apiEnv);
     const response = (await (client as unknown as {
       getTransactionInfo: (id: string) => Promise<{ signedTransactionInfo?: string }>;
     }).getTransactionInfo(transactionId));
+    return response?.signedTransactionInfo;
+  };
 
-    const jws = response?.signedTransactionInfo;
+  try {
+    let jws: string | undefined;
+    try {
+      jws = await fetchSignedTx(primaryEnv);
+    } catch (primaryErr) {
+      // 환경 불일치(예: 심사 중 샌드박스 결제)면 반대 환경으로 재시도
+      try {
+        jws = await fetchSignedTx(altEnv);
+      } catch {
+        return { ok: false, reason: `Apple API error: ${(primaryErr as Error).message}` };
+      }
+    }
     if (!jws) {
       return { ok: false, reason: "Empty signedTransactionInfo from Apple" };
     }
