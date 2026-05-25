@@ -11,11 +11,11 @@
 // 단위는 캠톡 매칭으로 재배열 (4000/6600/18600/32000/60000/100000P).
 // 모든 storeId 변경됨 — App Store Connect / Play Console에 신규 등록 필수.
 export const PRODUCTS = [
-  { id: "POINT_01", storeId: "kr.wantsome.app.point_4000",   name: "체험권 🌱",   price: 6600,   points: 4000,   bonus: 0 },
+  { id: "POINT_01", storeId: "kr.wantsome.app.point_4000_v2",   name: "체험권 🌱",   price: 6600,   points: 4000,   bonus: 0 },
   { id: "POINT_02", storeId: "kr.wantsome.app.point_6600",   name: "스몰 ☕",     price: 9900,   points: 6600,   bonus: 0 },
   { id: "POINT_03", storeId: "kr.wantsome.app.point_18600",  name: "미디엄 🎯",  price: 27500,  points: 18600,  bonus: 0 },
   { id: "POINT_04", storeId: "kr.wantsome.app.point_32000",  name: "라지 🔥",    price: 46200,  points: 32000,  bonus: 0 },
-  { id: "POINT_05", storeId: "kr.wantsome.app.point_60000",  name: "프리미엄 💎", price: 85800,  points: 60000,  bonus: 0 },
+  { id: "POINT_05", storeId: "kr.wantsome.app.point_60000_v2",  name: "프리미엄 💎", price: 85800,  points: 60000,  bonus: 0 },
   { id: "POINT_06", storeId: "kr.wantsome.app.point_100000", name: "VIP 👑",     price: 143000, points: 100000, bonus: 0 },
 ] as const;
 

@@ -55,3 +55,6 @@ server/.next/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# 로컬 자격증명 보관 (커밋 금지)
+/secrets/

@@ -1,0 +1,21 @@
+# 모든 텍스트 파일은 저장소에 LF로 저장/체크아웃 (CRLF 노이즈 방지)
+* text=auto eol=lf
+
+# 바이너리는 변환 금지
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.keystore binary
+*.jks binary
+*.p8 binary
+*.p12 binary
+*.mp4 binary
+*.zip binary

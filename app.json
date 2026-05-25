@@ -20,6 +20,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "kr.wantsome.app",
       "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSCameraUsageDescription": "영상통화를 위해 카메라 접근이 필요합니다.",
         "NSMicrophoneUsageDescription": "영상통화를 위해 마이크 접근이 필요합니다.",

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "wantsome-placeholder",
-    "storage_bucket": "wantsome-placeholder.appspot.com"
+    "project_number": "554690638493",
+    "project_id": "wantsome-4c3b0",
+    "storage_bucket": "wantsome-4c3b0.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+        "mobilesdk_app_id": "1:554690638493:android:4358efb154dad81d90da74",
         "android_client_info": {
           "package_name": "kr.wantsome.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "placeholder"
+          "current_key": "AIzaSyBTSuRtifsTErgein8-5cs_0Zop_W8FIME"
         }
       ],
       "services": {
