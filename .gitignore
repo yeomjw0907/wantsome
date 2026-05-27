@@ -58,3 +58,6 @@ server/.next/
 
 # 로컬 자격증명 보관 (커밋 금지)
 /secrets/
+
+# Danal 계약·신청서 (회사 민감정보)
+danal/

@@ -1,3 +1,5 @@
+import { BUSINESS_INFO } from "@/lib/businessInfo";
+
 export const metadata = {
   title: "개인정보처리방침 | wantsome",
 };
@@ -241,8 +243,15 @@ export default function PrivacyPage() {
       </section>
 
       <div style={{ marginTop: 60, borderTop: "1px solid #E5E7EB", paddingTop: 24, color: "#888", fontSize: 13 }}>
-        <p>본 개인정보처리방침은 <strong>2026년 4월 27일</strong>부터 시행됩니다.</p>
-        <p>wantsome | privacy@wantsome.kr | wantsome.kr</p>
+        <p style={{ marginBottom: 8 }}>본 개인정보처리방침은 <strong>2026년 4월 27일</strong>부터 시행됩니다.</p>
+        <p style={{ lineHeight: 2 }}>
+          <strong style={{ color: "#374151" }}>{BUSINESS_INFO.companyName}</strong> · 대표자: {BUSINESS_INFO.ceoName} · 사업자등록번호: {BUSINESS_INFO.businessNumber}<br />
+          주소: {BUSINESS_INFO.address}<br />
+          고객센터 전화: {BUSINESS_INFO.phone} · 이메일: {BUSINESS_INFO.email}
+        </p>
+        <p style={{ marginTop: 12 }}>
+          <a href="/business" style={{ color: "#F43F5E" }}>사업자 정보 전체 보기</a>
+        </p>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { COMPANY_LEGAL_NAME, MODE_LABEL, SERVICE_NAME } from "@/lib/branding";
+import { BUSINESS_INFO } from "@/lib/businessInfo";
 
 export const metadata: Metadata = {
   title: `${SERVICE_NAME}(wantsome) — 크리에이터와 실시간 영상통화`,
@@ -22,12 +23,12 @@ async function getSystemConfig() {
 export default async function HomePage() {
   const cfg = await getSystemConfig();
 
-  const companyName = cfg.company_name || COMPANY_LEGAL_NAME;
-  const ceoName = cfg.ceo_name || "-";
-  const businessNumber = cfg.business_number || "-";
-  const address = cfg.business_address || "-";
-  const csPhone = cfg.cs_phone || "-";
-  const csEmail = cfg.cs_email || "cs@wantsome.kr";
+  const companyName = cfg.company_name || BUSINESS_INFO.companyName;
+  const ceoName = cfg.ceo_name || BUSINESS_INFO.ceoName;
+  const businessNumber = cfg.business_number || BUSINESS_INFO.businessNumber;
+  const address = cfg.business_address || BUSINESS_INFO.address;
+  const csPhone = cfg.cs_phone || BUSINESS_INFO.phone;
+  const csEmail = cfg.cs_email || BUSINESS_INFO.email;
 
   return (
     <>

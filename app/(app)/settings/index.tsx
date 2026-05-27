@@ -160,6 +160,13 @@ export default function SettingsScreen() {
           />
           <View className="h-px bg-gray-100 ml-16" />
           <MenuItem
+            icon="business-outline"
+            iconColor="#8E8EA0"
+            label="사업자 정보"
+            onPress={() => router.push("/(app)/settings/business-info" as never)}
+          />
+          <View className="h-px bg-gray-100 ml-16" />
+          <MenuItem
             icon="document-text-outline"
             iconColor="#8E8EA0"
             label="이용약관"
