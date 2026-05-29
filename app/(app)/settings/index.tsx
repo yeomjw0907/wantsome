@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { BUSINESS_INFO } from "@/constants/businessInfo";
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -204,6 +205,20 @@ export default function SettingsScreen() {
             danger
             onPress={() => router.push("/(app)/settings/withdraw" as never)}
           />
+        </View>
+
+        {/* 사업자 정보 푸터 — 다날 본인확인서비스 심사 필수 노출 */}
+        <View className="mx-4 mt-6 mb-2 rounded-xl px-4 py-4" style={{ backgroundColor: "#F3F4F6" }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", color: "#9CA3AF", letterSpacing: 0.5, marginBottom: 8, textTransform: "uppercase" }}>
+            사업자 정보
+          </Text>
+          <Text style={{ fontSize: 11, color: "#6B7280", lineHeight: 20 }}>
+            <Text style={{ fontWeight: "600", color: "#4B5563" }}>{BUSINESS_INFO.companyName}</Text>{"\n"}
+            {"대표자: "}{BUSINESS_INFO.ceoName}{"  ·  사업자등록번호: "}{BUSINESS_INFO.businessNumber}{"\n"}
+            {"고객센터: "}{BUSINESS_INFO.phone}{"\n"}
+            {"이메일: "}{BUSINESS_INFO.email}{"\n"}
+            {BUSINESS_INFO.address}
+          </Text>
         </View>
 
         <View style={{ height: insets.bottom + 32 }} />
