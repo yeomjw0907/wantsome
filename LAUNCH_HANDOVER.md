@@ -219,3 +219,41 @@ git push
 - `danal/본인확인프로세스_원썸_초안.pptx` — 슬라이드 3 사업자정보 OK. 슬라이드 2(절차) 교체 대기
 - `danal/사업자정보_화면.png` — 라이브 페이지 캡처 (PPTX 슬라이드 3에 이미 삽입)
 - `danal/CODE-TODO_사업자정보_노출.md` — 완료 (코드 4c7a958 반영)
+
+---
+
+# ═══ DAY 4 UPDATE (2026-05-29) ═══
+
+## 오늘 끝낸 것
+- **사업자정보 설정 푸터 추가** (commit `615ec77` — Claude Code 작업): 설정 화면 최하단에 5종 + 회사정보 박스 노출. 다날 예시 PDF 형식 충족.
+- **다날 2차 회신 수신 → 수정·답변 완료**:
+  - DICI 신청서: 담당자 마스킹 + 서비스명/URL "원썸(wantsome) / APP" 정정
+  - PPTX 슬라이드 2: 앱 실제 화면 4컷 흐름(약관 → 연령확인 → 프로필 → 홈)
+  - PPTX 슬라이드 3: 라이브 페이지 캡처 + 앱 내 노출 경로(마이페이지>설정>사업자정보) 명시 보강
+- **다날 정액제 A~D형 단가표 수령** → **A형 선택 확정** (월 50,000원 / 1,200건 / 초과 50원)
+  - 트래픽 분석: 초기 베타 100~500건 / 안정화 1,000~3,000건 기준 A형이 가장 효율적
+  - 계약서 "신청 서비스 구분" → 월정액제 A형 ☑ + 단가 기재 완료
+- **EAS iOS Build 2 시도**:
+  - 빌드 성공 ✅ `c61b2137-6c3f-462a-9c6e-95d09065a6ce` (IPA: https://expo.dev/artifacts/eas/qsRr66Y8eqS4B1MB5MVcWN.ipa)
+  - **ASC 제출 실패** ⚠️ — "Something went wrong" generic 에러
+  - 유력 원인: Build number가 또 "1"로 잡혀 어제 Build 1과 충돌 (appVersionSource: remote 인데 auto-increment 안 됨)
+
+## 내일(DAY 5) 바로 할 일
+1. **제출 실패 원인 확인**: https://expo.dev/accounts/yeomjungwon/projects/wantsome/submissions/6441cbda-6e9f-4233-b808-5bf61863779c 열어서 빨간 에러 본문 확인
+2. **buildNumber 충돌 확인되면**: `eas build:version:set --platform=ios` → 2 → 재빌드 (`$env:EXPO_NO_CAPABILITY_SYNC="1"; eas build --platform ios --profile production`)
+3. **TestFlight Build 2 처리되면** → 설정 화면 최하단 사업자정보 푸터 캡처
+4. **PPTX 슬라이드 3에 앱 푸터 캡처 추가** (다날 예시 형식과 정확히 일치하게)
+5. **다날 회신 메일 발송** — 첨부: 수정 DICI PDF + 보강 PPTX
+6. **계약서 출력 → 인감/간인 → 등기 발송** (다날이 A형 OK 확인 회신 후)
+7. (병행) ASC 심사 제출 작업 — 어제 받은 4장 스크린샷 가공(1290×2796) + 등록정보 + IAP + Privacy Label + 제출
+
+## 현재 파일 (gitignored: `danal/`)
+- `DI_CI_제공신청서_원썸_채움.docx` — 수정본 (마스킹/URL)
+- `본인확인서비스_이용계약서_원썸_채움.docx` — A형 체크 완료
+- `본인확인프로세스_원썸_초안.pptx` — 슬라이드 2 4컷, 슬라이드 3 보강
+- `사업자정보_화면.png`, `절차1~4_*.png` — 캡처
+
+## 주요 메모
+- iOS Build 1은 어제 ASC에 업로드 완료, TestFlight에 있음
+- iOS Build 2 (오늘 빌드) = `c61b2137` IPA 생성됨, ASC 업로드만 실패 → 내일 buildNumber 충돌 해결하면 재제출 가능
+- 사업자정보 노출 코드는 두 곳: ① 별도 화면(`/settings/business-info`), ② 설정 화면 최하단 푸터 박스 — 다 코드 배포됨
